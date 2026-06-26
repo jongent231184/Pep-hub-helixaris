@@ -12,17 +12,17 @@ const About = () => (
       <div className="aspect-[21/9] rounded-lg overflow-hidden mb-10 bg-slate-100">
         <img
           src="https://content.webfactorysite.co.uk/749d7ff0-99f8-4621-a16e-6275b292c881.jpg?t=1778492996"
-          alt="About GH Peptides"
+          alt="About GHP-Research"
           className="w-full h-full object-cover"
         />
       </div>
 
-      <h2 className="text-2xl font-bold mb-4">GH Peptides</h2>
+      <h2 className="text-2xl font-bold mb-4">GHP-Research</h2>
       <div className="prose max-w-none text-slate-700 leading-relaxed space-y-4">
-        <p>GH Peptides is a UK-based supplier of premium-grade research peptides for the scientific and research community. We hold ourselves to the highest standards of scientific integrity and product quality.</p>
+        <p>GHP-Research is a UK-based supplier of premium-grade research peptides for the scientific and research community. We hold ourselves to the highest standards of scientific integrity and product quality.</p>
         <p>Precision, purity, and reliability sit at the core of what we do. Every batch is produced under strict quality controls and independently verified for molecular consistency.</p>
         <p>We provide fast, discreet UK delivery and transparent sourcing so researchers can focus on advancing their work with confidence.</p>
-        <p className="italic text-sm text-slate-500">Please note: All products supplied by GH Peptides (GHP) are intended solely for laboratory research and are not approved for human use.</p>
+        <p className="italic text-sm text-slate-500">Please note: All products supplied by GHP-Research (GHP) are intended solely for laboratory research and are not approved for human use.</p>
       </div>
 
       <div className="grid md:grid-cols-3 gap-6 mt-12">

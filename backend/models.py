@@ -168,7 +168,7 @@ class OrderStatusUpdate(BaseModel):
 
 # ---------- SETTINGS ----------
 class Settings(BaseModel):
-    site_name: str = 'GH Peptides'
+    site_name: str = 'GHP-Research'
     contact_email: str = 'ghpeptides@outlook.com'
     customer_hours: str = 'Mon - Fri: 9am - 5pm (GMT)'
     tiktok: str = ''

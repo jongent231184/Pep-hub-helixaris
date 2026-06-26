@@ -34,12 +34,11 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-6">
         {/* Logo */}
         <Link to="/" className="flex-shrink-0">
-          <div className="w-28 h-28 md:w-32 md:h-32 rounded-xl overflow-hidden bg-gradient-to-br from-slate-900 to-slate-700 grid place-items-center shadow-lg border-2 border-slate-200">
-            <div className="text-center">
-              <div className="text-cyan-300 text-2xl md:text-3xl font-black leading-none" style={{fontFamily: 'Georgia, serif'}}>GH</div>
-              <div className="text-cyan-200 text-[10px] md:text-xs font-bold tracking-widest mt-1">PEPTIDES</div>
-            </div>
-          </div>
+          <img
+            src="https://customer-assets.emergentagent.com/job_ghp-ecommerce-pay/artifacts/5nqmu9ll_Designer%20NEW.jpeg"
+            alt="GHP-Research"
+            className="h-20 md:h-24 w-auto rounded-lg shadow-md"
+          />
         </Link>
 
         {/* Search bar (desktop) */}

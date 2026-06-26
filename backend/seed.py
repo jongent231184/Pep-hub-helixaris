@@ -141,7 +141,7 @@ async def seed_settings():
         return
     await db.settings.insert_one({
         '_singleton': True,
-        'site_name': 'GH Peptides',
+        'site_name': 'GHP-Research',
         'contact_email': 'ghpeptides@outlook.com',
         'customer_hours': 'Mon - Fri: 9am - 5pm (GMT)',
         'tiktok': 'https://www.tiktok.com/@gh_peps_uk',

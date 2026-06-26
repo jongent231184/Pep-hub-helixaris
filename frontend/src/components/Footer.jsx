@@ -62,7 +62,7 @@ const Footer = () => {
       </div>
       <div className="border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-4 py-5 text-xs text-slate-400 flex flex-col sm:flex-row justify-between gap-2">
-          <p>Copyright © {new Date().getFullYear()} {s.site_name || 'GH Peptides'} Ltd. | <Link to="/terms" className="hover:text-sky-400">Terms &amp; Conditions</Link></p>
+          <p>Copyright © {new Date().getFullYear()} {s.site_name || 'GHP-Research'} Ltd. | <Link to="/terms" className="hover:text-sky-400">Terms &amp; Conditions</Link></p>
           <p>Premium-grade research peptides</p>
         </div>
       </div>

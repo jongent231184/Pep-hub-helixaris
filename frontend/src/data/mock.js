@@ -1,4 +1,4 @@
-// Mock data for GH Peptides clone
+// Mock data for GHP-Research clone
 
 export const CATEGORIES = [
   {
@@ -90,7 +90,7 @@ export const FEATURES = [
 ];
 
 export const SITE = {
-  name: 'GH Peptides',
+  name: 'GHP-Research',
   logoMain: 'https://content.webfactorysite.co.uk/7e79cba8-118f-4c4a-ae17-357be58e037d.jpg?t=1778239572',
   email: 'ghpeptides@outlook.com',
   tiktok: 'https://www.tiktok.com/@gh_peps_uk',
