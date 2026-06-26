@@ -5,6 +5,7 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import { Button } from '../components/ui/button';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { resolveImage } from '../lib/api';
 
 const Cart = () => {
   const { items, updateQty, removeItem, subtotal } = useCart();
@@ -29,14 +30,14 @@ const Cart = () => {
               {items.map(item => (
                 <div key={item._key} className="flex gap-4 border rounded-lg p-4 bg-white">
                   <Link to={`/${item.category}/${item.slug}`} className="w-24 h-24 bg-slate-50 rounded shrink-0">
-                    <img src={item.image} alt={item.name} className="w-full h-full object-contain p-2" />
+                    <img src={resolveImage(item.image)} alt={item.name} className="w-full h-full object-contain p-2" />
                   </Link>
                   <div className="flex-1">
                     <Link to={`/${item.category}/${item.slug}`}>
                       <h3 className="font-bold text-slate-900 hover:text-sky-600 transition-colors">{item.name}</h3>
                     </Link>
                     {item.option && <p className="text-sm text-slate-500 mt-0.5">{item.option}</p>}
-                    <p className="text-sky-600 font-bold mt-1">£{item.price.toFixed(2)}</p>
+                    <p className="text-sky-600 font-bold mt-1">£{Number(item.price).toFixed(2)}</p>
                     <div className="flex items-center gap-3 mt-3">
                       <div className="flex items-center border rounded">
                         <button onClick={() => updateQty(item._key, item.qty - 1)} className="h-8 w-8 grid place-items-center hover:bg-slate-100" aria-label="Decrease"><Minus className="h-4 w-4" /></button>

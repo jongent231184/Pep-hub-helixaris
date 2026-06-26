@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
+import { StoreProvider } from './context/StoreContext';
 import { Toaster } from './components/ui/toaster';
 import ScrollToTop from './components/ScrollToTop';
 
@@ -20,33 +21,59 @@ import Search from './pages/Search';
 import Wholesale from './pages/Wholesale';
 import Terms from './pages/Terms';
 
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminProducts from './pages/admin/AdminProducts';
+import AdminProductForm from './pages/admin/AdminProductForm';
+import AdminCategories from './pages/admin/AdminCategories';
+import AdminOrders from './pages/admin/AdminOrders';
+import AdminOrderDetail from './pages/admin/AdminOrderDetail';
+import AdminCustomers from './pages/admin/AdminCustomers';
+import AdminSettings from './pages/admin/AdminSettings';
+
 import './App.css';
 
 function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <BrowserRouter>
-          <ScrollToTop />
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about-us" element={<About />} />
-            <Route path="/bundles" element={<Bundles />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/account" element={<Account />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/wholesale" element={<Wholesale />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/:categorySlug" element={<CategoryPage />} />
-            <Route path="/:categorySlug/:productSlug" element={<ProductDetail />} />
-          </Routes>
-          <Toaster />
-        </BrowserRouter>
-      </CartProvider>
+      <StoreProvider>
+        <CartProvider>
+          <BrowserRouter>
+            <ScrollToTop />
+            <Routes>
+              {/* Admin */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="products" element={<AdminProducts />} />
+                <Route path="products/new" element={<AdminProductForm />} />
+                <Route path="products/:productId" element={<AdminProductForm />} />
+                <Route path="categories" element={<AdminCategories />} />
+                <Route path="orders" element={<AdminOrders />} />
+                <Route path="orders/:orderId" element={<AdminOrderDetail />} />
+                <Route path="customers" element={<AdminCustomers />} />
+                <Route path="settings" element={<AdminSettings />} />
+              </Route>
+
+              {/* Storefront */}
+              <Route path="/" element={<Home />} />
+              <Route path="/about-us" element={<About />} />
+              <Route path="/bundles" element={<Bundles />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/account" element={<Account />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/wholesale" element={<Wholesale />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/:categorySlug" element={<CategoryPage />} />
+              <Route path="/:categorySlug/:productSlug" element={<ProductDetail />} />
+            </Routes>
+            <Toaster />
+          </BrowserRouter>
+        </CartProvider>
+      </StoreProvider>
     </AuthProvider>
   );
 }

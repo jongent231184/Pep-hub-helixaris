@@ -1,37 +1,54 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Auth } from '../lib/api';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    try {
-      const raw = localStorage.getItem('ghp_user');
-      return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
-  });
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) localStorage.setItem('ghp_user', JSON.stringify(user));
-    else localStorage.removeItem('ghp_user');
-  }, [user]);
+    const token = localStorage.getItem('ghp_token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    Auth.me()
+      .then(u => setUser(u))
+      .catch(() => {
+        localStorage.removeItem('ghp_token');
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
-  const login = (email, password) => {
-    // Mock login
-    const u = { email, name: email.split('@')[0] };
-    setUser(u);
-    return u;
+  const login = async (email, password) => {
+    const data = await Auth.login({ email, password });
+    localStorage.setItem('ghp_token', data.access_token);
+    setUser(data.user);
+    return data.user;
   };
 
-  const register = (data) => {
-    const u = { email: data.email, name: data.firstName || data.email.split('@')[0] };
-    setUser(u);
-    return u;
+  const register = async (payload) => {
+    const data = await Auth.register({
+      email: payload.email,
+      password: payload.password,
+      first_name: payload.firstName || '',
+      last_name: payload.lastName || '',
+    });
+    localStorage.setItem('ghp_token', data.access_token);
+    setUser(data.user);
+    return data.user;
   };
 
-  const logout = () => setUser(null);
+  const logout = () => {
+    localStorage.removeItem('ghp_token');
+    setUser(null);
+  };
+
+  const isAdmin = user?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

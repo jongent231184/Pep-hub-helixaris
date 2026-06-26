@@ -1,89 +1,79 @@
-from fastapi import FastAPI, APIRouter
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
+"""Main FastAPI app for GH Peptides storefront + admin."""
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
-from datetime import datetime, timezone
-
+from fastapi import FastAPI, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+from db import init_indexes  # noqa: E402
+from seed import run_all as seed_all  # noqa: E402
+from routes.auth_routes import router as auth_router  # noqa: E402
+from routes.category_routes import router as category_router  # noqa: E402
+from routes.product_routes import router as product_router  # noqa: E402
+from routes.order_routes import router as order_router  # noqa: E402
+from routes.upload_routes import router as upload_router  # noqa: E402
+from routes.paypal_routes import router as paypal_router  # noqa: E402
+from routes.settings_routes import router as settings_router  # noqa: E402
+from routes.admin_routes import router as admin_router  # noqa: E402
 
-# Create the main app without a prefix
-app = FastAPI()
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s - %(message)s')
+logger = logging.getLogger('ghp')
 
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
+app = FastAPI(title='GH Peptides API', version='1.0.0')
 
-
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
-
-# Include the router in the main app
-app.include_router(api_router)
-
+# CORS
+cors_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=['*'],
+    allow_headers=['*'],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Static uploads (served at /api/uploads/<filename>)
+UPLOADS_DIR = Path(os.environ.get('UPLOADS_DIR', '/app/backend/uploads'))
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount('/api/uploads', StaticFiles(directory=str(UPLOADS_DIR)), name='uploads')
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+# Main API router with /api prefix
+api_router = APIRouter(prefix='/api')
+
+
+@api_router.get('/')
+async def root():
+    return {'status': 'ok', 'service': 'GH Peptides API'}
+
+
+@api_router.get('/health')
+async def health():
+    return {'status': 'healthy'}
+
+
+# Mount sub-routers
+api_router.include_router(auth_router)
+api_router.include_router(category_router)
+api_router.include_router(product_router)
+api_router.include_router(order_router)
+api_router.include_router(upload_router)
+api_router.include_router(paypal_router)
+api_router.include_router(settings_router)
+api_router.include_router(admin_router)
+
+app.include_router(api_router)
+
+
+@app.on_event('startup')
+async def on_startup():
+    logger.info('Starting up: indexes + seed')
+    try:
+        await init_indexes()
+        await seed_all()
+        logger.info('Startup complete')
+    except Exception as e:
+        logger.exception(f'Startup error: {e}')

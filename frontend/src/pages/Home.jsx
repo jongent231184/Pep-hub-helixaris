@@ -1,19 +1,24 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, FlaskConical, BadgeCheck, Truck, ArrowRight } from 'lucide-react';
+import { ShieldCheck, FlaskConical, BadgeCheck, Truck, ArrowRight, Loader2 } from 'lucide-react';
 import Layout from '../components/Layout';
 import CategoryCard from '../components/CategoryCard';
 import ProductCard from '../components/ProductCard';
-import { CATEGORIES, FEATURES, getFeaturedProducts } from '../data/mock';
+import { useStore } from '../context/StoreContext';
 
-const FeatureIcons = [ShieldCheck, FlaskConical, BadgeCheck, Truck];
+const FEATURES = [
+  { icon: ShieldCheck, title: 'Scientific Integrity', desc: 'Highest standards of scientific integrity and product quality.' },
+  { icon: FlaskConical, title: 'Premium Research Grade', desc: 'Specialist premium-grade research peptides.' },
+  { icon: BadgeCheck, title: 'Verified Quality & Purity', desc: 'Strict quality control and independent verification.' },
+  { icon: Truck, title: 'Fast & Reliable UK Delivery', desc: 'Fast, discreet UK delivery with transparent sourcing.' },
+];
 
 const Home = () => {
-  const featured = getFeaturedProducts();
+  const { categories, getFeatured, loading } = useStore();
+  const featured = getFeatured();
 
   return (
     <Layout>
-      {/* Hero */}
       <section className="relative overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -29,7 +34,7 @@ const Home = () => {
               Premium-grade<br />research peptides
             </h1>
             <p className="text-slate-100 mt-6 text-base md:text-lg max-w-xl leading-relaxed">
-              Based in the United Kingdom, we specialise in supplying premium-grade research peptides to the scientific and research community.
+              Based in the United Kingdom, supplying premium-grade research peptides to the scientific and research community.
             </p>
             <Link
               to="/about-us"
@@ -41,42 +46,46 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Features */}
       <section className="max-w-7xl mx-auto px-4 py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {FEATURES.map((f, i) => {
-            const Icon = FeatureIcons[i];
-            return (
-              <div key={f.title} className="p-6 text-center border border-slate-200 rounded-lg hover:border-sky-400 hover:shadow-lg transition-all">
-                <div className="h-14 w-14 mx-auto rounded-full bg-sky-50 grid place-items-center text-sky-600 mb-4">
-                  <Icon className="h-7 w-7" />
-                </div>
-                <h3 className="font-bold text-slate-900 uppercase tracking-wide text-sm">{f.title}</h3>
-                <p className="text-sm text-slate-600 mt-2 leading-relaxed">{f.desc}</p>
+          {FEATURES.map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="p-6 text-center border border-slate-200 rounded-lg hover:border-sky-400 hover:shadow-lg transition-all">
+              <div className="h-14 w-14 mx-auto rounded-full bg-sky-50 grid place-items-center text-sky-600 mb-4">
+                <Icon className="h-7 w-7" />
               </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Categories */}
-      <section className="max-w-7xl mx-auto px-4 pb-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {CATEGORIES.map(cat => (
-            <CategoryCard key={cat.slug} category={cat} />
+              <h3 className="font-bold text-slate-900 uppercase tracking-wide text-sm">{title}</h3>
+              <p className="text-sm text-slate-600 mt-2 leading-relaxed">{desc}</p>
+            </div>
           ))}
         </div>
       </section>
 
-      {/* Latest Products */}
+      <section className="max-w-7xl mx-auto px-4 pb-16">
+        {loading ? (
+          <div className="py-12 grid place-items-center"><Loader2 className="h-6 w-6 animate-spin text-sky-500" /></div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {categories.filter(c => c.slug !== 'bundles').map(cat => (
+              <CategoryCard key={cat.slug} category={cat} />
+            ))}
+          </div>
+        )}
+      </section>
+
       <section className="max-w-7xl mx-auto px-4 pb-20">
         <div className="flex items-end justify-between mb-8">
           <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-slate-900">Latest Products</h2>
           <Link to="/bundles" className="text-sm font-bold uppercase text-sky-600 hover:text-sky-700 tracking-wider hidden sm:inline">View All</Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {featured.map(p => <ProductCard key={p.id} product={p} />)}
-        </div>
+        {loading ? (
+          <div className="py-12 grid place-items-center"><Loader2 className="h-6 w-6 animate-spin text-sky-500" /></div>
+        ) : featured.length === 0 ? (
+          <p className="text-center text-slate-500 py-12">No featured products yet.</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {featured.map(p => <ProductCard key={p.id} product={p} />)}
+          </div>
+        )}
       </section>
     </Layout>
   );

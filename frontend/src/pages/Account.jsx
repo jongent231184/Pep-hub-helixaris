@@ -1,14 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, ShoppingBag, MapPin } from 'lucide-react';
+import { LogOut, ShoppingBag, Loader2 } from 'lucide-react';
+import { Orders } from '../lib/api';
 
 const Account = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const navigate = useNavigate();
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    Orders.mine().then(setOrders).catch(() => setOrders([])).finally(() => setOrdersLoading(false));
+  }, [user]);
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="max-w-3xl mx-auto px-4 py-20 grid place-items-center"><Loader2 className="h-8 w-8 animate-spin text-sky-500" /></div>
+      </Layout>
+    );
+  }
 
   if (!user) {
     return (
@@ -31,21 +47,36 @@ const Account = () => {
             <LogOut className="h-4 w-4" /> Log out
           </Button>
         </div>
-        <p className="text-slate-700 mb-6">Welcome back, <span className="font-bold">{user.name}</span></p>
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="border rounded-lg p-6">
-            <ShoppingBag className="h-8 w-8 text-sky-600 mb-3" />
-            <h3 className="font-bold uppercase tracking-wide text-sm mb-2">My Orders</h3>
-            <p className="text-sm text-slate-600 mb-4">View your previous orders and reorder favourites.</p>
-            <Link to="/orders" className="text-sky-600 font-semibold text-sm">View Orders →</Link>
+        <p className="text-slate-700 mb-6">Welcome, <span className="font-bold">{user.first_name || user.email}</span></p>
+        {user.role === 'admin' && (
+          <Link to="/admin" className="inline-block mb-6 bg-slate-900 text-white px-5 py-2.5 rounded uppercase font-bold text-sm tracking-wider hover:bg-slate-800">Go to Admin Dashboard</Link>
+        )}
+
+        <h2 className="text-xl font-bold uppercase mb-4 flex items-center gap-2"><ShoppingBag className="h-5 w-5" /> My Orders</h2>
+        {ordersLoading ? (
+          <div className="py-8 grid place-items-center"><Loader2 className="h-6 w-6 animate-spin text-sky-500" /></div>
+        ) : orders.length === 0 ? (
+          <div className="border rounded-lg p-8 text-center text-slate-500">No orders yet.</div>
+        ) : (
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600 uppercase text-xs">
+                <tr><th className="p-3 text-left">Order</th><th className="p-3 text-left">Date</th><th className="p-3 text-left">Total</th><th className="p-3 text-left">Payment</th><th className="p-3 text-left">Status</th></tr>
+              </thead>
+              <tbody className="divide-y">
+                {orders.map(o => (
+                  <tr key={o.id} className="hover:bg-slate-50">
+                    <td className="p-3 font-mono">{o.order_number}</td>
+                    <td className="p-3">{new Date(o.created_at).toLocaleDateString()}</td>
+                    <td className="p-3 font-bold">£{Number(o.total).toFixed(2)}</td>
+                    <td className="p-3 capitalize">{o.payment_status}</td>
+                    <td className="p-3 capitalize">{o.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="border rounded-lg p-6">
-            <MapPin className="h-8 w-8 text-sky-600 mb-3" />
-            <h3 className="font-bold uppercase tracking-wide text-sm mb-2">Addresses</h3>
-            <p className="text-sm text-slate-600 mb-4">Manage your saved shipping addresses.</p>
-            <Link to="/addresses" className="text-sky-600 font-semibold text-sm">Manage →</Link>
-          </div>
-        </div>
+        )}
       </div>
     </Layout>
   );

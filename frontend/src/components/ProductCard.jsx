@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { resolveImage } from '../lib/api';
 
 const ProductCard = ({ product }) => {
   const url = `/${product.category}/${product.slug}`;
+  const hasPrice = product.price && product.price > 0;
   return (
     <div className="group bg-white border border-slate-200 rounded-md overflow-hidden hover:shadow-xl transition-shadow duration-300 relative flex flex-col">
       {product.badge && (
@@ -12,7 +14,7 @@ const ProductCard = ({ product }) => {
       )}
       <Link to={url} className="block aspect-square bg-slate-50 overflow-hidden">
         <img
-          src={product.image}
+          src={resolveImage(product.image)}
           alt={product.name}
           loading="lazy"
           className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500"
@@ -28,15 +30,15 @@ const ProductCard = ({ product }) => {
           <p className="text-xs text-slate-500 mt-1">{product.tagline}</p>
         )}
         <div className="mt-2 mb-3">
-          {product.price > 0 ? (
+          {hasPrice ? (
             <div className="flex items-baseline gap-2">
-              <span className="text-lg font-bold text-slate-900">£{product.price.toFixed(2)}</span>
-              {product.wasPrice && (
-                <span className="text-xs text-slate-500 line-through">Was £{product.wasPrice.toFixed(2)}</span>
-              )}
+              <span className="text-lg font-bold text-slate-900">£{Number(product.price).toFixed(2)}</span>
+              {product.was_price ? (
+                <span className="text-xs text-slate-500 line-through">Was £{Number(product.was_price).toFixed(2)}</span>
+              ) : null}
             </div>
           ) : (
-            <p className="text-xs text-slate-600 italic">{product.priceLabel}</p>
+            <p className="text-xs text-slate-600 italic">{product.price_label || 'Email for pricing'}</p>
           )}
         </div>
         <Link
