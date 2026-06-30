@@ -16,11 +16,12 @@ async def stats(_=Depends(require_admin)):
     month = now - timedelta(days=30)
 
     async def revenue_since(since):
-        cursor = db.orders.find({'payment_status': 'paid', 'created_at': {'$gte': since}})
-        total = 0.0
-        async for o in cursor:
-            total += float(o.get('total', 0))
-        return total
+        pipeline = [
+            {'$match': {'payment_status': 'paid', 'created_at': {'$gte': since}}},
+            {'$group': {'_id': None, 'total': {'$sum': '$total'}}}
+        ]
+        result = await db.orders.aggregate(pipeline).to_list(1)
+        return float(result[0]['total']) if result else 0.0
 
     revenue_today = await revenue_since(today)
     revenue_week = await revenue_since(week)
