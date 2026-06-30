@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Settings as SettingsApi } from '../../lib/api';
+import api from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Switch } from '../../components/ui/switch';
+import { Loader2, Globe, Lock, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useStore } from '../../context/StoreContext';
 
@@ -11,11 +13,13 @@ const AdminSettings = () => {
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
   const { toast } = useToast();
   const { refresh } = useStore();
 
   useEffect(() => {
-    SettingsApi.get().then(setForm).finally(() => setLoading(false));
+    // Use admin endpoint to get the full settings including site_password
+    api.get('/settings/admin').then(r => setForm(r.data)).finally(() => setLoading(false));
   }, []);
 
   const update = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
@@ -38,31 +42,73 @@ const AdminSettings = () => {
   return (
     <div className="max-w-3xl">
       <h1 className="text-2xl md:text-3xl font-black uppercase mb-6">Settings</h1>
-      <form onSubmit={save} className="space-y-6 bg-white border rounded-lg p-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div><Label>Site name</Label><Input value={form.site_name} onChange={update('site_name')} className="mt-1" /></div>
-          <div><Label>Contact email</Label><Input type="email" value={form.contact_email} onChange={update('contact_email')} className="mt-1" /></div>
-        </div>
-        <div><Label>Customer service hours</Label><Input value={form.customer_hours} onChange={update('customer_hours')} className="mt-1" /></div>
-        <div><Label>Wholesale banner text</Label><Input value={form.wholesale_banner} onChange={update('wholesale_banner')} className="mt-1" /></div>
-        <div className="grid grid-cols-2 gap-4">
-          <div><Label>TikTok URL</Label><Input value={form.tiktok || ''} onChange={update('tiktok')} className="mt-1" /></div>
-          <div><Label>Instagram URL</Label><Input value={form.instagram || ''} onChange={update('instagram')} className="mt-1" /></div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div><Label>Free shipping threshold (£)</Label><Input type="number" step="0.01" value={form.free_shipping_threshold} onChange={updateNum('free_shipping_threshold')} className="mt-1" /></div>
-          <div><Label>Flat shipping rate (£)</Label><Input type="number" step="0.01" value={form.flat_shipping} onChange={updateNum('flat_shipping')} className="mt-1" /></div>
-        </div>
+      <form onSubmit={save} className="space-y-6">
+        {/* --- PUBLISH SECTION --- */}
+        <section className="bg-white border rounded-lg p-6">
+          <h2 className="text-base font-bold uppercase tracking-wide mb-4 flex items-center gap-2">
+            {form.published ? <Globe className="h-5 w-5 text-emerald-600" /> : <Lock className="h-5 w-5 text-amber-600" />} Publish status
+          </h2>
 
-        <div className="border-t pt-4 flex justify-end">
+          <div className={`flex items-start justify-between gap-4 rounded-lg p-4 border ${form.published ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+            <div>
+              <p className="font-bold">{form.published ? 'Site is LIVE' : 'Site is PRIVATE'}</p>
+              <p className="text-xs text-slate-600 mt-1">
+                {form.published
+                  ? 'Anyone can visit your storefront. Customers can shop and check out.'
+                  : 'Visitors are blocked behind a password gate. Only people with the preview password (or admin login) can view the storefront.'}
+              </p>
+            </div>
+            <Switch checked={form.published} onCheckedChange={v => setForm(f => ({ ...f, published: v }))} />
+          </div>
+
+          <div className="mt-4">
+            <Label>Preview password (used while site is private)</Label>
+            <div className="mt-1 relative">
+              <Input
+                type={showPwd ? 'text' : 'password'}
+                value={form.site_password || ''}
+                onChange={update('site_password')}
+                placeholder="e.g. preview2026"
+                className="pr-10"
+              />
+              <button type="button" onClick={() => setShowPwd(s => !s)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700" aria-label="toggle">
+                {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              Share this password with anyone you want to preview the site before going live. Admins can always view the site without it once logged in.
+            </p>
+          </div>
+        </section>
+
+        {/* --- BRAND --- */}
+        <section className="bg-white border rounded-lg p-6 space-y-4">
+          <h2 className="text-base font-bold uppercase tracking-wide">Brand & contact</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div><Label>Site name</Label><Input value={form.site_name} onChange={update('site_name')} className="mt-1" /></div>
+            <div><Label>Contact email</Label><Input type="email" value={form.contact_email} onChange={update('contact_email')} className="mt-1" /></div>
+          </div>
+          <div><Label>Customer service hours</Label><Input value={form.customer_hours} onChange={update('customer_hours')} className="mt-1" /></div>
+          <div><Label>Wholesale banner text</Label><Input value={form.wholesale_banner} onChange={update('wholesale_banner')} className="mt-1" /></div>
+          <div className="grid grid-cols-2 gap-4">
+            <div><Label>TikTok URL</Label><Input value={form.tiktok || ''} onChange={update('tiktok')} className="mt-1" /></div>
+            <div><Label>Instagram URL</Label><Input value={form.instagram || ''} onChange={update('instagram')} className="mt-1" /></div>
+          </div>
+        </section>
+
+        {/* --- SHIPPING --- */}
+        <section className="bg-white border rounded-lg p-6 space-y-4">
+          <h2 className="text-base font-bold uppercase tracking-wide">Shipping</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div><Label>Free shipping threshold (£)</Label><Input type="number" step="0.01" value={form.free_shipping_threshold} onChange={updateNum('free_shipping_threshold')} className="mt-1" /></div>
+            <div><Label>Flat shipping rate (£)</Label><Input type="number" step="0.01" value={form.flat_shipping} onChange={updateNum('flat_shipping')} className="mt-1" /></div>
+          </div>
+        </section>
+
+        <div className="flex justify-end">
           <Button type="submit" disabled={saving} className="bg-sky-500 hover:bg-sky-600 text-white">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save settings'}
           </Button>
-        </div>
-
-        <div className="border-t pt-4 text-xs text-slate-500">
-          <p className="font-semibold mb-1">Note about PayPal:</p>
-          <p>To enable real payments, set <code className="bg-slate-100 px-1 rounded">PAYPAL_CLIENT_ID</code> and <code className="bg-slate-100 px-1 rounded">PAYPAL_CLIENT_SECRET</code> in <code className="bg-slate-100 px-1 rounded">backend/.env</code> and restart the backend.</p>
         </div>
       </form>
     </div>

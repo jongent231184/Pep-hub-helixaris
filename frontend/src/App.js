@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import { StoreProvider } from './context/StoreContext';
 import { Toaster } from './components/ui/toaster';
 import ScrollToTop from './components/ScrollToTop';
+import SitePasswordGate from './components/SitePasswordGate';
 
 import Home from './pages/Home';
 import About from './pages/About';
@@ -40,7 +41,8 @@ function App() {
         <CartProvider>
           <BrowserRouter>
             <ScrollToTop />
-            <Routes>
+            <SitePasswordGate>
+              <Routes>
               {/* Admin */}
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
@@ -69,7 +71,8 @@ function App() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/:categorySlug" element={<CategoryPage />} />
               <Route path="/:categorySlug/:productSlug" element={<ProductDetail />} />
-            </Routes>
+              </Routes>
+            </SitePasswordGate>
             <Toaster />
           </BrowserRouter>
         </CartProvider>

@@ -178,3 +178,6 @@ class Settings(BaseModel):
     flat_shipping: float = 4.99
     currency: str = 'GBP'
     currency_symbol: str = '£'
+    # Publish controls (Squarespace-style)
+    published: bool = False
+    site_password: str = ''
