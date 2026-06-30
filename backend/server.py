@@ -1,4 +1,4 @@
-"""Main FastAPI app for GHP-Research storefront + admin."""
+"""Main FastAPI app for GHP-Health storefront + admin."""
 import os
 import logging
 from pathlib import Path
@@ -24,7 +24,7 @@ from routes.admin_routes import router as admin_router  # noqa: E402
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s - %(message)s')
 logger = logging.getLogger('ghp')
 
-app = FastAPI(title='GHP-Research API', version='1.0.0')
+app = FastAPI(title='GHP-Health API', version='1.0.0')
 
 # CORS
 cors_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
@@ -47,7 +47,7 @@ api_router = APIRouter(prefix='/api')
 
 @api_router.get('/')
 async def root():
-    return {'status': 'ok', 'service': 'GHP-Research API'}
+    return {'status': 'ok', 'service': 'GHP-Health API'}
 
 
 @api_router.get('/health')

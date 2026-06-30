@@ -1,4 +1,4 @@
-// Mock data for GHP-Research clone
+// Mock data for GHP-Health clone
 
 export const CATEGORIES = [
   {
@@ -90,9 +90,9 @@ export const FEATURES = [
 ];
 
 export const SITE = {
-  name: 'GHP-Research',
+  name: 'GHP-Health',
   logoMain: 'https://content.webfactorysite.co.uk/7e79cba8-118f-4c4a-ae17-357be58e037d.jpg?t=1778239572',
-  email: 'ghpeptides@outlook.com',
+  email: 'GHP-Health@outlook.com',
   tiktok: 'https://www.tiktok.com/@gh_peps_uk',
   instagram: 'https://www.instagram.com/ghp_health',
   customerHours: 'Mon - Fri: 9am - 5pm (GMT)'

@@ -35,8 +35,8 @@ const Header = () => {
         {/* Logo */}
         <Link to="/" className="flex-shrink-0">
           <img
-            src="https://customer-assets.emergentagent.com/job_ghp-ecommerce-pay/artifacts/5nqmu9ll_Designer%20NEW.jpeg"
-            alt="GHP-Research"
+            src="https://customer-assets.emergentagent.com/job_ghp-ecommerce-pay/artifacts/0f0tlig3_ghp%20logo.jpg"
+            alt="GHP-Health"
             className="h-20 md:h-24 w-auto rounded-lg shadow-md"
           />
         </Link>

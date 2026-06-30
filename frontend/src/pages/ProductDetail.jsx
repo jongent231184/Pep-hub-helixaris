@@ -132,7 +132,7 @@ const ProductDetail = () => {
                   <ShoppingBag className="h-5 w-5 mr-2" /> Add to Basket
                 </Button>
               ) : (
-                <a href="mailto:ghpeptides@outlook.com" className="block text-center w-full bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-wider h-12 leading-[3rem] rounded">
+                <a href="mailto:GHP-Health@outlook.com" className="block text-center w-full bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-wider h-12 leading-[3rem] rounded">
                   Email for Pricing
                 </a>
               )}
