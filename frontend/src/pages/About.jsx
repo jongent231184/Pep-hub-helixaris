@@ -11,7 +11,7 @@ const About = () => (
 
       <div className="aspect-[21/9] rounded-lg overflow-hidden mb-10 bg-slate-100">
         <img
-          src="https://content.webfactorysite.co.uk/749d7ff0-99f8-4621-a16e-6275b292c881.jpg?t=1778492996"
+          src={`${process.env.REACT_APP_BACKEND_URL}/api/uploads/about_hero_a5e382ef.png`}
           alt="About GHP-Health"
           className="w-full h-full object-cover"
         />
