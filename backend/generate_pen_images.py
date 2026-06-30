@@ -29,17 +29,19 @@ GEMINI_MODEL = "gemini-2.5-flash-image"
 def build_pen_prompt(product_name: str) -> str:
     return (
         "Using the supplied product photo only as the BRAND and LABEL design reference, create a "
-        "new product photograph of a premium pharmaceutical DOSING PEN INJECTOR - a sleek "
-        "cylindrical injection pen, similar in shape and proportions to a modern insulin pen "
-        "(approximately 15cm long, with a tapered tip cap on one side and a dose dial/twist "
-        "mechanism on the other). The pen body must have a glossy black/dark-silver finish. "
-        "Wrap a label around the centre of the pen that mirrors the reference design: hexagon "
+        "new product photograph of a premium pharmaceutical INSULIN PEN INJECTOR (medical injection "
+        "pen). It must clearly look like a modern insulin pen: a long slim cylindrical body roughly "
+        "15-17 cm long, glossy black/dark-silver finish, with a removable clear plastic cap at one "
+        "end covering a small fine needle, a small clear dose-display window near the cap end "
+        "showing a small number, and a large numbered twist dose-dial at the opposite back end. "
+        "Do NOT make it look like a fountain pen, ballpoint pen, ink pen or writing instrument. "
+        "Wrap a label around the centre body of the pen that mirrors the reference design: hexagon "
         "pattern, gold/silver DNA-helix logo, 'GHP Health' wordmark, 'For Research Purposes Only' "
         "vertical text on one edge, premium black-to-silver gradient. "
         f"The large gold product name printed across the lower section of the wrap-around label "
-        f"must read: \"{product_name}\". Show the pen horizontally or at a slight angle, centred "
-        "on a clean neutral light-grey studio background, professional product photography, "
-        "soft lighting, square aspect ratio, no extra text or watermarks."
+        f"must read: \"{product_name}\". Show the insulin pen horizontally or at a slight angle on "
+        "a clean neutral light-grey studio background, professional product photography, soft "
+        "lighting, square aspect ratio, no extra text or watermarks."
     )
 
 
