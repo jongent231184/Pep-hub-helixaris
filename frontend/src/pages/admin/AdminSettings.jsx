@@ -8,6 +8,7 @@ import { Switch } from '../../components/ui/switch';
 import { Loader2, Globe, Lock, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useStore } from '../../context/StoreContext';
+import ChangePasswordCard from '../../components/ChangePasswordCard';
 
 const AdminSettings = () => {
   const [form, setForm] = useState(null);
@@ -111,6 +112,10 @@ const AdminSettings = () => {
           </Button>
         </div>
       </form>
+
+      <div className="mt-8 bg-white border rounded-lg">
+        <ChangePasswordCard />
+      </div>
     </div>
   );
 };

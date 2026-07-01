@@ -1,10 +1,11 @@
 """Auth routes: register, login, me."""
 from datetime import datetime
+import secrets
 import uuid
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Body
 from db import db
 from models import UserCreate, UserLogin, UserOut, TokenOut
-from auth import hash_password, verify_password, create_access_token, get_current_user
+from auth import hash_password, verify_password, create_access_token, get_current_user, require_admin
 from utils import doc_to_dict
 
 router = APIRouter(prefix='/auth', tags=['auth'])
@@ -41,3 +42,43 @@ async def login(payload: UserLogin):
 @router.get('/me', response_model=UserOut)
 async def me(user: dict = Depends(get_current_user)):
     return UserOut(**doc_to_dict(user))
+
+
+@router.post('/change-password')
+async def change_password(payload: dict = Body(...), user: dict = Depends(get_current_user)):
+    """Authenticated user changes their own password."""
+    current = (payload or {}).get('current_password', '')
+    new_pw = (payload or {}).get('new_password', '')
+    if not current or not new_pw:
+        raise HTTPException(400, 'current_password and new_password required')
+    if len(new_pw) < 8:
+        raise HTTPException(400, 'New password must be at least 8 characters')
+    if not verify_password(current, user.get('password_hash', '')):
+        raise HTTPException(401, 'Current password is incorrect')
+    await db.users.update_one(
+        {'id': user['id']},
+        {'$set': {'password_hash': hash_password(new_pw)}}
+    )
+    return {'ok': True}
+
+
+@router.post('/admin/reset-user-password')
+async def admin_reset_user_password(payload: dict = Body(...), _=Depends(require_admin)):
+    """Admin resets any user's password. If new_password is omitted, a random one is generated and returned once."""
+    user_id = (payload or {}).get('user_id')
+    email = (payload or {}).get('email')
+    new_pw = (payload or {}).get('new_password')
+    if not user_id and not email:
+        raise HTTPException(400, 'user_id or email required')
+    flt = {'id': user_id} if user_id else {'email': email}
+    target = await db.users.find_one(flt)
+    if not target:
+        raise HTTPException(404, 'User not found')
+    generated = False
+    if not new_pw:
+        new_pw = secrets.token_urlsafe(9)  # ~12-char temp password
+        generated = True
+    if len(new_pw) < 8:
+        raise HTTPException(400, 'Password must be at least 8 characters')
+    await db.users.update_one({'id': target['id']}, {'$set': {'password_hash': hash_password(new_pw)}})
+    return {'ok': True, 'email': target['email'], 'temp_password': new_pw if generated else None}

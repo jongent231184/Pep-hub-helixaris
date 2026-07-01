@@ -26,6 +26,10 @@ export const Auth = {
   register: (data) => api.post('/auth/register', data).then(r => r.data),
   login: (data) => api.post('/auth/login', data).then(r => r.data),
   me: () => api.get('/auth/me').then(r => r.data),
+  changePassword: (current_password, new_password) =>
+    api.post('/auth/change-password', { current_password, new_password }).then(r => r.data),
+  adminResetPassword: (payload) =>
+    api.post('/auth/admin/reset-user-password', payload).then(r => r.data),
 };
 
 export const Categories = {
