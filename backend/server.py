@@ -38,7 +38,13 @@ app.add_middleware(
 
 # Static uploads (served at /api/uploads/<filename>)
 UPLOADS_DIR = Path(os.environ.get('UPLOADS_DIR', '/app/backend/uploads'))
-UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    logger_boot = logging.getLogger('ghp.boot')
+    logger_boot.warning(f'Could not create UPLOADS_DIR {UPLOADS_DIR}: {e}. Using /tmp/uploads instead.')
+    UPLOADS_DIR = Path('/tmp/uploads')
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount('/api/uploads', StaticFiles(directory=str(UPLOADS_DIR)), name='uploads')
 
 # Main API router with /api prefix
@@ -70,10 +76,19 @@ app.include_router(api_router)
 
 @app.on_event('startup')
 async def on_startup():
-    logger.info('Starting up: indexes + seed')
-    try:
-        await init_indexes()
-        await seed_all()
-        logger.info('Startup complete')
-    except Exception as e:
-        logger.exception(f'Startup error: {e}')
+    """Non-blocking startup: schedule DB init + seed in background so the readiness probe
+    can return immediately even if the DB is temporarily slow.
+    """
+    import asyncio
+
+    async def _background_init():
+        try:
+            logger.info('Background init: creating indexes and seeding data...')
+            await init_indexes()
+            await seed_all()
+            logger.info('Background init complete')
+        except Exception as e:
+            logger.exception(f'Background init error (server still running): {e}')
+
+    asyncio.create_task(_background_init())
+    logger.info('Startup: background init scheduled; server ready to accept requests')

@@ -5,7 +5,13 @@ from motor.motor_asyncio import AsyncIOMotorClient
 MONGO_URL = os.environ['MONGO_URL']
 DB_NAME = os.environ.get('DB_NAME', 'ghpresearch')
 
-_client: AsyncIOMotorClient = AsyncIOMotorClient(MONGO_URL)
+# Short timeouts so a slow Atlas connection cannot hang startup / readiness probe
+_client: AsyncIOMotorClient = AsyncIOMotorClient(
+    MONGO_URL,
+    serverSelectionTimeoutMS=5000,
+    connectTimeoutMS=5000,
+    socketTimeoutMS=20000,
+)
 db = _client[DB_NAME]
 
 

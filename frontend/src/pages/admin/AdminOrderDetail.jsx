@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, FileText } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 
 const STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -57,7 +57,12 @@ const AdminOrderDetail = () => {
           <h1 className="text-2xl md:text-3xl font-black uppercase">Order <span className="font-mono text-sky-600">{order.order_number}</span></h1>
           <p className="text-sm text-slate-500">Placed {new Date(order.created_at).toLocaleString()}</p>
         </div>
-        <p className="text-3xl font-black">£{Number(order.total).toFixed(2)}</p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link to={`/admin/orders/${order.id}/invoice`}>
+            <Button variant="outline" className="gap-2"><FileText className="h-4 w-4" /> View invoice</Button>
+          </Link>
+          <p className="text-3xl font-black">£{Number(order.total).toFixed(2)}</p>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">

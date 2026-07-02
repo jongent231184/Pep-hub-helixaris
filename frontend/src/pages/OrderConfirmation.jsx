@@ -51,7 +51,10 @@ const OrderConfirmation = () => {
         <p className="text-slate-600 mt-1">Status: <span className="font-semibold capitalize">{order.status}</span> · Payment: <span className="font-semibold capitalize">{order.payment_status}</span></p>
         <p className="mt-2 text-lg font-bold">Total: £{Number(order.total).toFixed(2)}</p>
         <p className="text-sm text-slate-500 mt-1">A confirmation has been sent to {order.shipping_address?.email}</p>
-        <div className="mt-10">
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <Link to={`/admin/orders/${order.id}/invoice`} target="_blank" className="inline-block border border-slate-300 hover:bg-slate-50 text-slate-800 px-6 py-3 rounded font-bold uppercase tracking-wider text-sm">
+            View / Print Invoice
+          </Link>
           <Link to="/" className="inline-block bg-sky-500 hover:bg-sky-600 text-white px-7 py-3 rounded font-bold uppercase tracking-wider text-sm">
             Continue Shopping
           </Link>

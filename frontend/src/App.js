@@ -29,6 +29,7 @@ import AdminProductForm from './pages/admin/AdminProductForm';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminOrderDetail from './pages/admin/AdminOrderDetail';
+import AdminOrderInvoice from './pages/admin/AdminOrderInvoice';
 import AdminCustomers from './pages/admin/AdminCustomers';
 import AdminSettings from './pages/admin/AdminSettings';
 
@@ -52,6 +53,7 @@ function App() {
                 <Route path="categories" element={<AdminCategories />} />
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="orders/:orderId" element={<AdminOrderDetail />} />
+                <Route path="orders/:orderId/invoice" element={<AdminOrderInvoice />} />
                 <Route path="customers" element={<AdminCustomers />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
