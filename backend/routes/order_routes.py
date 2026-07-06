@@ -12,7 +12,20 @@ router = APIRouter(prefix='/orders', tags=['orders'])
 
 
 def _gen_order_number() -> str:
+    # Legacy generator (random) — no longer used. Kept for reference.
     return 'GHP-' + datetime.utcnow().strftime('%Y%m%d') + '-' + uuid.uuid4().hex[:6].upper()
+
+
+async def _next_order_number() -> str:
+    """Sequential order number, starts at GHP-001 and grows to GHP-999, GHP-1000..."""
+    counter = await db.counters.find_one_and_update(
+        {'_id': 'orders'},
+        {'$inc': {'seq': 1}},
+        upsert=True,
+        return_document=True,
+    )
+    seq = counter.get('seq', 1)
+    return f'GHP-{seq:03d}'
 
 
 @router.post('', response_model=OrderOut)
@@ -20,7 +33,7 @@ async def create_order(payload: OrderCreate, user: Optional[dict] = Depends(get_
     now = datetime.utcnow()
     doc = {
         'id': str(uuid.uuid4()),
-        'order_number': _gen_order_number(),
+        'order_number': await _next_order_number(),
         'user_id': user['id'] if user else None,
         'items': [i.model_dump() for i in payload.items],
         'shipping_address': payload.shipping_address.model_dump(),

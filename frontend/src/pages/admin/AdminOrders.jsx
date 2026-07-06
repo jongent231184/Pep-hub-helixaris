@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Orders } from '../../lib/api';
-import { Loader2, Download } from 'lucide-react';
+import { Loader2, Download, Trash2 } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
+import { useToast } from '../../hooks/use-toast';
 
 const statusColor = (s) => ({
   pending: 'bg-amber-100 text-amber-800',
@@ -20,10 +21,26 @@ const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     Orders.all().then(setOrders).catch(() => setOrders([])).finally(() => setLoading(false));
   }, []);
+
+  const handleDelete = async (order) => {
+    if (!window.confirm(`Delete order ${order.order_number}? This cannot be undone.`)) return;
+    setDeletingId(order.id);
+    try {
+      await Orders.remove(order.id);
+      setOrders(prev => prev.filter(o => o.id !== order.id));
+      toast({ title: 'Order deleted', description: order.order_number });
+    } catch (e) {
+      toast({ title: 'Delete failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const filtered = orders.filter(o => {
     if (!query) return true;
@@ -76,6 +93,7 @@ const AdminOrders = () => {
                 <th className="p-3 text-left">Total</th>
                 <th className="p-3 text-left">Payment</th>
                 <th className="p-3 text-left">Status</th>
+                <th className="p-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -91,9 +109,25 @@ const AdminOrders = () => {
                   <td className="p-3 font-bold">£{Number(o.total).toFixed(2)}</td>
                   <td className="p-3"><span className={`px-2 py-1 rounded text-xs font-semibold uppercase ${statusColor(o.payment_status)}`}>{o.payment_status}</span></td>
                   <td className="p-3"><span className={`px-2 py-1 rounded text-xs font-semibold uppercase ${statusColor(o.status)}`}>{o.status}</span></td>
+                  <td className="p-3 text-right">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(o)}
+                      disabled={deletingId === o.id}
+                      title={`Delete order ${o.order_number}`}
+                      data-testid={`delete-order-${o.order_number}`}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8"
+                    >
+                      {deletingId === o.id
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <Trash2 className="h-4 w-4" />}
+                    </Button>
+                  </td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-slate-500">No orders found.</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-slate-500">No orders found.</td></tr>}
             </tbody>
           </table>
         </div>
