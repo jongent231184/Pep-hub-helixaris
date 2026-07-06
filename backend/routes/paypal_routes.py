@@ -28,6 +28,16 @@ async def create_order(payload: dict = Body(...)):
     order = await db.orders.find_one({'id': internal_order_id})
     if not order:
         raise HTTPException(404, 'Internal order not found')
+    # Stock availability check — refuse to start payment if any item is oversold
+    for item in order.get('items', []):
+        prod = await db.products.find_one({'id': item['product_id']}, {'stock': 1, 'name': 1})
+        available = int((prod or {}).get('stock', 0))
+        if available < int(item['qty']):
+            raise HTTPException(
+                409,
+                f"Insufficient stock for '{item.get('name') or (prod or {}).get('name') or 'item'}'. "
+                f"Only {available} left."
+            )
     paypal_resp = await create_paypal_order(
         amount=order['total'],
         currency=order.get('currency', 'GBP'),
@@ -51,13 +61,40 @@ async def capture_order(payload: dict = Body(...)):
     capture = await capture_paypal_order(paypal_order_id)
     status = capture.get('status', '').upper()
     payment_status = 'paid' if status == 'COMPLETED' else 'pending'
-    await db.orders.update_one(
-        {'id': internal_order_id},
-        {'$set': {
-            'payment_status': payment_status,
-            'payment_id': paypal_order_id,
-            'status': 'processing' if payment_status == 'paid' else 'pending',
-            'updated_at': datetime.utcnow()
-        }}
-    )
+    # Atomic idempotent transition: only decrement stock on the FIRST time
+    # this order moves to 'paid'. Guards against double-fire from frontend.
+    if payment_status == 'paid':
+        transitioned = await db.orders.find_one_and_update(
+            {'id': internal_order_id, 'payment_status': {'$ne': 'paid'}},
+            {'$set': {
+                'payment_status': 'paid',
+                'payment_id': paypal_order_id,
+                'status': 'processing',
+                'paid_at': datetime.utcnow(),
+                'updated_at': datetime.utcnow()
+            }}
+        )
+        if transitioned:
+            # First transition — decrement inventory for each ordered item.
+            # Uses $inc so stock cannot go negative in a race (checked below).
+            for item in transitioned.get('items', []):
+                await db.products.update_one(
+                    {'id': item['product_id']},
+                    {'$inc': {'stock': -int(item['qty'])},
+                     '$set': {'updated_at': datetime.utcnow()}}
+                )
+                # Safety net: clamp any negative stock to 0
+                await db.products.update_one(
+                    {'id': item['product_id'], 'stock': {'$lt': 0}},
+                    {'$set': {'stock': 0}}
+                )
+    else:
+        await db.orders.update_one(
+            {'id': internal_order_id},
+            {'$set': {
+                'payment_status': payment_status,
+                'payment_id': paypal_order_id,
+                'updated_at': datetime.utcnow()
+            }}
+        )
     return {'status': status, 'payment_status': payment_status, 'capture': capture}

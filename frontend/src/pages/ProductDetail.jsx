@@ -53,6 +53,10 @@ const ProductDetail = () => {
   }
 
   const hasPrice = product.price > 0;
+  const stock = Number.isFinite(product.stock) ? product.stock : 999;
+  const outOfStock = hasPrice && stock <= 0;
+  const lowStock = hasPrice && stock > 0 && stock <= 5;
+  const maxQty = Math.max(1, Math.min(20, stock || 1));
 
   const handleAdd = () => {
     if (product.options && product.options.length > 0 && !option) {
@@ -117,19 +121,32 @@ const ProductDetail = () => {
               )}
               <div>
                 <label className="text-sm font-semibold uppercase tracking-wide block mb-2">Qty</label>
-                <Select value={qty} onValueChange={setQty}>
+                <Select value={qty} onValueChange={setQty} disabled={outOfStock}>
                   <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 20 }, (_, i) => i + 1).map(n => (
+                    {Array.from({ length: maxQty }, (_, i) => i + 1).map(n => (
                       <SelectItem key={n} value={String(n)}>{n}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {hasPrice && (lowStock || outOfStock) && (
+                  <p
+                    data-testid="stock-message"
+                    className={`text-xs font-semibold mt-2 ${outOfStock ? 'text-red-600' : 'text-amber-600'}`}
+                  >
+                    {outOfStock ? 'Sold Out' : `Only ${stock} left in stock`}
+                  </p>
+                )}
               </div>
 
               {hasPrice ? (
-                <Button onClick={handleAdd} className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold uppercase tracking-wider h-12 text-base">
-                  <ShoppingBag className="h-5 w-5 mr-2" /> Add to Basket
+                <Button
+                  onClick={handleAdd}
+                  disabled={outOfStock}
+                  data-testid="add-to-basket-btn"
+                  className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold uppercase tracking-wider h-12 text-base disabled:bg-slate-300 disabled:cursor-not-allowed"
+                >
+                  <ShoppingBag className="h-5 w-5 mr-2" /> {outOfStock ? 'Sold Out' : 'Add to Basket'}
                 </Button>
               ) : (
                 <a href="mailto:GHP-Health@outlook.com" className="block text-center w-full bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-wider h-12 leading-[3rem] rounded">

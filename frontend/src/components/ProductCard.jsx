@@ -5,9 +5,18 @@ import { resolveImage } from '../lib/api';
 const ProductCard = ({ product }) => {
   const url = `/${product.category}/${product.slug}`;
   const hasPrice = product.price && product.price > 0;
+  const stock = Number.isFinite(product.stock) ? product.stock : 999;
+  const outOfStock = hasPrice && stock <= 0;
   return (
     <div className="group bg-white border border-slate-200 rounded-md overflow-hidden hover:shadow-xl transition-shadow duration-300 relative flex flex-col">
-      {product.badge && (
+      {outOfStock ? (
+        <span
+          data-testid="sold-out-badge"
+          className="absolute top-3 left-3 z-10 bg-red-600 text-white text-[10px] font-bold uppercase px-2.5 py-1 rounded tracking-wider"
+        >
+          Sold Out
+        </span>
+      ) : product.badge && (
         <span className="absolute top-3 left-3 z-10 bg-sky-500 text-white text-[10px] font-bold uppercase px-2.5 py-1 rounded tracking-wider">
           {product.badge}
         </span>
@@ -17,7 +26,7 @@ const ProductCard = ({ product }) => {
           src={resolveImage(product.image)}
           alt={product.name}
           loading="lazy"
-          className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500"
+          className={`w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500 ${outOfStock ? 'opacity-60' : ''}`}
         />
       </Link>
       <div className="p-4 flex-1 flex flex-col">

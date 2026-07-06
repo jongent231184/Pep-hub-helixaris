@@ -67,8 +67,14 @@ const Checkout = () => {
         paypal.Buttons({
           style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'paypal' },
           createOrder: async () => {
-            const { paypal_order_id } = await PayPal.createOrder(createdOrder.id);
-            return paypal_order_id;
+            try {
+              const { paypal_order_id } = await PayPal.createOrder(createdOrder.id);
+              return paypal_order_id;
+            } catch (e) {
+              const msg = e.response?.data?.detail || e.message || 'Unable to start payment';
+              toast({ title: 'Cannot proceed', description: String(msg), variant: 'destructive' });
+              throw e;
+            }
           },
           onApprove: async (data) => {
             setProcessing(true);
