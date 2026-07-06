@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Orders, resolveImage } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
-import { ArrowLeft, Loader2, FileText } from 'lucide-react';
+import { ArrowLeft, Loader2, FileText, Trash2 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 
 const STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -13,6 +13,7 @@ const PAY_STATUSES = ['pending', 'paid', 'failed', 'refunded'];
 
 const AdminOrderDetail = () => {
   const { orderId } = useParams();
+  const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -61,6 +62,22 @@ const AdminOrderDetail = () => {
           <Link to={`/admin/orders/${order.id}/invoice`}>
             <Button variant="outline" className="gap-2"><FileText className="h-4 w-4" /> View invoice</Button>
           </Link>
+          <Button
+            variant="outline"
+            className="gap-2 text-red-600 hover:bg-red-50 border-red-200"
+            onClick={async () => {
+              if (!window.confirm(`Delete order ${order.order_number}? This cannot be undone.`)) return;
+              try {
+                await Orders.remove(order.id);
+                toast({ title: 'Order deleted' });
+                navigate('/admin/orders');
+              } catch (e) {
+                toast({ title: 'Delete failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+              }
+            }}
+          >
+            <Trash2 className="h-4 w-4" /> Delete
+          </Button>
           <p className="text-3xl font-black">£{Number(order.total).toFixed(2)}</p>
         </div>
       </div>

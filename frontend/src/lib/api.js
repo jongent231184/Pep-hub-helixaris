@@ -56,6 +56,7 @@ export const Orders = {
   all: () => api.get('/orders/all').then(r => r.data),
   get: (id) => api.get(`/orders/${id}`).then(r => r.data),
   patch: (id, data) => api.patch(`/orders/${id}`, data).then(r => r.data),
+  remove: (id) => api.delete(`/orders/${id}`).then(r => r.data),
 };
 
 export const Uploads = {

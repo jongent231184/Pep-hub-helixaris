@@ -75,3 +75,11 @@ async def update_order_status(order_id: str, payload: OrderStatusUpdate, _=Depen
     if not res:
         raise HTTPException(404, 'Order not found')
     return OrderOut(**doc_to_dict(res))
+
+
+@router.delete('/{order_id}')
+async def delete_order(order_id: str, _=Depends(require_admin)):
+    res = await db.orders.delete_one({'id': order_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, 'Order not found')
+    return {'ok': True}
