@@ -147,28 +147,46 @@ async def create_paylink(payload: PaylinkCreate, _=Depends(require_admin)):
     the admin can share `/pay/{order_id}` with the customer."""
     now = datetime.utcnow()
 
-    # Server-side pricing from the catalog (mirrors POST /orders)
+    # Server-side pricing from the catalog (mirrors POST /orders). Custom
+    # "Other" lines (no product_id) use the admin-supplied name/price directly.
     priced_items = []
     subtotal_server = 0.0
     for it in payload.items:
-        prod = await db.products.find_one({'id': it.product_id})
-        if not prod:
-            raise HTTPException(400, f"Unknown product id: {it.product_id}")
-        price = float(prod.get('price', 0) or 0)
-        if it.option:
-            for v in prod.get('variants', []) or []:
-                if str(v.get('label', '')).strip().lower() == it.option.strip().lower():
-                    price = float(v.get('price', price) or price)
-                    break
-        line = {
-            'product_id': it.product_id,
-            'slug': prod.get('slug', ''),
-            'name': prod.get('name', ''),
-            'image': prod.get('image', ''),
-            'option': it.option,
-            'qty': int(it.qty),
-            'price': price,
-        }
+        if it.product_id:
+            prod = await db.products.find_one({'id': it.product_id})
+            if not prod:
+                raise HTTPException(400, f"Unknown product id: {it.product_id}")
+            price = float(prod.get('price', 0) or 0)
+            if it.option:
+                for v in prod.get('variants', []) or []:
+                    if str(v.get('label', '')).strip().lower() == it.option.strip().lower():
+                        price = float(v.get('price', price) or price)
+                        break
+            line = {
+                'product_id': it.product_id,
+                'slug': prod.get('slug', ''),
+                'name': prod.get('name', ''),
+                'image': prod.get('image', ''),
+                'option': it.option,
+                'qty': int(it.qty),
+                'price': price,
+            }
+        else:
+            # Custom "Other" line — description + price provided by admin
+            if not it.name or not it.name.strip():
+                raise HTTPException(400, 'Custom line item requires a description')
+            if it.price is None or float(it.price) < 0:
+                raise HTTPException(400, 'Custom line item requires a valid price')
+            price = float(it.price)
+            line = {
+                'product_id': None,
+                'slug': 'custom',
+                'name': it.name.strip(),
+                'image': '',
+                'option': None,
+                'qty': int(it.qty),
+                'price': price,
+            }
         priced_items.append(line)
         subtotal_server += price * int(it.qty)
     subtotal_server = round(subtotal_server, 2)

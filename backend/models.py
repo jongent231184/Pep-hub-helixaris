@@ -118,7 +118,7 @@ class ProductOut(ProductBase):
 
 # ---------- ORDERS ----------
 class OrderItem(BaseModel):
-    product_id: str
+    product_id: Optional[str] = None  # null for custom "Other" line items on paylinks
     slug: str
     name: str
     image: str = ''
@@ -150,7 +150,9 @@ class OrderCreate(BaseModel):
 
 
 class PaylinkItemIn(BaseModel):
-    product_id: str
+    product_id: Optional[str] = None
+    name: Optional[str] = None      # required when product_id is null (custom line)
+    price: Optional[float] = None   # required when product_id is null (custom line)
     qty: int = 1
     option: Optional[str] = None
 

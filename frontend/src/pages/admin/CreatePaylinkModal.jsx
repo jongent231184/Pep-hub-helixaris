@@ -12,7 +12,7 @@ const CreatePaylinkModal = ({ open, onClose, onCreated }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [rows, setRows] = useState([{ product_id: '', qty: 1, option: '' }]);
+  const [rows, setRows] = useState([{ product_id: '', qty: 1, option: '', name: '', price: '' }]);
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [notes, setNotes] = useState('');
@@ -28,7 +28,7 @@ const CreatePaylinkModal = ({ open, onClose, onCreated }) => {
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
     // reset form when re-opened
-    setRows([{ product_id: '', qty: 1, option: '' }]);
+    setRows([{ product_id: '', qty: 1, option: '', name: '', price: '' }]);
     setCustomerName(''); setCustomerEmail(''); setNotes(''); setPromoCode('');
     setCreatedOrder(null); setCopied(false);
   }, [open]);
@@ -36,19 +36,41 @@ const CreatePaylinkModal = ({ open, onClose, onCreated }) => {
   if (!open) return null;
 
   const productMap = Object.fromEntries(products.map(p => [p.id, p]));
-  const addRow = () => setRows(r => [...r, { product_id: '', qty: 1, option: '' }]);
+  const addRow = () => setRows(r => [...r, { product_id: '', qty: 1, option: '', name: '', price: '' }]);
   const updateRow = (i, patch) => setRows(r => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
   const removeRow = (i) => setRows(r => r.filter((_, idx) => idx !== i));
 
   const submit = async () => {
-    const items = rows.filter(r => r.product_id).map(r => ({
-      product_id: r.product_id,
-      qty: Math.max(1, Number(r.qty) || 1),
-      option: r.option || null,
-    }));
+    const items = rows
+      .filter(r => r.product_id === '__custom__' || r.product_id)
+      .map(r => (r.product_id === '__custom__'
+        ? {
+            product_id: null,
+            name: (r.name || '').trim(),
+            price: Number(r.price) || 0,
+            qty: Math.max(1, Number(r.qty) || 1),
+          }
+        : {
+            product_id: r.product_id,
+            qty: Math.max(1, Number(r.qty) || 1),
+            option: r.option || null,
+          }));
     if (items.length === 0) {
-      toast({ title: 'Add at least one product', variant: 'destructive' });
+      toast({ title: 'Add at least one item', variant: 'destructive' });
       return;
+    }
+    // Frontend guardrails for custom lines
+    for (const it of items) {
+      if (it.product_id === null) {
+        if (!it.name) {
+          toast({ title: 'Please describe the "Other" line item', variant: 'destructive' });
+          return;
+        }
+        if (!it.price || it.price <= 0) {
+          toast({ title: 'Please enter a price for the "Other" line item', variant: 'destructive' });
+          return;
+        }
+      }
     }
     setCreating(true);
     try {
@@ -177,6 +199,7 @@ const CreatePaylinkModal = ({ open, onClose, onCreated }) => {
               </div>
               <div className="space-y-2">
                 {rows.map((row, i) => {
+                  const isCustom = row.product_id === '__custom__';
                   const prod = productMap[row.product_id];
                   const variants = prod?.variants || [];
                   const legacyOptions = prod?.options || [];
@@ -184,49 +207,77 @@ const CreatePaylinkModal = ({ open, onClose, onCreated }) => {
                     ? variants.map(v => ({ label: v.label, price: Number(v.price || 0) }))
                     : legacyOptions.map(l => ({ label: l, price: Number(prod?.price || 0) }));
                   return (
-                    <div key={i} className="grid grid-cols-[1fr,120px,90px,40px] gap-2 items-start">
-                      <Select value={row.product_id} onValueChange={v => updateRow(i, { product_id: v, option: '' })}>
-                        <SelectTrigger data-testid={`paylink-product-${i}`}><SelectValue placeholder="Choose product..." /></SelectTrigger>
-                        <SelectContent className="max-h-72">
-                          {products.map(p => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.name} <span className="text-slate-400 text-xs">({p.category})</span>
+                    <div key={i} className="space-y-2 border-l-2 border-slate-100 pl-3">
+                      <div className="grid grid-cols-[1fr,120px,90px,40px] gap-2 items-start">
+                        <Select value={row.product_id} onValueChange={v => updateRow(i, { product_id: v, option: '', name: '', price: '' })}>
+                          <SelectTrigger data-testid={`paylink-product-${i}`}><SelectValue placeholder="Choose product..." /></SelectTrigger>
+                          <SelectContent className="max-h-72">
+                            <SelectItem value="__custom__" data-testid="paylink-custom-option">
+                              <span className="font-semibold text-sky-700">Other (custom line)</span>
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {optionList.length > 0 ? (
-                        <Select value={row.option || ''} onValueChange={v => updateRow(i, { option: v })}>
-                          <SelectTrigger><SelectValue placeholder="Option" /></SelectTrigger>
-                          <SelectContent>
-                            {optionList.map(o => (
-                              <SelectItem key={o.label} value={o.label}>
-                                {o.label}{o.price > 0 ? ` — £${o.price.toFixed(2)}` : ''}
+                            {products.map(p => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.name} <span className="text-slate-400 text-xs">({p.category})</span>
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                      ) : (
-                        <div className="text-xs text-slate-400 flex items-center px-2 h-10">no options</div>
+                        {isCustom ? (
+                          <div className="text-xs text-slate-500 flex items-center px-2 h-10 italic">custom</div>
+                        ) : optionList.length > 0 ? (
+                          <Select value={row.option || ''} onValueChange={v => updateRow(i, { option: v })}>
+                            <SelectTrigger><SelectValue placeholder="Option" /></SelectTrigger>
+                            <SelectContent>
+                              {optionList.map(o => (
+                                <SelectItem key={o.label} value={o.label}>
+                                  {o.label}{o.price > 0 ? ` — £${o.price.toFixed(2)}` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="text-xs text-slate-400 flex items-center px-2 h-10">no options</div>
+                        )}
+                        <Input
+                          type="number"
+                          min="1"
+                          value={row.qty}
+                          onChange={e => updateRow(i, { qty: e.target.value })}
+                          className="h-10"
+                          data-testid={`paylink-qty-${i}`}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeRow(i)}
+                          disabled={rows.length === 1}
+                          className="text-red-600 h-10 w-10"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {isCustom && (
+                        <div className="grid grid-cols-[1fr,140px] gap-2 items-start pl-1">
+                          <Input
+                            value={row.name}
+                            onChange={e => updateRow(i, { name: e.target.value })}
+                            placeholder="Description (e.g. Wholesale — 50× BPC-157 5mg)"
+                            className="text-sm"
+                            data-testid={`paylink-custom-name-${i}`}
+                          />
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={row.price}
+                            onChange={e => updateRow(i, { price: e.target.value })}
+                            placeholder="Price £"
+                            className="text-sm"
+                            data-testid={`paylink-custom-price-${i}`}
+                          />
+                        </div>
                       )}
-                      <Input
-                        type="number"
-                        min="1"
-                        value={row.qty}
-                        onChange={e => updateRow(i, { qty: e.target.value })}
-                        className="h-10"
-                        data-testid={`paylink-qty-${i}`}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeRow(i)}
-                        disabled={rows.length === 1}
-                        className="text-red-600 h-10 w-10"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
                     </div>
                   );
                 })}

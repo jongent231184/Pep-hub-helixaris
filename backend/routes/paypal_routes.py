@@ -28,8 +28,11 @@ async def create_order(payload: dict = Body(...)):
     order = await db.orders.find_one({'id': internal_order_id})
     if not order:
         raise HTTPException(404, 'Internal order not found')
-    # Stock availability check — refuse to start payment if any item is oversold
+    # Stock availability check — refuse to start payment if any item is oversold.
+    # Custom "Other" lines (no product_id) are skipped.
     for item in order.get('items', []):
+        if not item.get('product_id'):
+            continue
         prod = await db.products.find_one({'id': item['product_id']}, {'stock': 1, 'name': 1})
         available = int((prod or {}).get('stock', 0))
         if available < int(item['qty']):
@@ -76,8 +79,10 @@ async def capture_order(payload: dict = Body(...)):
         )
         if transitioned:
             # First transition — decrement inventory for each ordered item.
-            # Uses $inc so stock cannot go negative in a race (checked below).
+            # Skip custom "Other" lines (no product_id).
             for item in transitioned.get('items', []):
+                if not item.get('product_id'):
+                    continue
                 await db.products.update_one(
                     {'id': item['product_id']},
                     {'$inc': {'stock': -int(item['qty'])},
