@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { useToast } from '../../hooks/use-toast';
 
-const CreatePaylinkModal = ({ open, onClose, onCreated }) => {
+const CreatePaylinkModal = ({ open, onClose, onCreated, initialData }) => {
   const { toast } = useToast();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -27,11 +27,29 @@ const CreatePaylinkModal = ({ open, onClose, onCreated }) => {
       .then((all) => setProducts(all.filter(p => p.visible !== false).sort((a, b) => a.name.localeCompare(b.name))))
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
-    // reset form when re-opened
-    setRows([{ product_id: '', qty: 1, option: '', name: '', price: '' }]);
-    setCustomerName(''); setCustomerEmail(''); setNotes(''); setPromoCode('');
+    // Reset (or prefill from initialData for duplicate flow)
+    if (initialData) {
+      const prefillRows = (initialData.items || []).map(it => (
+        it.product_id
+          ? { product_id: it.product_id, qty: it.qty || 1, option: it.option || '', name: '', price: '' }
+          : { product_id: '__custom__', qty: it.qty || 1, option: '', name: it.name || '', price: String(it.price ?? '') }
+      ));
+      setRows(prefillRows.length ? prefillRows : [{ product_id: '', qty: 1, option: '', name: '', price: '' }]);
+      const addr = initialData.shipping_address || {};
+      const emailRaw = addr.email || '';
+      const emailForForm = emailRaw && emailRaw !== 'pending@ghp-health.com' ? emailRaw : '';
+      const fullName = `${addr.first_name || ''} ${addr.last_name || ''}`.trim();
+      setCustomerName(fullName);
+      setCustomerEmail(emailForForm);
+      setNotes(initialData.notes || '');
+      setPromoCode(initialData.promo_code || '');
+    } else {
+      setRows([{ product_id: '', qty: 1, option: '', name: '', price: '' }]);
+      setCustomerName(''); setCustomerEmail(''); setNotes(''); setPromoCode('');
+    }
     setCreatedOrder(null); setCopied(false);
-  }, [open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialData]);
 
   if (!open) return null;
 
