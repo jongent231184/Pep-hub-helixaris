@@ -30,17 +30,29 @@ async def create_order(payload: dict = Body(...)):
     if not order:
         raise HTTPException(404, 'Internal order not found')
     # Stock availability check — refuse to start payment if any item is oversold.
-    # Custom "Other" lines (no product_id) are skipped.
+    # Custom "Other" lines (no product_id) are skipped. Variant stock overrides
+    # product stock when the variant has its own stock set.
     for item in order.get('items', []):
         if not item.get('product_id'):
             continue
-        prod = await db.products.find_one({'id': item['product_id']}, {'stock': 1, 'name': 1})
-        available = int((prod or {}).get('stock', 0))
+        prod = await db.products.find_one({'id': item['product_id']}, {'stock': 1, 'name': 1, 'variants': 1})
+        if not prod:
+            continue
+        available = int(prod.get('stock', 0) or 0)
+        item_option = item.get('option')
+        if item_option:
+            for v in prod.get('variants', []) or []:
+                if str(v.get('label', '')).strip().lower() == str(item_option).strip().lower():
+                    v_stock = v.get('stock')
+                    if v_stock is not None:
+                        available = int(v_stock)
+                    break
         if available < int(item['qty']):
             raise HTTPException(
                 409,
-                f"Insufficient stock for '{item.get('name') or (prod or {}).get('name') or 'item'}'. "
-                f"Only {available} left."
+                f"Insufficient stock for '{item.get('name') or prod.get('name') or 'item'}'"
+                + (f" ({item_option})" if item_option else '')
+                + f". Only {available} left."
             )
     paypal_resp = await create_paypal_order(
         amount=order['total'],
@@ -81,19 +93,42 @@ async def capture_order(payload: dict = Body(...)):
         if transitioned:
             # First transition — decrement inventory for each ordered item.
             # Skip custom "Other" lines (no product_id).
+            # If the item has an option that matches a variant with its own stock,
+            # decrement THAT variant's stock; otherwise decrement product.stock.
             for item in transitioned.get('items', []):
                 if not item.get('product_id'):
                     continue
-                await db.products.update_one(
-                    {'id': item['product_id']},
-                    {'$inc': {'stock': -int(item['qty'])},
-                     '$set': {'updated_at': datetime.utcnow()}}
-                )
-                # Safety net: clamp any negative stock to 0
-                await db.products.update_one(
-                    {'id': item['product_id'], 'stock': {'$lt': 0}},
-                    {'$set': {'stock': 0}}
-                )
+                qty = int(item['qty'])
+                opt = item.get('option')
+                prod_id = item['product_id']
+                variant_decremented = False
+                if opt:
+                    prod = await db.products.find_one(
+                        {'id': prod_id}, {'variants': 1}
+                    ) or {}
+                    for idx, v in enumerate(prod.get('variants', []) or []):
+                        if str(v.get('label', '')).strip().lower() == str(opt).strip().lower():
+                            if v.get('stock') is not None:
+                                new_stock = max(0, int(v['stock']) - qty)
+                                await db.products.update_one(
+                                    {'id': prod_id},
+                                    {'$set': {
+                                        f'variants.{idx}.stock': new_stock,
+                                        'updated_at': datetime.utcnow(),
+                                    }}
+                                )
+                                variant_decremented = True
+                            break
+                if not variant_decremented:
+                    await db.products.update_one(
+                        {'id': prod_id},
+                        {'$inc': {'stock': -qty},
+                         '$set': {'updated_at': datetime.utcnow()}}
+                    )
+                    await db.products.update_one(
+                        {'id': prod_id, 'stock': {'$lt': 0}},
+                        {'$set': {'stock': 0}}
+                    )
             # Bump promo usage counter if this order used one
             promo_code = transitioned.get('promo_code')
             if promo_code:

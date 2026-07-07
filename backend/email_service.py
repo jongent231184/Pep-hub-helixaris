@@ -255,22 +255,29 @@ async def send_order_emails(order: dict) -> None:
         return
 
     order_number = order.get('order_number', '?')
+
+    # Build the PDF once — used for both customer and admin emails.
+    try:
+        pdf_bytes = await asyncio.to_thread(build_invoice_pdf, order)
+    except Exception as e:
+        logger.warning(f'invoice PDF build failed for {order_number}: {e}')
+        pdf_bytes = None
+
     customer_email = (order.get('shipping_address') or {}).get('email', '')
     # Skip the placeholder we use before the customer fills their address
     if customer_email and customer_email != 'pending@ghp-health.com':
         try:
-            pdf_bytes = await asyncio.to_thread(build_invoice_pdf, order)
-            attachment = {
-                'filename': f'Invoice-{order_number}.pdf',
-                'content': list(pdf_bytes),  # Resend expects bytes as list of ints
-            }
             params = {
                 'from': f'{BUSINESS_NAME} <{FROM_EMAIL}>',
                 'to': [customer_email],
                 'subject': f'Order confirmed — {order_number}',
                 'html': _order_summary_html(order),
-                'attachments': [attachment],
             }
+            if pdf_bytes:
+                params['attachments'] = [{
+                    'filename': f'Invoice-{order_number}.pdf',
+                    'content': list(pdf_bytes),
+                }]
             res = await asyncio.to_thread(resend.Emails.send, params)
             logger.info(f'customer email sent for {order_number}: {res.get("id")}')
         except Exception as e:
@@ -286,6 +293,11 @@ async def send_order_emails(order: dict) -> None:
                 'subject': f'New order {order_number} — £{float(order.get("total", 0)):.2f}',
                 'html': _admin_notify_html(order),
             }
+            if pdf_bytes:
+                params['attachments'] = [{
+                    'filename': f'Invoice-{order_number}.pdf',
+                    'content': list(pdf_bytes),
+                }]
             res = await asyncio.to_thread(resend.Emails.send, params)
             logger.info(f'admin notify sent for {order_number}: {res.get("id")}')
         except Exception as e:

@@ -5,8 +5,12 @@ import { resolveImage } from '../lib/api';
 const ProductCard = ({ product }) => {
   const url = `/${product.category}/${product.slug}`;
   const hasPrice = product.price && product.price > 0;
-  const stock = Number.isFinite(product.stock) ? product.stock : 999;
-  const outOfStock = hasPrice && stock <= 0;
+  const productStock = Number.isFinite(product.stock) ? product.stock : 999;
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  const anyVariantInStock = variants.length > 0
+    ? variants.some(v => (v.stock === null || v.stock === undefined ? productStock : Number(v.stock)) > 0)
+    : productStock > 0;
+  const outOfStock = hasPrice && !anyVariantInStock;
   return (
     <div className="group bg-white border border-slate-200 rounded-md overflow-hidden hover:shadow-xl transition-shadow duration-300 relative flex flex-col">
       {outOfStock ? (

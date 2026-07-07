@@ -54,23 +54,37 @@ const ProductDetail = () => {
 
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const legacyOptions = Array.isArray(product.options) ? product.options : [];
+  const productStock = Number.isFinite(product.stock) ? product.stock : 999;
   // Prefer new-style variants; fall back to legacy string options (all at base price)
   const optionList = variants.length > 0
-    ? variants.map(v => ({ label: v.label, price: Number(v.price ?? product.price ?? 0) }))
-    : legacyOptions.map(l => ({ label: l, price: Number(product.price ?? 0) }));
+    ? variants.map(v => ({
+        label: v.label,
+        price: Number(v.price ?? product.price ?? 0),
+        stock: v.stock === null || v.stock === undefined ? productStock : Number(v.stock),
+      }))
+    : legacyOptions.map(l => ({ label: l, price: Number(product.price ?? 0), stock: productStock }));
 
   const selectedVariant = option ? optionList.find(o => o.label === option) : null;
   const currentPrice = selectedVariant ? selectedVariant.price : Number(product.price ?? 0);
+  const currentStock = selectedVariant ? selectedVariant.stock : productStock;
 
   const hasPrice = currentPrice > 0 || (optionList.length > 0 && optionList.some(o => o.price > 0));
-  const stock = Number.isFinite(product.stock) ? product.stock : 999;
-  const outOfStock = hasPrice && stock <= 0;
-  const lowStock = hasPrice && stock > 0 && stock <= 5;
-  const maxQty = Math.max(1, Math.min(20, stock || 1));
+  // If variants exist, "sold out" means ALL variants have 0 stock. If no variants, product stock rules.
+  const anyInStock = optionList.length > 0
+    ? optionList.some(o => o.stock > 0)
+    : productStock > 0;
+  const outOfStock = hasPrice && !anyInStock;
+  const stockForNudge = selectedVariant ? currentStock : (optionList.length > 0 ? Math.max(...optionList.map(o => o.stock)) : productStock);
+  const lowStock = hasPrice && stockForNudge > 0 && stockForNudge <= 5;
+  const maxQty = Math.max(1, Math.min(20, currentStock || 1));
 
   const handleAdd = () => {
     if (optionList.length > 0 && !option) {
       toast({ title: 'Please select an option', variant: 'destructive' });
+      return;
+    }
+    if (selectedVariant && selectedVariant.stock <= 0) {
+      toast({ title: 'This option is sold out', variant: 'destructive' });
       return;
     }
     addItem({
@@ -127,12 +141,18 @@ const ProductDetail = () => {
                   <Select value={option} onValueChange={setOption}>
                     <SelectTrigger data-testid="variant-select"><SelectValue placeholder="Select Option..." /></SelectTrigger>
                     <SelectContent>
-                      {optionList.map(o => (
-                        <SelectItem key={o.label} value={o.label}>
-                          {o.label}
-                          {o.price > 0 && ` — £${Number(o.price).toFixed(2)}`}
-                        </SelectItem>
-                      ))}
+                      {optionList.map(o => {
+                        const opSoldOut = o.stock <= 0;
+                        const opLow = o.stock > 0 && o.stock <= 5;
+                        return (
+                          <SelectItem key={o.label} value={o.label} disabled={opSoldOut}>
+                            {o.label}
+                            {o.price > 0 && ` — £${Number(o.price).toFixed(2)}`}
+                            {opSoldOut && ' — Sold out'}
+                            {opLow && ` (only ${o.stock} left)`}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -147,12 +167,18 @@ const ProductDetail = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                {hasPrice && (lowStock || outOfStock) && (
+                {hasPrice && (lowStock || outOfStock || (selectedVariant && selectedVariant.stock <= 0)) && (
                   <p
                     data-testid="stock-message"
-                    className={`text-xs font-semibold mt-2 ${outOfStock ? 'text-red-600' : 'text-amber-600'}`}
+                    className={`text-xs font-semibold mt-2 ${(outOfStock || (selectedVariant && selectedVariant.stock <= 0)) ? 'text-red-600' : 'text-amber-600'}`}
                   >
-                    {outOfStock ? 'Sold Out' : `Only ${stock} left in stock`}
+                    {outOfStock
+                      ? 'Sold Out'
+                      : selectedVariant && selectedVariant.stock <= 0
+                        ? `${selectedVariant.label} is sold out — pick another option`
+                        : selectedVariant
+                          ? `Only ${selectedVariant.stock} left of ${selectedVariant.label}`
+                          : `Only ${stockForNudge} left in stock`}
                   </p>
                 )}
               </div>

@@ -66,6 +66,7 @@ class CategoryOut(CategoryBase):
 class ProductVariant(BaseModel):
     label: str
     price: float = 0.0
+    stock: Optional[int] = None  # per-variant stock; falls back to product.stock if None
 
 
 class ProductBase(BaseModel):
