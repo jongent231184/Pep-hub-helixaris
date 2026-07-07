@@ -204,6 +204,11 @@ class OrderStatusUpdate(BaseModel):
     status: Optional[Literal['pending', 'processing', 'shipped', 'delivered', 'cancelled']] = None
     payment_status: Optional[Literal['pending', 'paid', 'failed', 'refunded']] = None
     notes: Optional[str] = None
+    order_number: Optional[str] = None  # admin-only renumber
+
+
+class CounterReset(BaseModel):
+    next_seq: int  # next order will be GHP-{seq:03d}
 
 
 # ---------- SETTINGS ----------

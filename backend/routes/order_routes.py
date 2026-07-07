@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from db import db
 from models import (
-    OrderCreate, OrderOut, OrderStatusUpdate,
+    OrderCreate, OrderOut, OrderStatusUpdate, CounterReset,
     PaylinkCreate, PaylinkAddress,
 )
 from auth import get_current_user_optional, get_current_user, require_admin
@@ -302,6 +302,21 @@ async def set_paylink_address(order_id: str, payload: PaylinkAddress):
     return OrderOut(**doc_to_dict(res))
 
 
+@router.post('/reset-counter')
+async def reset_order_counter(payload: CounterReset, _=Depends(require_admin)):
+    """Admin-only — sets the sequential order counter so the next order will be
+    GHP-{next_seq:03d}. Uses upsert so it works whether the counter exists or not."""
+    seq_start = int(payload.next_seq) - 1
+    if seq_start < 0:
+        raise HTTPException(400, 'next_seq must be >= 1')
+    await db.counters.update_one(
+        {'_id': 'orders'},
+        {'$set': {'seq': seq_start}},
+        upsert=True,
+    )
+    return {'ok': True, 'next_order_will_be': f'GHP-{payload.next_seq:03d}'}
+
+
 @router.get('/{order_id}', response_model=OrderOut)
 async def get_order(order_id: str, user: Optional[dict] = Depends(get_current_user_optional)):
     doc = await db.orders.find_one({'$or': [{'id': order_id}, {'order_number': order_id}]})
@@ -318,6 +333,10 @@ async def update_order_status(order_id: str, payload: OrderStatusUpdate, _=Depen
     updates = {k: v for k, v in payload.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(400, 'No fields to update')
+    if 'order_number' in updates:
+        clash = await db.orders.find_one({'order_number': updates['order_number'], 'id': {'$ne': order_id}})
+        if clash:
+            raise HTTPException(409, f"Order number {updates['order_number']} already exists")
     updates['updated_at'] = datetime.utcnow()
     res = await db.orders.find_one_and_update(
         {'id': order_id}, {'$set': updates}, return_document=True
