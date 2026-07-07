@@ -1,4 +1,5 @@
 """PayPal Smart Buttons routes."""
+import asyncio
 import os
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Body
@@ -100,6 +101,13 @@ async def capture_order(payload: dict = Body(...)):
                     {'code': promo_code},
                     {'$inc': {'uses': 1}, '$set': {'updated_at': datetime.utcnow()}}
                 )
+            # Fire order confirmation emails (never blocks or breaks the flow)
+            try:
+                from email_service import send_order_emails
+                fresh = await db.orders.find_one({'id': internal_order_id}) or transitioned
+                asyncio.create_task(send_order_emails(fresh))
+            except Exception as e:
+                print(f'[capture-order] email dispatch failed: {e}')
     else:
         await db.orders.update_one(
             {'id': internal_order_id},
