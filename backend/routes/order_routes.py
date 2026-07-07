@@ -116,7 +116,15 @@ async def my_orders(user: dict = Depends(get_current_user)):
 @router.get('/all', response_model=list[OrderOut])
 async def all_orders(_=Depends(require_admin)):
     docs = await db.orders.find().sort('created_at', -1).to_list(1000)
-    return [OrderOut(**doc_to_dict(d)) for d in docs]
+    out = []
+    for d in docs:
+        try:
+            out.append(OrderOut(**doc_to_dict(d)))
+        except Exception as e:
+            # Log the offending doc's key fields so we can spot bad legacy data
+            oid = d.get('id') or d.get('order_number') or str(d.get('_id'))
+            print(f"[orders/all] skipping malformed order {oid}: {e}")
+    return out
 
 
 # ============ PAY LINKS ============
