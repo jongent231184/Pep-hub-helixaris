@@ -33,9 +33,12 @@ const AdminProducts = () => {
     }
   };
 
-  const filtered = items.filter(p =>
-    !query || p.name.toLowerCase().includes(query.toLowerCase()) || p.slug.includes(query.toLowerCase())
-  );
+  const filtered = items
+    .filter(p =>
+      !query || p.name.toLowerCase().includes(query.toLowerCase()) || p.slug.includes(query.toLowerCase())
+    )
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div>
