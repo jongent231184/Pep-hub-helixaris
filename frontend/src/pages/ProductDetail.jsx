@@ -52,14 +52,24 @@ const ProductDetail = () => {
     );
   }
 
-  const hasPrice = product.price > 0;
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  const legacyOptions = Array.isArray(product.options) ? product.options : [];
+  // Prefer new-style variants; fall back to legacy string options (all at base price)
+  const optionList = variants.length > 0
+    ? variants.map(v => ({ label: v.label, price: Number(v.price ?? product.price ?? 0) }))
+    : legacyOptions.map(l => ({ label: l, price: Number(product.price ?? 0) }));
+
+  const selectedVariant = option ? optionList.find(o => o.label === option) : null;
+  const currentPrice = selectedVariant ? selectedVariant.price : Number(product.price ?? 0);
+
+  const hasPrice = currentPrice > 0 || (optionList.length > 0 && optionList.some(o => o.price > 0));
   const stock = Number.isFinite(product.stock) ? product.stock : 999;
   const outOfStock = hasPrice && stock <= 0;
   const lowStock = hasPrice && stock > 0 && stock <= 5;
   const maxQty = Math.max(1, Math.min(20, stock || 1));
 
   const handleAdd = () => {
-    if (product.options && product.options.length > 0 && !option) {
+    if (optionList.length > 0 && !option) {
       toast({ title: 'Please select an option', variant: 'destructive' });
       return;
     }
@@ -67,7 +77,7 @@ const ProductDetail = () => {
       id: product.id,
       slug: product.slug,
       name: product.name,
-      price: product.price,
+      price: currentPrice,
       image: product.image,
       category: product.category,
     }, parseInt(qty, 10), option || null);
@@ -97,9 +107,12 @@ const ProductDetail = () => {
             <div className="mt-6">
               {hasPrice ? (
                 <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-bold text-slate-900">£{Number(product.price).toFixed(2)}</span>
+                  <span className="text-3xl font-bold text-slate-900" data-testid="product-price">£{Number(currentPrice).toFixed(2)}</span>
                   {product.was_price && (
                     <span className="text-slate-500 line-through">Was £{Number(product.was_price).toFixed(2)}</span>
+                  )}
+                  {optionList.length > 0 && !option && (
+                    <span className="text-xs text-slate-500 italic">Select an option to confirm price</span>
                   )}
                 </div>
               ) : (
@@ -108,13 +121,18 @@ const ProductDetail = () => {
             </div>
 
             <div className="mt-8 space-y-4 max-w-md">
-              {product.options && product.options.length > 0 && (
+              {optionList.length > 0 && (
                 <div>
-                  <label className="text-sm font-semibold uppercase tracking-wide block mb-2">Size</label>
+                  <label className="text-sm font-semibold uppercase tracking-wide block mb-2">Option</label>
                   <Select value={option} onValueChange={setOption}>
-                    <SelectTrigger><SelectValue placeholder="Select Option..." /></SelectTrigger>
+                    <SelectTrigger data-testid="variant-select"><SelectValue placeholder="Select Option..." /></SelectTrigger>
                     <SelectContent>
-                      {product.options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      {optionList.map(o => (
+                        <SelectItem key={o.label} value={o.label}>
+                          {o.label}
+                          {o.price > 0 && ` — £${Number(o.price).toFixed(2)}`}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

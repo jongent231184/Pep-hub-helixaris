@@ -7,7 +7,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { ArrowLeft, Loader2, Upload, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Upload, X, Plus } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useStore } from '../../context/StoreContext';
 
@@ -16,7 +16,7 @@ const slugify = (s) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replac
 const empty = {
   slug: '', name: '', category: '', price: 0, was_price: null, price_label: '',
   image: '', images: [], description: '', tagline: '', badge: '',
-  options: [], stock: 999, visible: true, featured: false,
+  options: [], variants: [], stock: 999, visible: true, featured: false,
 };
 
 const AdminProductForm = () => {
@@ -28,7 +28,7 @@ const AdminProductForm = () => {
 
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(empty);
-  const [optionsText, setOptionsText] = useState('');
+  const [variants, setVariants] = useState([]); // [{label, price}]
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -41,12 +41,23 @@ const AdminProductForm = () => {
     if (!isEdit) return;
     Products.getById(productId).then((p) => {
       setForm({ ...empty, ...p });
-      setOptionsText((p.options || []).join('\n'));
+      // Prefer new variants; migrate legacy options → variants at product.price
+      if (p.variants && p.variants.length > 0) {
+        setVariants(p.variants.map(v => ({ label: v.label, price: Number(v.price ?? 0) })));
+      } else if (p.options && p.options.length > 0) {
+        setVariants(p.options.map(o => ({ label: o, price: Number(p.price || 0) })));
+      } else {
+        setVariants([]);
+      }
     }).catch(() => {
       toast({ title: 'Product not found', variant: 'destructive' });
       navigate('/admin/products');
     }).finally(() => setLoading(false));
   }, [productId, isEdit, navigate, toast]);
+
+  const addVariant = () => setVariants(v => [...v, { label: '', price: Number(form.price) || 0 }]);
+  const updateVariant = (idx, patch) => setVariants(v => v.map((row, i) => i === idx ? { ...row, ...patch } : row));
+  const removeVariant = (idx) => setVariants(v => v.filter((_, i) => i !== idx));
 
   const onField = (k) => (e) => {
     const v = e.target?.value ?? e;
@@ -79,9 +90,14 @@ const AdminProductForm = () => {
   const submit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    const cleanVariants = variants
+      .map(v => ({ label: (v.label || '').trim(), price: Number(v.price) || 0 }))
+      .filter(v => v.label);
     const payload = {
       ...form,
-      options: optionsText.split('\n').map(s => s.trim()).filter(Boolean),
+      variants: cleanVariants,
+      // Keep legacy options in sync so older clients still see labels
+      options: cleanVariants.map(v => v.label),
       price: Number(form.price) || 0,
       was_price: form.was_price === null || form.was_price === '' ? null : Number(form.was_price),
     };
@@ -168,8 +184,65 @@ const AdminProductForm = () => {
         </div>
 
         <div>
-          <Label>Size options (one per line, optional)</Label>
-          <Textarea value={optionsText} onChange={e => setOptionsText(e.target.value)} rows={4} placeholder="5mg&#10;10mg&#10;20mg" className="mt-1 font-mono text-sm" />
+          <div className="flex items-center justify-between mb-2">
+            <Label>Variants (optional)</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addVariant}
+              data-testid="add-variant-btn"
+              className="gap-1"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add variant
+            </Button>
+          </div>
+          <p className="text-xs text-slate-500 mb-3">
+            Each variant has its own price. If empty, the base price above is used.
+          </p>
+          {variants.length === 0 ? (
+            <div className="text-xs text-slate-400 italic border border-dashed rounded p-4 text-center">
+              No variants — customers will pay the base price of £{Number(form.price || 0).toFixed(2)}.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="grid grid-cols-[1fr,140px,40px] gap-2 text-xs uppercase tracking-wide text-slate-500 px-1">
+                <div>Label</div>
+                <div>Price (£)</div>
+                <div></div>
+              </div>
+              {variants.map((v, i) => (
+                <div key={i} className="grid grid-cols-[1fr,140px,40px] gap-2 items-center">
+                  <Input
+                    value={v.label}
+                    onChange={e => updateVariant(i, { label: e.target.value })}
+                    placeholder="e.g. 5mg"
+                    className="font-mono text-sm"
+                    data-testid={`variant-label-${i}`}
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={v.price}
+                    onChange={e => updateVariant(i, { price: e.target.value })}
+                    placeholder="0.00"
+                    data-testid={`variant-price-${i}`}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeVariant(i)}
+                    className="text-red-600 hover:bg-red-50 h-9 w-9"
+                    data-testid={`remove-variant-${i}`}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div>

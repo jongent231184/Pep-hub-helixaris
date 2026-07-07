@@ -32,6 +32,28 @@ async def _next_order_number() -> str:
 async def create_order(payload: OrderCreate, user: Optional[dict] = Depends(get_current_user_optional)):
     now = datetime.utcnow()
 
+    # Server-side price re-computation from the catalog so a client can't
+    # fabricate an item price by editing the payload. For each item we use
+    # the variant price if a matching option was selected, otherwise the
+    # base product price.
+    priced_items: list[dict] = []
+    subtotal_server = 0.0
+    for item in payload.items:
+        prod = await db.products.find_one({'id': item.product_id})
+        if not prod:
+            raise HTTPException(400, f"Unknown product: {item.name or item.product_id}")
+        server_price = float(prod.get('price', 0) or 0)
+        if item.option:
+            for v in prod.get('variants', []) or []:
+                if str(v.get('label', '')).strip().lower() == item.option.strip().lower():
+                    server_price = float(v.get('price', server_price) or server_price)
+                    break
+        line = item.model_dump()
+        line['price'] = server_price
+        priced_items.append(line)
+        subtotal_server += server_price * int(item.qty)
+    subtotal_server = round(subtotal_server, 2)
+
     # Server-side promo re-validation so the client can't fabricate discounts.
     discount = 0.0
     shipping_final = float(payload.shipping)
@@ -44,27 +66,27 @@ async def create_order(payload: OrderCreate, user: Optional[dict] = Depends(get_
             exp_ok = not exp or (isinstance(exp, datetime) and exp.replace(tzinfo=None) >= datetime.utcnow())
             max_uses = promo.get('max_uses')
             uses_ok = max_uses is None or int(promo.get('uses', 0)) < int(max_uses)
-            min_ok = float(payload.subtotal) >= float(promo.get('min_subtotal', 0))
+            min_ok = subtotal_server >= float(promo.get('min_subtotal', 0))
             if exp_ok and uses_ok and min_ok:
                 ptype = promo.get('type', 'percent')
                 value = float(promo.get('value', 0))
                 if ptype == 'percent':
-                    discount = round(payload.subtotal * (value / 100.0), 2)
+                    discount = round(subtotal_server * (value / 100.0), 2)
                 elif ptype == 'fixed':
-                    discount = round(min(value, payload.subtotal), 2)
+                    discount = round(min(value, subtotal_server), 2)
                 elif ptype == 'free_shipping':
                     shipping_final = 0.0
                 promo_code_stored = code
 
-    total_final = round(max(0.0, payload.subtotal - discount) + shipping_final, 2)
+    total_final = round(max(0.0, subtotal_server - discount) + shipping_final, 2)
 
     doc = {
         'id': str(uuid.uuid4()),
         'order_number': await _next_order_number(),
         'user_id': user['id'] if user else None,
-        'items': [i.model_dump() for i in payload.items],
+        'items': priced_items,
         'shipping_address': payload.shipping_address.model_dump(),
-        'subtotal': payload.subtotal,
+        'subtotal': subtotal_server,
         'shipping': shipping_final,
         'discount': discount,
         'promo_code': promo_code_stored,

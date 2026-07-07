@@ -63,6 +63,11 @@ class CategoryOut(CategoryBase):
 
 
 # ---------- PRODUCTS ----------
+class ProductVariant(BaseModel):
+    label: str
+    price: float = 0.0
+
+
 class ProductBase(BaseModel):
     slug: str
     name: str
@@ -75,7 +80,8 @@ class ProductBase(BaseModel):
     description: str = ''
     tagline: Optional[str] = ''
     badge: Optional[str] = ''
-    options: List[str] = Field(default_factory=list)
+    options: List[str] = Field(default_factory=list)  # legacy: labels only
+    variants: List[ProductVariant] = Field(default_factory=list)  # per-variant pricing
     stock: int = 999
     visible: bool = True
     featured: bool = False
@@ -98,6 +104,7 @@ class ProductUpdate(BaseModel):
     tagline: Optional[str] = None
     badge: Optional[str] = None
     options: Optional[List[str]] = None
+    variants: Optional[List[ProductVariant]] = None
     stock: Optional[int] = None
     visible: Optional[bool] = None
     featured: Optional[bool] = None
