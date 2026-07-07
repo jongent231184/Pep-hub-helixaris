@@ -57,6 +57,10 @@ export const Orders = {
   get: (id) => api.get(`/orders/${id}`).then(r => r.data),
   patch: (id, data) => api.patch(`/orders/${id}`, data).then(r => r.data),
   remove: (id) => api.delete(`/orders/${id}`).then(r => r.data),
+  // Paylinks
+  createPaylink: (data) => api.post('/orders/paylink', data).then(r => r.data),
+  getPaylink: (id) => api.get(`/orders/pay/${id}`).then(r => r.data),
+  setPaylinkAddress: (id, addr) => api.put(`/orders/pay/${id}/address`, addr).then(r => r.data),
 };
 
 export const Uploads = {

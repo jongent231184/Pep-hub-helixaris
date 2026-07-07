@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 
-const BYPASS_PATH_PREFIXES = ['/admin', '/login'];
+const BYPASS_PATH_PREFIXES = ['/admin', '/login', '/pay/'];
 
 const SitePasswordGate = ({ children }) => {
   const location = useLocation();

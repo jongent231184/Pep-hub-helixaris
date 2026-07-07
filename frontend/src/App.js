@@ -14,6 +14,7 @@ import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import OrderConfirmation from './pages/OrderConfirmation';
+import PayLinkPage from './pages/PayLinkPage';
 import Login from './pages/Login';
 import Account from './pages/Account';
 import Contact from './pages/Contact';
@@ -67,6 +68,7 @@ function App() {
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+              <Route path="/pay/:orderId" element={<PayLinkPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/account" element={<Account />} />
               <Route path="/contact" element={<Contact />} />

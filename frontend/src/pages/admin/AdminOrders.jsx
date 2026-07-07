@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Orders } from '../../lib/api';
-import { Loader2, Download, Trash2 } from 'lucide-react';
+import { Loader2, Download, Trash2, Link as LinkIcon } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
+import CreatePaylinkModal from './CreatePaylinkModal';
 
 const statusColor = (s) => ({
   pending: 'bg-amber-100 text-amber-800',
@@ -22,11 +23,12 @@ const AdminOrders = () => {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [deletingId, setDeletingId] = useState(null);
+  const [paylinkOpen, setPaylinkOpen] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    Orders.all().then(setOrders).catch(() => setOrders([])).finally(() => setLoading(false));
-  }, []);
+  const load = () => Orders.all().then(setOrders).catch(() => setOrders([])).finally(() => setLoading(false));
+
+  useEffect(() => { load(); }, []);
 
   const handleDelete = async (order) => {
     if (!window.confirm(`Delete order ${order.order_number}? This cannot be undone.`)) return;
@@ -75,8 +77,22 @@ const AdminOrders = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl md:text-3xl font-black uppercase">Orders</h1>
-        <Button onClick={exportCSV} variant="outline" className="gap-2"><Download className="h-4 w-4" /> Export CSV</Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setPaylinkOpen(true)}
+            className="bg-sky-500 hover:bg-sky-600 text-white gap-2"
+            data-testid="create-paylink-btn"
+          >
+            <LinkIcon className="h-4 w-4" /> Create pay link
+          </Button>
+          <Button onClick={exportCSV} variant="outline" className="gap-2"><Download className="h-4 w-4" /> Export CSV</Button>
+        </div>
       </div>
+      <CreatePaylinkModal
+        open={paylinkOpen}
+        onClose={() => setPaylinkOpen(false)}
+        onCreated={() => load()}
+      />
       <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by order #, name or email…" className="max-w-md mb-4" />
 
       {loading ? (

@@ -149,6 +149,33 @@ class OrderCreate(BaseModel):
     promo_code: Optional[str] = None
 
 
+class PaylinkItemIn(BaseModel):
+    product_id: str
+    qty: int = 1
+    option: Optional[str] = None
+
+
+class PaylinkCreate(BaseModel):
+    items: List[PaylinkItemIn]
+    customer_email: Optional[str] = None
+    customer_name: Optional[str] = None
+    notes: Optional[str] = ''
+    promo_code: Optional[str] = None
+    shipping: Optional[float] = None  # if None, use site default
+
+
+class PaylinkAddress(BaseModel):
+    first_name: str
+    last_name: str
+    email: EmailStr
+    phone: str
+    address1: str
+    address2: Optional[str] = ''
+    city: str
+    postcode: str
+    country: str = 'United Kingdom'
+
+
 class OrderOut(BaseModel):
     id: str
     order_number: str
@@ -165,6 +192,7 @@ class OrderOut(BaseModel):
     payment_provider: str = 'paypal'
     payment_id: Optional[str] = ''
     status: Literal['pending', 'processing', 'shipped', 'delivered', 'cancelled'] = 'pending'
+    source: Optional[str] = None  # 'web' | 'paylink'
     notes: Optional[str] = ''
     created_at: datetime
     updated_at: datetime
