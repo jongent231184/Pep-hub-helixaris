@@ -32,6 +32,7 @@ import AdminOrderDetail from './pages/admin/AdminOrderDetail';
 import AdminOrderInvoice from './pages/admin/AdminOrderInvoice';
 import AdminCustomers from './pages/admin/AdminCustomers';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminPromos from './pages/admin/AdminPromos';
 
 import './App.css';
 
@@ -54,6 +55,7 @@ function App() {
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="orders/:orderId" element={<AdminOrderDetail />} />
                 <Route path="orders/:orderId/invoice" element={<AdminOrderInvoice />} />
+                <Route path="promos" element={<AdminPromos />} />
                 <Route path="customers" element={<AdminCustomers />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>

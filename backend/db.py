@@ -20,3 +20,4 @@ async def init_indexes():
     await db.products.create_index('slug', unique=True)
     await db.categories.create_index('slug', unique=True)
     await db.orders.create_index('order_number', unique=True)
+    await db.promos.create_index('code', unique=True)

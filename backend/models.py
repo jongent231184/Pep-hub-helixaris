@@ -139,6 +139,7 @@ class OrderCreate(BaseModel):
     shipping: float
     total: float
     notes: Optional[str] = ''
+    promo_code: Optional[str] = None
 
 
 class OrderOut(BaseModel):
@@ -150,6 +151,8 @@ class OrderOut(BaseModel):
     subtotal: float
     shipping: float
     total: float
+    discount: float = 0
+    promo_code: Optional[str] = None
     currency: str = 'GBP'
     payment_status: Literal['pending', 'paid', 'failed', 'refunded'] = 'pending'
     payment_provider: str = 'paypal'
@@ -181,3 +184,51 @@ class Settings(BaseModel):
     # Publish controls (Squarespace-style)
     published: bool = False
     site_password: str = ''
+
+
+# ---------- PROMO CODES ----------
+class PromoBase(BaseModel):
+    code: str
+    type: Literal['percent', 'fixed', 'free_shipping'] = 'percent'
+    value: float = 0.0  # percent (0-100) or £ amount; ignored for free_shipping
+    active: bool = True
+    min_subtotal: float = 0.0
+    max_uses: Optional[int] = None
+    expires_at: Optional[datetime] = None
+
+
+class PromoCreate(PromoBase):
+    pass
+
+
+class PromoUpdate(BaseModel):
+    code: Optional[str] = None
+    type: Optional[Literal['percent', 'fixed', 'free_shipping']] = None
+    value: Optional[float] = None
+    active: Optional[bool] = None
+    min_subtotal: Optional[float] = None
+    max_uses: Optional[int] = None
+    expires_at: Optional[datetime] = None
+
+
+class PromoOut(PromoBase):
+    id: str
+    uses: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class PromoValidateIn(BaseModel):
+    code: str
+    subtotal: float
+    shipping: float = 0.0
+
+
+class PromoValidateOut(BaseModel):
+    valid: bool
+    code: Optional[str] = None
+    type: Optional[Literal['percent', 'fixed', 'free_shipping']] = None
+    value: float = 0.0
+    discount: float = 0.0            # amount deducted from subtotal
+    shipping_discount: float = 0.0   # amount deducted from shipping (for free_shipping)
+    message: str = ''

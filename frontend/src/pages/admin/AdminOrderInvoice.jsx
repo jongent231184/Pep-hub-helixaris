@@ -118,6 +118,14 @@ const AdminOrderInvoice = () => {
               <td colSpan={3} className="text-right py-2 text-slate-600">Subtotal</td>
               <td className="text-right py-2">£{Number(order.subtotal).toFixed(2)}</td>
             </tr>
+            {Number(order.discount) > 0 && (
+              <tr>
+                <td colSpan={3} className="text-right py-1 text-slate-600">
+                  Discount{order.promo_code ? ` (${order.promo_code})` : ''}
+                </td>
+                <td className="text-right py-1 text-emerald-700">-£{Number(order.discount).toFixed(2)}</td>
+              </tr>
+            )}
             <tr>
               <td colSpan={3} className="text-right py-1 text-slate-600">Shipping</td>
               <td className="text-right py-1">{order.shipping === 0 ? 'FREE' : `£${Number(order.shipping).toFixed(2)}`}</td>

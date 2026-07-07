@@ -88,6 +88,13 @@ async def capture_order(payload: dict = Body(...)):
                     {'id': item['product_id'], 'stock': {'$lt': 0}},
                     {'$set': {'stock': 0}}
                 )
+            # Bump promo usage counter if this order used one
+            promo_code = transitioned.get('promo_code')
+            if promo_code:
+                await db.promos.update_one(
+                    {'code': promo_code},
+                    {'$inc': {'uses': 1}, '$set': {'updated_at': datetime.utcnow()}}
+                )
     else:
         await db.orders.update_one(
             {'id': internal_order_id},

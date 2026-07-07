@@ -101,6 +101,12 @@ const AdminOrderDetail = () => {
           </ul>
           <div className="border-t mt-4 pt-4 text-sm space-y-1">
             <div className="flex justify-between"><span>Subtotal</span><span>£{Number(order.subtotal).toFixed(2)}</span></div>
+            {Number(order.discount) > 0 && (
+              <div className="flex justify-between text-emerald-700">
+                <span>Discount{order.promo_code ? ` (${order.promo_code})` : ''}</span>
+                <span>-£{Number(order.discount).toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between"><span>Shipping</span><span>{order.shipping === 0 ? 'FREE' : `£${Number(order.shipping).toFixed(2)}`}</span></div>
             <div className="flex justify-between font-bold text-base pt-2 border-t"><span>Total</span><span>£{Number(order.total).toFixed(2)}</span></div>
           </div>

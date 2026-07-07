@@ -10,7 +10,7 @@ import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
 import { useToast } from '../hooks/use-toast';
 import { Lock, Loader2 } from 'lucide-react';
-import { Orders, PayPal, resolveImage } from '../lib/api';
+import { Orders, PayPal, Promos, resolveImage } from '../lib/api';
 
 const loadPayPalScript = (clientId, currency = 'GBP') => new Promise((resolve, reject) => {
   if (window.paypal) return resolve(window.paypal);
@@ -48,8 +48,55 @@ const Checkout = () => {
 
   const flat = settings?.flat_shipping ?? 4.99;
   const threshold = settings?.free_shipping_threshold ?? 50;
-  const shipping = subtotal >= threshold ? 0 : flat;
-  const total = subtotal + shipping;
+  const baseShipping = subtotal >= threshold ? 0 : flat;
+
+  // Promo state
+  const [promoInput, setPromoInput] = useState('');
+  const [applyingPromo, setApplyingPromo] = useState(false);
+  const [promo, setPromo] = useState(null); // { code, type, discount, shipping_discount }
+
+  const discount = promo ? Number(promo.discount || 0) : 0;
+  const shipping = promo ? Math.max(0, baseShipping - Number(promo.shipping_discount || 0)) : baseShipping;
+  const total = Math.max(0, subtotal - discount) + shipping;
+
+  // Auto-remove promo if basket changes below the required minimum
+  useEffect(() => {
+    if (!promo) return;
+    // Re-validate silently when the basket subtotal changes
+    Promos.validate(promo.code, subtotal, baseShipping)
+      .then(res => {
+        if (!res.valid) {
+          setPromo(null);
+          toast({ title: 'Promo removed', description: res.message || 'No longer valid for your basket' });
+        } else {
+          setPromo(res);
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal]);
+
+  const applyPromo = async () => {
+    const code = (promoInput || '').trim();
+    if (!code) return;
+    setApplyingPromo(true);
+    try {
+      const res = await Promos.validate(code, subtotal, baseShipping);
+      if (!res.valid) {
+        toast({ title: 'Invalid code', description: res.message || 'This promo code cannot be used.', variant: 'destructive' });
+        return;
+      }
+      setPromo(res);
+      setPromoInput('');
+      toast({ title: 'Promo applied', description: res.code });
+    } catch (err) {
+      toast({ title: 'Could not apply promo', description: String(err.response?.data?.detail || err.message), variant: 'destructive' });
+    } finally {
+      setApplyingPromo(false);
+    }
+  };
+
+  const removePromo = () => setPromo(null);
 
   useEffect(() => {
     PayPal.config().then(setPaypalConfig).catch(() => setPaypalConfig({ configured: false }));
@@ -130,6 +177,7 @@ const Checkout = () => {
           country: form.country,
         },
         subtotal, shipping, total,
+        promo_code: promo ? promo.code : undefined,
       };
       const order = await Orders.create(orderPayload);
       setCreatedOrder(order);
@@ -251,8 +299,62 @@ const Checkout = () => {
             </div>
             <div className="border-t mt-4 pt-4 space-y-2 text-sm">
               <div className="flex justify-between"><span>Subtotal</span><span>£{subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>Shipping</span><span>{shipping === 0 ? 'FREE' : `£${shipping.toFixed(2)}`}</span></div>
+              {discount > 0 && (
+                <div className="flex justify-between text-emerald-700">
+                  <span>Discount ({promo.code})</span>
+                  <span>-£{discount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>Shipping{promo?.shipping_discount > 0 && ' (free)'}</span>
+                <span>{shipping === 0 ? 'FREE' : `£${shipping.toFixed(2)}`}</span>
+              </div>
               <div className="flex justify-between font-bold text-base pt-2 border-t"><span>Total</span><span>£{total.toFixed(2)}</span></div>
+            </div>
+
+            {/* Promo code */}
+            <div className="mt-4 border-t pt-4">
+              {promo ? (
+                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded px-3 py-2 text-sm">
+                  <div>
+                    <p className="font-mono font-bold text-emerald-800">{promo.code}</p>
+                    <p className="text-[11px] text-emerald-700">
+                      {promo.type === 'percent' && `${promo.value}% off`}
+                      {promo.type === 'fixed' && `£${Number(promo.value).toFixed(2)} off`}
+                      {promo.type === 'free_shipping' && 'Free shipping'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removePromo}
+                    data-testid="remove-promo-btn"
+                    className="text-xs text-slate-500 hover:text-red-600 underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    value={promoInput}
+                    onChange={e => setPromoInput(e.target.value.toUpperCase())}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); applyPromo(); } }}
+                    placeholder="Promo code"
+                    className="h-10 font-mono uppercase"
+                    data-testid="promo-code-input"
+                  />
+                  <Button
+                    type="button"
+                    onClick={applyPromo}
+                    disabled={applyingPromo || !promoInput.trim()}
+                    variant="outline"
+                    data-testid="apply-promo-btn"
+                    className="h-10 shrink-0"
+                  >
+                    {applyingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                  </Button>
+                </div>
+              )}
             </div>
 
             {step === 'details' && (

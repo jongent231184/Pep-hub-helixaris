@@ -83,4 +83,13 @@ export const Admin = {
   customers: () => api.get('/admin/customers').then(r => r.data),
 };
 
+export const Promos = {
+  list: () => api.get('/promos').then(r => r.data),
+  create: (data) => api.post('/promos', data).then(r => r.data),
+  update: (id, data) => api.put(`/promos/${id}`, data).then(r => r.data),
+  remove: (id) => api.delete(`/promos/${id}`).then(r => r.data),
+  validate: (code, subtotal, shipping) =>
+    api.post('/promos/validate', { code, subtotal, shipping }).then(r => r.data),
+};
+
 export default api;

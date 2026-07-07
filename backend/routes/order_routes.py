@@ -31,6 +31,33 @@ async def _next_order_number() -> str:
 @router.post('', response_model=OrderOut)
 async def create_order(payload: OrderCreate, user: Optional[dict] = Depends(get_current_user_optional)):
     now = datetime.utcnow()
+
+    # Server-side promo re-validation so the client can't fabricate discounts.
+    discount = 0.0
+    shipping_final = float(payload.shipping)
+    promo_code_stored: Optional[str] = None
+    if payload.promo_code:
+        code = payload.promo_code.strip().upper()
+        promo = await db.promos.find_one({'code': code})
+        if promo and promo.get('active', True):
+            exp = promo.get('expires_at')
+            exp_ok = not exp or (isinstance(exp, datetime) and exp.replace(tzinfo=None) >= datetime.utcnow())
+            max_uses = promo.get('max_uses')
+            uses_ok = max_uses is None or int(promo.get('uses', 0)) < int(max_uses)
+            min_ok = float(payload.subtotal) >= float(promo.get('min_subtotal', 0))
+            if exp_ok and uses_ok and min_ok:
+                ptype = promo.get('type', 'percent')
+                value = float(promo.get('value', 0))
+                if ptype == 'percent':
+                    discount = round(payload.subtotal * (value / 100.0), 2)
+                elif ptype == 'fixed':
+                    discount = round(min(value, payload.subtotal), 2)
+                elif ptype == 'free_shipping':
+                    shipping_final = 0.0
+                promo_code_stored = code
+
+    total_final = round(max(0.0, payload.subtotal - discount) + shipping_final, 2)
+
     doc = {
         'id': str(uuid.uuid4()),
         'order_number': await _next_order_number(),
@@ -38,8 +65,10 @@ async def create_order(payload: OrderCreate, user: Optional[dict] = Depends(get_
         'items': [i.model_dump() for i in payload.items],
         'shipping_address': payload.shipping_address.model_dump(),
         'subtotal': payload.subtotal,
-        'shipping': payload.shipping,
-        'total': payload.total,
+        'shipping': shipping_final,
+        'discount': discount,
+        'promo_code': promo_code_stored,
+        'total': total_final,
         'currency': 'GBP',
         'payment_status': 'pending',
         'payment_provider': 'paypal',
