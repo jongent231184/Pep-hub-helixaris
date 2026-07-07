@@ -57,7 +57,7 @@ const PayLinkPage = () => {
           ...f,
           firstName: o.shipping_address?.first_name || '',
           lastName: o.shipping_address?.last_name || '',
-          email: o.shipping_address?.email && !o.shipping_address.email.endsWith('@paylink.local') ? o.shipping_address.email : '',
+          email: o.shipping_address?.email && o.shipping_address.email !== 'pending@ghp-health.com' ? o.shipping_address.email : '',
           phone: o.shipping_address?.phone || '',
           address1: o.shipping_address?.address1 || '',
           address2: o.shipping_address?.address2 || '',

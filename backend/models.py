@@ -157,7 +157,7 @@ class PaylinkItemIn(BaseModel):
 
 class PaylinkCreate(BaseModel):
     items: List[PaylinkItemIn]
-    customer_email: Optional[str] = None
+    customer_email: Optional[EmailStr] = None
     customer_name: Optional[str] = None
     notes: Optional[str] = ''
     promo_code: Optional[str] = None

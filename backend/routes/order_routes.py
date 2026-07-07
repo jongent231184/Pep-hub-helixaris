@@ -132,9 +132,10 @@ async def all_orders(_=Depends(require_admin)):
 
 def _placeholder_address() -> dict:
     """Empty shipping address so the OrderOut schema stays valid until the
-    customer fills their real one in on the pay page."""
+    customer fills their real one in on the pay page. Uses a valid-format
+    email domain (EmailStr rejects .local TLDs)."""
     return {
-        'first_name': '', 'last_name': '', 'email': 'pending@paylink.local',
+        'first_name': '', 'last_name': '', 'email': 'pending@ghp-health.com',
         'phone': '', 'address1': '', 'address2': '',
         'city': '', 'postcode': '', 'country': 'United Kingdom',
     }

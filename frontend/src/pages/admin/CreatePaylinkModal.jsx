@@ -62,7 +62,17 @@ const CreatePaylinkModal = ({ open, onClose, onCreated }) => {
       setCreatedOrder(order);
       onCreated?.(order);
     } catch (err) {
-      toast({ title: 'Failed to create pay link', description: String(err.response?.data?.detail || err.message), variant: 'destructive' });
+      // FastAPI validation errors come back as an array of {msg, loc}. Flatten for display.
+      const detail = err.response?.data?.detail;
+      let description;
+      if (Array.isArray(detail)) {
+        description = detail.map(d => (d.loc?.slice(-1)[0] ? `${d.loc.slice(-1)[0]}: ` : '') + d.msg).join(' • ');
+      } else if (typeof detail === 'string') {
+        description = detail;
+      } else {
+        description = err.message;
+      }
+      toast({ title: 'Failed to create pay link', description, variant: 'destructive' });
     } finally {
       setCreating(false);
     }
