@@ -55,7 +55,7 @@ const CategoryPage = () => {
     <Layout>
       <div className="max-w-7xl mx-auto px-4 py-10">
         <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: cat.name }]} />
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-6 mb-8 border-b pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-6 mb-4 border-b pb-6">
           <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tight">{cat.name}</h1>
           <Select value={sort} onValueChange={setSort}>
             <SelectTrigger className="w-full sm:w-64">
@@ -67,6 +67,13 @@ const CategoryPage = () => {
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div
+          data-testid="research-disclaimer-banner"
+          className="mb-8 bg-amber-50 border-l-4 border-amber-500 rounded px-4 py-3 text-xs sm:text-sm text-amber-900"
+        >
+          <strong className="uppercase tracking-wider">For research use only.</strong>{' '}
+          All products are supplied strictly for laboratory research purposes and are not for human consumption, therapeutic use, or in vitro diagnostic use.
         </div>
         {sorted.length === 0 ? (
           <p className="text-center text-slate-500 py-20">No products in this category yet.</p>

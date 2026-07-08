@@ -54,6 +54,9 @@ const ProductCard = ({ product }) => {
             <p className="text-xs text-slate-600 italic">{product.price_label || 'Email for pricing'}</p>
           )}
         </div>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 mb-2">
+          For research use only · Not for human consumption
+        </p>
         <Link
           to={url}
           className="mt-auto inline-flex justify-center items-center bg-slate-900 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded hover:bg-sky-600 transition-colors"

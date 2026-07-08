@@ -107,6 +107,14 @@ const ProductDetail = () => {
           { label: product.name }
         ]} />
 
+        <div
+          data-testid="research-disclaimer-banner"
+          className="mt-6 bg-amber-50 border-l-4 border-amber-500 rounded px-4 py-3 text-xs sm:text-sm text-amber-900"
+        >
+          <strong className="uppercase tracking-wider">For research use only.</strong>{' '}
+          Supplied strictly for laboratory research purposes. Not for human consumption, therapeutic use, or in vitro diagnostic use.
+        </div>
+
         <div className="grid lg:grid-cols-2 gap-10 mt-8">
           <div className="bg-slate-50 rounded-lg overflow-hidden border">
             <img src={resolveImage(product.image)} alt={product.name} className="w-full h-full object-contain aspect-square p-8" />
