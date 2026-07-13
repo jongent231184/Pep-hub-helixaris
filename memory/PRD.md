@@ -40,6 +40,12 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
   - Backend `OrderCreate`/`OrderOut` now accept optional `billing_address`; when omitted it defaults to `shipping_address`
   - Admin order detail displays a separate "Billing address" block only when it differs from shipping
   - Admin invoice + PDF email invoice both render a "Ship to" column alongside "Bill to" only when addresses differ
+- **Saved address book (Feb 2026)**:
+  - New collection `addresses` with per-user CRUD via `/api/addresses` (GET mine, POST, PUT, DELETE)
+  - `My Account` page has a "Saved Addresses" section with add/edit/delete + set-default
+  - Checkout auto-loads the default saved address for logged-in customers (email + all shipping fields pre-populated)
+  - Dropdown lets customer pick any other saved address for shipping or billing
+  - "Save this address to my account for next time" checkbox on new addresses; auto-saved after order creation
 
 ## Backlog / Next Tasks
 ### P0 — Ready to Deploy

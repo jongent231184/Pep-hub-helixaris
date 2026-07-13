@@ -11,7 +11,8 @@ import { useStore } from '../context/StoreContext';
 import { useToast } from '../hooks/use-toast';
 import { Lock, Loader2 } from 'lucide-react';
 import { Checkbox } from '../components/ui/checkbox';
-import { Orders, PayPal, Promos, resolveImage } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+import { Orders, PayPal, Promos, Addresses, resolveImage } from '../lib/api';
 
 const loadPayPalScript = (clientId, currency = 'GBP') => new Promise((resolve, reject) => {
   if (window.paypal) return resolve(window.paypal);
@@ -32,6 +33,7 @@ const loadPayPalScript = (clientId, currency = 'GBP') => new Promise((resolve, r
 const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
   const { settings } = useStore();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const paypalRef = useRef(null);
@@ -50,8 +52,58 @@ const Checkout = () => {
     address1: '', address2: '', city: '', postcode: '', country: 'United Kingdom',
   });
 
+  // Saved addresses for logged-in users
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedShippingId, setSelectedShippingId] = useState(''); // '' = new/manual
+  const [selectedBillingId, setSelectedBillingId] = useState('');
+  const [saveShippingToBook, setSaveShippingToBook] = useState(false);
+  const [saveBillingToBook, setSaveBillingToBook] = useState(false);
+
+  const applyAddress = (target, addr) => {
+    const mapped = {
+      firstName: addr.first_name || '', lastName: addr.last_name || '',
+      phone: addr.phone || '',
+      address1: addr.address1 || '', address2: addr.address2 || '',
+      city: addr.city || '', postcode: addr.postcode || '',
+      country: addr.country || 'United Kingdom',
+    };
+    if (target === 'shipping') {
+      setForm((f) => ({ ...f, ...mapped }));
+    } else {
+      setBilling((b) => ({ ...b, ...mapped }));
+    }
+  };
+
+  // Preload user's email + saved addresses; auto-populate the default one
+  useEffect(() => {
+    if (!user) return;
+    if (user.email) setForm((f) => (f.email ? f : { ...f, email: user.email }));
+    Addresses.mine().then((list) => {
+      setSavedAddresses(list);
+      const def = list.find((a) => a.is_default) || list[0];
+      if (def) {
+        setSelectedShippingId(def.id);
+        applyAddress('shipping', def);
+      }
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   const update = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   const updateBilling = (k) => (e) => setBilling(b => ({ ...b, [k]: e.target.value }));
+
+  const onSelectSavedShipping = (val) => {
+    setSelectedShippingId(val === '__manual__' ? '' : val);
+    if (val === '__manual__' || !val) return;
+    const a = savedAddresses.find((x) => x.id === val);
+    if (a) applyAddress('shipping', a);
+  };
+  const onSelectSavedBilling = (val) => {
+    setSelectedBillingId(val === '__manual__' ? '' : val);
+    if (val === '__manual__' || !val) return;
+    const a = savedAddresses.find((x) => x.id === val);
+    if (a) applyAddress('billing', a);
+  };
 
   const flat = settings?.flat_shipping ?? 4.99;
   const threshold = settings?.free_shipping_threshold ?? 50;
@@ -198,6 +250,31 @@ const Checkout = () => {
         promo_code: promo ? promo.code : undefined,
       };
       const order = await Orders.create(orderPayload);
+
+      // Save address(es) to the user's account when opted in (best-effort).
+      if (user) {
+        try {
+          if (saveShippingToBook && !selectedShippingId) {
+            await Addresses.create({
+              label: 'Home',
+              first_name: form.firstName, last_name: form.lastName, phone: form.phone,
+              address1: form.address1, address2: form.address2 || '',
+              city: form.city, postcode: form.postcode, country: form.country,
+              is_default: savedAddresses.length === 0,
+            });
+          }
+          if (!billingSameAsShipping && saveBillingToBook && !selectedBillingId) {
+            await Addresses.create({
+              label: 'Billing',
+              first_name: billing.firstName, last_name: billing.lastName, phone: billing.phone,
+              address1: billing.address1, address2: billing.address2 || '',
+              city: billing.city, postcode: billing.postcode, country: billing.country,
+              is_default: false,
+            });
+          }
+        } catch (_) { /* silent — order already created */ }
+      }
+
       setCreatedOrder(order);
       setStep('payment');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -252,6 +329,22 @@ const Checkout = () => {
 
                 <section className="border rounded-lg p-6 bg-white">
                   <h2 className="text-lg font-bold uppercase mb-4">Shipping Address</h2>
+                  {user && savedAddresses.length > 0 && (
+                    <div className="mb-5 pb-5 border-b" data-testid="saved-shipping-picker">
+                      <Label className="text-xs uppercase tracking-wider text-slate-500">Use a saved address</Label>
+                      <Select value={selectedShippingId || '__manual__'} onValueChange={onSelectSavedShipping}>
+                        <SelectTrigger className="mt-1"><SelectValue placeholder="Enter a new address" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__manual__">Enter a new address</SelectItem>
+                          {savedAddresses.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {(a.label || a.address1)}{a.is_default ? ' · Default' : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div><Label>First Name</Label><Input required value={form.firstName} onChange={update('firstName')} className="mt-1" /></div>
                     <div><Label>Last Name</Label><Input required value={form.lastName} onChange={update('lastName')} className="mt-1" /></div>
@@ -271,6 +364,16 @@ const Checkout = () => {
                     </div>
                     <div><Label>Phone</Label><Input required value={form.phone} onChange={update('phone')} className="mt-1" /></div>
                   </div>
+                  {user && !selectedShippingId && (
+                    <label className="flex items-center gap-2 mt-5 text-sm cursor-pointer select-none">
+                      <Checkbox
+                        checked={saveShippingToBook}
+                        onCheckedChange={(v) => setSaveShippingToBook(v === true)}
+                        data-testid="save-shipping-checkbox"
+                      />
+                      <span>Save this address to my account for next time</span>
+                    </label>
+                  )}
                 </section>
 
                 <section className="border rounded-lg p-6 bg-white">
@@ -288,7 +391,24 @@ const Checkout = () => {
                   {billingSameAsShipping ? (
                     <p className="text-sm text-slate-500">Billing address matches the shipping address above.</p>
                   ) : (
-                    <div className="grid sm:grid-cols-2 gap-4" data-testid="billing-address-form">
+                    <>
+                      {user && savedAddresses.length > 0 && (
+                        <div className="mb-5 pb-5 border-b" data-testid="saved-billing-picker">
+                          <Label className="text-xs uppercase tracking-wider text-slate-500">Use a saved address</Label>
+                          <Select value={selectedBillingId || '__manual__'} onValueChange={onSelectSavedBilling}>
+                            <SelectTrigger className="mt-1"><SelectValue placeholder="Enter a new address" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__manual__">Enter a new address</SelectItem>
+                              {savedAddresses.map((a) => (
+                                <SelectItem key={a.id} value={a.id}>
+                                  {(a.label || a.address1)}{a.is_default ? ' · Default' : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      <div className="grid sm:grid-cols-2 gap-4" data-testid="billing-address-form">
                       <div><Label>First Name</Label><Input required value={billing.firstName} onChange={updateBilling('firstName')} className="mt-1" /></div>
                       <div><Label>Last Name</Label><Input required value={billing.lastName} onChange={updateBilling('lastName')} className="mt-1" /></div>
                       <div className="sm:col-span-2"><Label>Address Line 1</Label><Input required value={billing.address1} onChange={updateBilling('address1')} className="mt-1" /></div>
@@ -307,6 +427,17 @@ const Checkout = () => {
                       </div>
                       <div><Label>Phone (Optional)</Label><Input value={billing.phone} onChange={updateBilling('phone')} className="mt-1" /></div>
                     </div>
+                    {user && !selectedBillingId && (
+                      <label className="flex items-center gap-2 mt-5 text-sm cursor-pointer select-none">
+                        <Checkbox
+                          checked={saveBillingToBook}
+                          onCheckedChange={(v) => setSaveBillingToBook(v === true)}
+                          data-testid="save-billing-checkbox"
+                        />
+                        <span>Save this billing address to my account for next time</span>
+                      </label>
+                    )}
+                    </>
                   )}
                 </section>
               </form>

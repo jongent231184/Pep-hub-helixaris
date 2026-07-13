@@ -21,6 +21,7 @@ from routes.paypal_routes import router as paypal_router  # noqa: E402
 from routes.settings_routes import router as settings_router  # noqa: E402
 from routes.admin_routes import router as admin_router  # noqa: E402
 from routes.promo_routes import router as promo_router  # noqa: E402
+from routes.address_routes import router as address_router  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s - %(message)s')
 logger = logging.getLogger('ghp')
@@ -72,6 +73,7 @@ api_router.include_router(paypal_router)
 api_router.include_router(settings_router)
 api_router.include_router(admin_router)
 api_router.include_router(promo_router)
+api_router.include_router(address_router)
 
 app.include_router(api_router)
 

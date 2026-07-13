@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { LogOut, ShoppingBag, Loader2 } from 'lucide-react';
 import { Orders } from '../lib/api';
 import ChangePasswordCard from '../components/ChangePasswordCard';
+import SavedAddresses from '../components/SavedAddresses';
 
 const Account = () => {
   const { user, logout, loading } = useAuth();
@@ -78,6 +79,10 @@ const Account = () => {
             </table>
           </div>
         )}
+
+        <div className="mt-10 border-t pt-8">
+          <SavedAddresses />
+        </div>
 
         <div className="mt-10 border-t pt-6">
           <ChangePasswordCard />

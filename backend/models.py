@@ -277,3 +277,41 @@ class PromoValidateOut(BaseModel):
     discount: float = 0.0            # amount deducted from subtotal
     shipping_discount: float = 0.0   # amount deducted from shipping (for free_shipping)
     message: str = ''
+
+
+# ---------- SAVED ADDRESSES ----------
+class AddressBase(BaseModel):
+    label: str = ''  # e.g. "Home", "Office"
+    first_name: str
+    last_name: str
+    phone: str = ''
+    address1: str
+    address2: Optional[str] = ''
+    city: str
+    postcode: str
+    country: str = 'United Kingdom'
+    is_default: bool = False
+
+
+class AddressCreate(AddressBase):
+    pass
+
+
+class AddressUpdate(BaseModel):
+    label: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    address1: Optional[str] = None
+    address2: Optional[str] = None
+    city: Optional[str] = None
+    postcode: Optional[str] = None
+    country: Optional[str] = None
+    is_default: Optional[bool] = None
+
+
+class AddressOut(AddressBase):
+    id: str
+    user_id: str
+    created_at: datetime
+    updated_at: datetime
