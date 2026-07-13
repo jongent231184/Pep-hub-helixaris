@@ -34,6 +34,12 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
   - PayPal `create-order` refuses orders that exceed available stock (409 + friendly toast)
   - PayPal `capture-order` performs atomic idempotent stock `$inc: {stock: -qty}` on the first paid transition; double-fire captures are safely a no-op
   - Storefront shows "Sold Out" badge on ProductCard and disables Add-to-Basket on ProductDetail; qty dropdown capped to available stock; "Only N left" nudge when stock ≤ 5
+- **Separate billing & shipping address at checkout (Feb 2026)**:
+  - Checkout now has a "Billing Address" section with a "Same as shipping address" checkbox (checked by default)
+  - When unchecked, a full billing form appears (name, address, city, postcode, country, optional phone)
+  - Backend `OrderCreate`/`OrderOut` now accept optional `billing_address`; when omitted it defaults to `shipping_address`
+  - Admin order detail displays a separate "Billing address" block only when it differs from shipping
+  - Admin invoice + PDF email invoice both render a "Ship to" column alongside "Bill to" only when addresses differ
 
 ## Backlog / Next Tasks
 ### P0 — Ready to Deploy

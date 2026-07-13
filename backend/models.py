@@ -143,6 +143,7 @@ class ShippingAddress(BaseModel):
 class OrderCreate(BaseModel):
     items: List[OrderItem]
     shipping_address: ShippingAddress
+    billing_address: Optional[ShippingAddress] = None  # if None, billing == shipping
     subtotal: float
     shipping: float
     total: float
@@ -185,6 +186,7 @@ class OrderOut(BaseModel):
     user_id: Optional[str] = None
     items: List[OrderItem]
     shipping_address: ShippingAddress
+    billing_address: Optional[ShippingAddress] = None
     subtotal: float
     shipping: float
     total: float

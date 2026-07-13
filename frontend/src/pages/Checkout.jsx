@@ -10,6 +10,7 @@ import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
 import { useToast } from '../hooks/use-toast';
 import { Lock, Loader2 } from 'lucide-react';
+import { Checkbox } from '../components/ui/checkbox';
 import { Orders, PayPal, Promos, resolveImage } from '../lib/api';
 
 const loadPayPalScript = (clientId, currency = 'GBP') => new Promise((resolve, reject) => {
@@ -43,8 +44,14 @@ const Checkout = () => {
     email: '', firstName: '', lastName: '', phone: '',
     address1: '', address2: '', city: '', postcode: '', country: 'United Kingdom',
   });
+  const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
+  const [billing, setBilling] = useState({
+    firstName: '', lastName: '', phone: '',
+    address1: '', address2: '', city: '', postcode: '', country: 'United Kingdom',
+  });
 
   const update = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+  const updateBilling = (k) => (e) => setBilling(b => ({ ...b, [k]: e.target.value }));
 
   const flat = settings?.flat_shipping ?? 4.99;
   const threshold = settings?.free_shipping_threshold ?? 50;
@@ -176,6 +183,17 @@ const Checkout = () => {
           postcode: form.postcode,
           country: form.country,
         },
+        billing_address: billingSameAsShipping ? undefined : {
+          first_name: billing.firstName,
+          last_name: billing.lastName,
+          email: form.email, // billing shares customer email
+          phone: billing.phone,
+          address1: billing.address1,
+          address2: billing.address2,
+          city: billing.city,
+          postcode: billing.postcode,
+          country: billing.country,
+        },
         subtotal, shipping, total,
         promo_code: promo ? promo.code : undefined,
       };
@@ -253,6 +271,43 @@ const Checkout = () => {
                     </div>
                     <div><Label>Phone</Label><Input required value={form.phone} onChange={update('phone')} className="mt-1" /></div>
                   </div>
+                </section>
+
+                <section className="border rounded-lg p-6 bg-white">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <h2 className="text-lg font-bold uppercase">Billing Address</h2>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer select-none" data-testid="billing-same-toggle-label">
+                      <Checkbox
+                        checked={billingSameAsShipping}
+                        onCheckedChange={(v) => setBillingSameAsShipping(v === true)}
+                        data-testid="billing-same-checkbox"
+                      />
+                      <span className="text-slate-700">Same as shipping address</span>
+                    </label>
+                  </div>
+                  {billingSameAsShipping ? (
+                    <p className="text-sm text-slate-500">Billing address matches the shipping address above.</p>
+                  ) : (
+                    <div className="grid sm:grid-cols-2 gap-4" data-testid="billing-address-form">
+                      <div><Label>First Name</Label><Input required value={billing.firstName} onChange={updateBilling('firstName')} className="mt-1" /></div>
+                      <div><Label>Last Name</Label><Input required value={billing.lastName} onChange={updateBilling('lastName')} className="mt-1" /></div>
+                      <div className="sm:col-span-2"><Label>Address Line 1</Label><Input required value={billing.address1} onChange={updateBilling('address1')} className="mt-1" /></div>
+                      <div className="sm:col-span-2"><Label>Address Line 2 (Optional)</Label><Input value={billing.address2} onChange={updateBilling('address2')} className="mt-1" /></div>
+                      <div><Label>City</Label><Input required value={billing.city} onChange={updateBilling('city')} className="mt-1" /></div>
+                      <div><Label>Postcode</Label><Input required value={billing.postcode} onChange={updateBilling('postcode')} className="mt-1" /></div>
+                      <div>
+                        <Label>Country</Label>
+                        <Select value={billing.country} onValueChange={v => setBilling(b => ({ ...b, country: v }))}>
+                          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="United Kingdom">United Kingdom</SelectItem>
+                            <SelectItem value="Ireland">Ireland</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div><Label>Phone (Optional)</Label><Input value={billing.phone} onChange={updateBilling('phone')} className="mt-1" /></div>
+                    </div>
+                  )}
                 </section>
               </form>
             )}

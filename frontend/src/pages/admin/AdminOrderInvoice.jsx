@@ -23,6 +23,15 @@ const AdminOrderInvoice = () => {
   if (!order) return <p className="p-6">Invoice not found.</p>;
 
   const a = order.shipping_address || {};
+  const b = order.billing_address || null;
+  const billingDiffers = b && (
+    b.address1 !== a.address1 ||
+    b.postcode !== a.postcode ||
+    b.city !== a.city ||
+    b.first_name !== a.first_name ||
+    b.last_name !== a.last_name
+  );
+  const billTo = billingDiffers ? b : a;
   const s = settings || {};
   const paid = order.payment_status === 'paid';
   const created = new Date(order.created_at);
@@ -62,18 +71,29 @@ const AdminOrderInvoice = () => {
           </div>
         </div>
 
-        {/* Billing + Order info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6 border-b">
+        {/* Billing + Shipping + Order info */}
+        <div className={`grid grid-cols-1 ${billingDiffers ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-8 py-6 border-b`}>
           <div>
             <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">Billed to</p>
-            <p className="font-semibold">{a.first_name} {a.last_name}</p>
-            <p className="text-sm">{a.address1}</p>
-            {a.address2 && <p className="text-sm">{a.address2}</p>}
-            <p className="text-sm">{a.city}, {a.postcode}</p>
-            <p className="text-sm">{a.country}</p>
+            <p className="font-semibold">{billTo.first_name} {billTo.last_name}</p>
+            <p className="text-sm">{billTo.address1}</p>
+            {billTo.address2 && <p className="text-sm">{billTo.address2}</p>}
+            <p className="text-sm">{billTo.city}, {billTo.postcode}</p>
+            <p className="text-sm">{billTo.country}</p>
             <p className="text-sm mt-2 text-slate-600">{a.email}</p>
-            {a.phone && <p className="text-sm text-slate-600">{a.phone}</p>}
+            {(billTo.phone || a.phone) && <p className="text-sm text-slate-600">{billTo.phone || a.phone}</p>}
           </div>
+          {billingDiffers && (
+            <div>
+              <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">Shipped to</p>
+              <p className="font-semibold">{a.first_name} {a.last_name}</p>
+              <p className="text-sm">{a.address1}</p>
+              {a.address2 && <p className="text-sm">{a.address2}</p>}
+              <p className="text-sm">{a.city}, {a.postcode}</p>
+              <p className="text-sm">{a.country}</p>
+              {a.phone && <p className="text-sm mt-2 text-slate-600">{a.phone}</p>}
+            </div>
+          )}
           <div className="md:text-right">
             <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">Details</p>
             <p className="text-sm"><span className="text-slate-500">Order number:</span> <span className="font-mono">{order.order_number}</span></p>

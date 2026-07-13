@@ -49,6 +49,15 @@ const AdminOrderDetail = () => {
   if (!order) return <p>Order not found.</p>;
 
   const a = order.shipping_address || {};
+  const b = order.billing_address || null;
+  // Only surface a separate billing block when it materially differs from shipping
+  const billingDiffers = b && (
+    b.address1 !== a.address1 ||
+    b.postcode !== a.postcode ||
+    b.city !== a.city ||
+    b.first_name !== a.first_name ||
+    b.last_name !== a.last_name
+  );
 
   return (
     <div className="max-w-5xl">
@@ -115,7 +124,7 @@ const AdminOrderDetail = () => {
         {/* Customer + status */}
         <div className="space-y-4">
           <div className="bg-white border rounded-lg p-5">
-            <h2 className="font-bold uppercase text-sm tracking-wide mb-3">Customer</h2>
+            <h2 className="font-bold uppercase text-sm tracking-wide mb-3">Customer{billingDiffers ? ' · Shipping to' : ''}</h2>
             <p className="font-semibold">{a.first_name} {a.last_name}</p>
             <p className="text-sm text-slate-600">{a.email}</p>
             <p className="text-sm text-slate-600">{a.phone}</p>
@@ -126,6 +135,20 @@ const AdminOrderDetail = () => {
               <p>{a.country}</p>
             </div>
           </div>
+
+          {billingDiffers && (
+            <div className="bg-white border rounded-lg p-5" data-testid="billing-address-block">
+              <h2 className="font-bold uppercase text-sm tracking-wide mb-3">Billing address</h2>
+              <p className="font-semibold">{b.first_name} {b.last_name}</p>
+              {b.phone && <p className="text-sm text-slate-600">{b.phone}</p>}
+              <div className="mt-3 pt-3 border-t text-sm text-slate-700">
+                <p>{b.address1}</p>
+                {b.address2 && <p>{b.address2}</p>}
+                <p>{b.city}, {b.postcode}</p>
+                <p>{b.country}</p>
+              </div>
+            </div>
+          )}
 
           <div className="bg-white border rounded-lg p-5 space-y-4">
             <h2 className="font-bold uppercase text-sm tracking-wide">Status</h2>

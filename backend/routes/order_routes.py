@@ -89,6 +89,11 @@ async def create_order(payload: OrderCreate, user: Optional[dict] = Depends(get_
         'user_id': user['id'] if user else None,
         'items': priced_items,
         'shipping_address': payload.shipping_address.model_dump(),
+        'billing_address': (
+            payload.billing_address.model_dump()
+            if payload.billing_address is not None
+            else payload.shipping_address.model_dump()
+        ),
         'subtotal': subtotal_server,
         'shipping': shipping_final,
         'discount': discount,

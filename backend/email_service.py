@@ -77,20 +77,46 @@ def build_invoice_pdf(order: dict) -> bytes:
     elems.append(meta_tbl)
     elems.append(Spacer(1, 6 * mm))
 
-    # Bill to
-    addr = order.get('shipping_address', {})
+    # Bill to (uses billing_address if present, else shipping)
+    addr = order.get('shipping_address', {}) or {}
+    billing = order.get('billing_address') or None
+    billing_differs = bool(billing) and (
+        billing.get('address1') != addr.get('address1')
+        or billing.get('postcode') != addr.get('postcode')
+        or billing.get('city') != addr.get('city')
+        or billing.get('first_name') != addr.get('first_name')
+        or billing.get('last_name') != addr.get('last_name')
+    )
+    bill_source = billing if billing_differs else addr
     bill_to_lines = [
-        f"{addr.get('first_name', '')} {addr.get('last_name', '')}".strip(),
+        f"{bill_source.get('first_name', '')} {bill_source.get('last_name', '')}".strip(),
         addr.get('email', ''),
-        addr.get('phone', ''),
-        addr.get('address1', ''),
-        addr.get('address2', ''),
-        f"{addr.get('city', '')}, {addr.get('postcode', '')}",
-        addr.get('country', ''),
+        bill_source.get('phone', '') or addr.get('phone', ''),
+        bill_source.get('address1', ''),
+        bill_source.get('address2', ''),
+        f"{bill_source.get('city', '')}, {bill_source.get('postcode', '')}",
+        bill_source.get('country', ''),
     ]
     bill_to = '<br/>'.join(line for line in bill_to_lines if line)
-    elems.append(Paragraph('BILL TO', label))
-    elems.append(Paragraph(bill_to, body))
+    if billing_differs:
+        ship_to_lines = [
+            f"{addr.get('first_name', '')} {addr.get('last_name', '')}".strip(),
+            addr.get('address1', ''),
+            addr.get('address2', ''),
+            f"{addr.get('city', '')}, {addr.get('postcode', '')}",
+            addr.get('country', ''),
+        ]
+        ship_to = '<br/>'.join(line for line in ship_to_lines if line)
+        addr_tbl = Table(
+            [[Paragraph('BILL TO', label), Paragraph('SHIP TO', label)],
+             [Paragraph(bill_to, body), Paragraph(ship_to, body)]],
+            colWidths=[87 * mm, 88 * mm],
+        )
+        addr_tbl.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP')]))
+        elems.append(addr_tbl)
+    else:
+        elems.append(Paragraph('BILL TO', label))
+        elems.append(Paragraph(bill_to, body))
     elems.append(Spacer(1, 6 * mm))
 
     # Items table
