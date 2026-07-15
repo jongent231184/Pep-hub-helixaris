@@ -12,7 +12,7 @@ import { useToast } from '../hooks/use-toast';
 import { Lock, Loader2 } from 'lucide-react';
 import { Checkbox } from '../components/ui/checkbox';
 import { useAuth } from '../context/AuthContext';
-import { Orders, PayPal, Promos, Addresses, resolveImage } from '../lib/api';
+import { Orders, PayPal, Promos, Addresses, Wallid, resolveImage } from '../lib/api';
 
 const loadPayPalScript = (clientId, currency = 'GBP') => new Promise((resolve, reject) => {
   if (window.paypal) return resolve(window.paypal);
@@ -41,6 +41,8 @@ const Checkout = () => {
   const [step, setStep] = useState('details'); // 'details' | 'payment'
   const [processing, setProcessing] = useState(false);
   const [paypalConfig, setPaypalConfig] = useState(null);
+  const [wallidConfig, setWallidConfig] = useState(null);
+  const [wallidLoading, setWallidLoading] = useState(false);
   const [createdOrder, setCreatedOrder] = useState(null);
   const [form, setForm] = useState({
     email: '', firstName: '', lastName: '', phone: '',
@@ -159,6 +161,7 @@ const Checkout = () => {
 
   useEffect(() => {
     PayPal.config().then(setPaypalConfig).catch(() => setPaypalConfig({ configured: false }));
+    Wallid.config().then(setWallidConfig).catch(() => setWallidConfig({ configured: false }));
   }, []);
 
   // Render PayPal buttons after order is created
@@ -292,6 +295,22 @@ const Checkout = () => {
     clearCart();
     toast({ title: 'Order placed', description: 'Awaiting payment configuration' });
     navigate(`/order-confirmation/${createdOrder.order_number}`);
+  };
+
+  // Wallid Pay-by-Bank: create hosted session, redirect to their checkout
+  const payWithWallid = async () => {
+    if (!createdOrder) return;
+    setWallidLoading(true);
+    try {
+      const res = await Wallid.createPayment(createdOrder.id);
+      if (!res?.payment_link) throw new Error('No payment link returned');
+      clearCart();
+      window.location.href = res.payment_link;
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      toast({ title: 'Could not start Wallid payment', description: detail || err.message, variant: 'destructive' });
+      setWallidLoading(false);
+    }
   };
 
   if (items.length === 0 && !createdOrder) {
@@ -448,6 +467,31 @@ const Checkout = () => {
                 <h2 className="text-lg font-bold uppercase mb-4">Payment</h2>
                 <p className="text-sm text-slate-600 mb-6">Order <span className="font-mono font-bold">{createdOrder?.order_number}</span> created. Complete payment below.</p>
 
+                {wallidConfig?.configured && (
+                  <div className="mb-6" data-testid="wallid-section">
+                    <Button
+                      onClick={payWithWallid}
+                      disabled={wallidLoading}
+                      className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-wider text-base"
+                      data-testid="wallid-pay-btn"
+                    >
+                      {wallidLoading
+                        ? <Loader2 className="h-5 w-5 animate-spin" />
+                        : <><Lock className="h-4 w-4 mr-2" /> Pay by Bank · £{Number(createdOrder?.total || 0).toFixed(2)}</>}
+                    </Button>
+                    <p className="text-xs text-slate-500 mt-2 text-center">
+                      Instant secure transfer from your bank · No card details · Powered by Wallid
+                    </p>
+                    {paypalConfig?.configured && (
+                      <div className="relative my-6 flex items-center">
+                        <div className="flex-1 border-t border-slate-200"></div>
+                        <span className="px-3 text-xs uppercase tracking-widest text-slate-400">or</span>
+                        <div className="flex-1 border-t border-slate-200"></div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {paypalConfig?.configured ? (
                   <div>
                     <div ref={paypalRef} className="min-h-[100px]"></div>
@@ -455,13 +499,13 @@ const Checkout = () => {
                       <Lock className="h-3 w-3" /> Secured by PayPal
                     </p>
                   </div>
-                ) : (
+                ) : !wallidConfig?.configured ? (
                   <div className="border border-amber-200 bg-amber-50 rounded p-4 text-sm text-amber-900">
-                    <p className="font-semibold mb-1">PayPal not yet configured.</p>
-                    <p>An admin must add PayPal credentials before payments can be taken. The order has been saved as <span className="font-mono">{createdOrder?.order_number}</span> and can be paid later via an invoice.</p>
+                    <p className="font-semibold mb-1">No payment provider configured.</p>
+                    <p>An admin must add payment credentials before payments can be taken. The order has been saved as <span className="font-mono">{createdOrder?.order_number}</span> and can be paid later via an invoice.</p>
                     <Button onClick={completeTestOrder} className="mt-4 bg-slate-900 hover:bg-slate-800 text-white">Continue (test mode)</Button>
                   </div>
-                )}
+                ) : null}
 
                 <button onClick={() => setStep('details')} className="mt-6 text-sm text-sky-600 hover:text-sky-700">← Edit details</button>
               </section>

@@ -22,3 +22,4 @@ async def init_indexes():
     await db.orders.create_index('order_number', unique=True)
     await db.promos.create_index('code', unique=True)
     await db.addresses.create_index('user_id')
+    await db.wallid_events.create_index('event_id', unique=True)

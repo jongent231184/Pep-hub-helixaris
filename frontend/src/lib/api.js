@@ -78,6 +78,12 @@ export const PayPal = {
   captureOrder: (orderId, paypalOrderId) => api.post('/paypal/capture-order', { order_id: orderId, paypal_order_id: paypalOrderId }).then(r => r.data),
 };
 
+export const Wallid = {
+  config: () => api.get('/wallid/config').then(r => r.data),
+  createPayment: (orderId) => api.post('/wallid/create-payment', { order_id: orderId }).then(r => r.data),
+  verifyStatus: (orderId) => api.get(`/wallid/verify-status/${orderId}`).then(r => r.data),
+};
+
 export const Settings = {
   get: () => api.get('/settings').then(r => r.data),
   update: (data) => api.put('/settings', data).then(r => r.data),

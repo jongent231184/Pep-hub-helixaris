@@ -46,6 +46,16 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
   - Checkout auto-loads the default saved address for logged-in customers (email + all shipping fields pre-populated)
   - Dropdown lets customer pick any other saved address for shipping or billing
   - "Save this address to my account for next time" checkbox on new addresses; auto-saved after order creation
+- **Wallid Pay-by-Bank integration (Feb 2026)**:
+  - New router `/api/wallid` (config, create-payment, webhook, verify-status)
+  - LIVE credentials in `backend/.env` (WALLID_KEY_ID, WALLID_KEY_SECRET, WALLID_WEBHOOK_SECRET, WALLID_BASE_URL, FRONTEND_PUBLIC_URL)
+  - Webhook does HMAC-SHA256 signature verification on raw body with 5-min replay window and constant-time compare
+  - New `wallid_events` collection with unique index on `event_id` — full idempotency across replays/retries
+  - Shared `order_helpers.mark_order_paid()` handles atomic paid transition + stock decrement + promo bump + confirmation email (reusable by both PayPal and Wallid flows)
+  - Checkout shows Wallid button as primary CTA (green "Pay by Bank") with PayPal below as fallback via "OR" divider
+  - Success URL: `/order-confirmation/{order_number}?wallid=1` · Fail URL: `/checkout?wallid=failed`
+  - Verified end-to-end in preview: config OK, create-payment returns real Wallid session, webhook forge with SUCCESS transitions order to paid + decrements stock, replay is idempotent, stale timestamps rejected, invalid signatures rejected
+  - **⚠️ £1 real test payment pending** — requires deploying to production and giving Wallid the production webhook URL + secret
 
 ## Backlog / Next Tasks
 ### P0 — Ready to Deploy
