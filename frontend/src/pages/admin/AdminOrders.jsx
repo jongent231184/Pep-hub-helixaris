@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
 import CreatePaylinkModal from './CreatePaylinkModal';
+import PaymentSourceBadge from '../../components/PaymentSourceBadge';
 
 const statusColor = (s) => ({
   pending: 'bg-amber-100 text-amber-800',
@@ -123,7 +124,12 @@ const AdminOrders = () => {
                   </td>
                   <td className="p-3 text-xs">{o.items?.length} item{o.items?.length !== 1 ? 's' : ''}</td>
                   <td className="p-3 font-bold">£{Number(o.total).toFixed(2)}</td>
-                  <td className="p-3"><span className={`px-2 py-1 rounded text-xs font-semibold uppercase ${statusColor(o.payment_status)}`}>{o.payment_status}</span></td>
+                  <td className="p-3">
+                    <div className="flex flex-col items-start gap-1">
+                      <span className={`px-2 py-1 rounded text-xs font-semibold uppercase ${statusColor(o.payment_status)}`}>{o.payment_status}</span>
+                      {o.payment_status === 'paid' && <PaymentSourceBadge source={o.payment_source} />}
+                    </div>
+                  </td>
                   <td className="p-3"><span className={`px-2 py-1 rounded text-xs font-semibold uppercase ${statusColor(o.status)}`}>{o.status}</span></td>
                   <td className="p-3 text-right">
                     <Button

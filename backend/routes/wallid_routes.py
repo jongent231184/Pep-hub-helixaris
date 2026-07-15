@@ -175,8 +175,11 @@ async def create_payment(payload: dict = Body(...), request: Request = None):
     }
 
 
-async def _apply_status(order: dict, wallid_status: str, payment_ref: str = ''):
-    """Idempotent status mapping — called by webhook and status-poll."""
+async def _apply_status(order: dict, wallid_status: str, payment_ref: str = '', source: str = 'polling'):
+    """Idempotent status mapping — called by webhook and status-poll.
+    `source` is stamped onto the order so admins can see if the payment was
+    confirmed by webhook (instant) or by polling (delayed / webhook missed).
+    """
     wallid_status = (wallid_status or '').upper()
     if not order:
         return
@@ -186,6 +189,7 @@ async def _apply_status(order: dict, wallid_status: str, payment_ref: str = ''):
             payment_id=payment_ref or order.get('wallid_api_payment_id', ''),
             payment_provider='wallid',
             extra_fields={'wallid_status': wallid_status},
+            payment_source=source,
         )
     elif wallid_status in ('FAILED', 'EXPIRED'):
         # Only downgrade if not already paid via another route
@@ -266,7 +270,7 @@ async def wallid_webhook(request: Request):
 
         order = await db.orders.find_one({'wallid_api_payment_id': api_payment_id})
         if order:
-            await _apply_status(order, status_str, payment_ref=api_payment_id)
+            await _apply_status(order, status_str, payment_ref=api_payment_id, source='webhook')
         processed += 1
 
     return {'ok': True, 'processed': processed}
@@ -295,7 +299,7 @@ async def verify_status(order_id: str):
 
     data = resp.json()
     wallid_status = (data.get('status') or '').upper()
-    await _apply_status(order, wallid_status, payment_ref=api_payment_id)
+    await _apply_status(order, wallid_status, payment_ref=api_payment_id, source='polling')
     refreshed = await db.orders.find_one({'id': order_id}) or order
     return {
         'wallid_status': wallid_status,

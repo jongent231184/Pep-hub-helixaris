@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
 import { ArrowLeft, Loader2, FileText, Trash2, RefreshCw } from 'lucide-react';
+import PaymentSourceBadge from '../../components/PaymentSourceBadge';
 import { useToast } from '../../hooks/use-toast';
 
 const STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -180,9 +181,12 @@ const AdminOrderDetail = () => {
           <div className="bg-white border rounded-lg p-5 space-y-4">
             <h2 className="font-bold uppercase text-sm tracking-wide">Status</h2>
             <div>
-              <Label className="text-xs">Payment status</Label>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <Label className="text-xs">Payment status</Label>
+                {order.payment_status === 'paid' && <PaymentSourceBadge source={order.payment_source} />}
+              </div>
               <Select value={paymentStatus} onValueChange={setPaymentStatus}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {PAY_STATUSES.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
                 </SelectContent>

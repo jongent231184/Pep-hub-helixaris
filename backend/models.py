@@ -196,6 +196,7 @@ class OrderOut(BaseModel):
     payment_status: Literal['pending', 'paid', 'failed', 'refunded'] = 'pending'
     payment_provider: str = 'paypal'
     payment_id: Optional[str] = ''
+    payment_source: Optional[str] = None  # 'webhook' | 'polling' | 'manual'
     wallid_api_payment_id: Optional[str] = None
     wallid_status: Optional[str] = None
     status: Literal['pending', 'processing', 'shipped', 'delivered', 'cancelled'] = 'pending'

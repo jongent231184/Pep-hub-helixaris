@@ -342,6 +342,13 @@ async def update_order_status(order_id: str, payload: OrderStatusUpdate, _=Depen
         clash = await db.orders.find_one({'order_number': updates['order_number'], 'id': {'$ne': order_id}})
         if clash:
             raise HTTPException(409, f"Order number {updates['order_number']} already exists")
+    # If an admin is flipping payment_status to paid via the dashboard, stamp
+    # the source so it visibly reads "MANUAL" (rather than auto-verified).
+    if updates.get('payment_status') == 'paid':
+        existing = await db.orders.find_one({'id': order_id}, {'payment_status': 1})
+        if existing and existing.get('payment_status') != 'paid':
+            updates.setdefault('payment_source', 'manual')
+            updates.setdefault('paid_at', datetime.utcnow())
     updates['updated_at'] = datetime.utcnow()
     res = await db.orders.find_one_and_update(
         {'id': order_id}, {'$set': updates}, return_document=True

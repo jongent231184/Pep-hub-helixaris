@@ -10,11 +10,13 @@ async def mark_order_paid(
     payment_id: str,
     payment_provider: str,
     extra_fields: Optional[dict] = None,
+    payment_source: Optional[str] = None,
 ) -> Optional[dict]:
     """Atomic idempotent transition to 'paid'. On the first transition:
       - decrements variant/product stock
       - bumps promo usage
       - dispatches confirmation emails (fire-and-forget)
+      - stamps `payment_source` ('webhook' | 'polling' | 'manual' | ...)
     Returns the transitioned order document (as loaded PRE-update) or None if
     the order was already paid (i.e. this call was a duplicate).
     """
@@ -26,6 +28,8 @@ async def mark_order_paid(
         'paid_at': datetime.utcnow(),
         'updated_at': datetime.utcnow(),
     }
+    if payment_source:
+        updates['payment_source'] = payment_source
     if extra_fields:
         updates.update(extra_fields)
 
