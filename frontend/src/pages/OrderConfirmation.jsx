@@ -3,14 +3,29 @@ import { Link, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { CheckCircle2, Loader2, Clock } from 'lucide-react';
 import { Orders } from '../lib/api';
+import PaymentSuccessSplash from '../components/PaymentSuccessSplash';
 
 const OrderConfirmation = () => {
   const { orderId } = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
 
   useEffect(() => {
-    Orders.get(orderId).then(setOrder).catch(() => setOrder(null)).finally(() => setLoading(false));
+    Orders.get(orderId)
+      .then((o) => {
+        setOrder(o);
+        // Show welcome splash once per order for successful payments
+        if (o?.payment_status === 'paid') {
+          const key = `ghp_splash_${o.id}`;
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, '1');
+            setShowSplash(true);
+          }
+        }
+      })
+      .catch(() => setOrder(null))
+      .finally(() => setLoading(false));
   }, [orderId]);
 
   if (loading) {
@@ -60,6 +75,12 @@ const OrderConfirmation = () => {
           </Link>
         </div>
       </div>
+      {showSplash && (
+        <PaymentSuccessSplash
+          orderNumber={order.order_number}
+          onDismiss={() => setShowSplash(false)}
+        />
+      )}
     </Layout>
   );
 };
