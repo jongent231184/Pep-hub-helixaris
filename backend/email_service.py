@@ -15,13 +15,14 @@ import os
 from datetime import datetime
 from typing import Optional
 
+import httpx
 import resend
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image,
 )
 
 logger = logging.getLogger('email_service')
@@ -31,6 +32,57 @@ ADMIN_NOTIFY_EMAIL = os.environ.get('ADMIN_NOTIFY_EMAIL', 'GHP-Health@outlook.co
 BUSINESS_NAME = 'GHP-Health'
 BUSINESS_TAGLINE = 'Research-grade peptides'
 BUSINESS_URL = 'https://www.ghp-health.com'
+LOGO_URL = 'https://customer-assets.emergentagent.com/job_ghp-ecommerce-pay/artifacts/0f0tlig3_ghp%20logo.jpg'
+
+# In-memory cache of the logo bytes (fetched once per worker process).
+_LOGO_BYTES: Optional[bytes] = None
+
+
+def _load_logo_bytes() -> Optional[bytes]:
+    global _LOGO_BYTES
+    if _LOGO_BYTES is not None:
+        return _LOGO_BYTES or None
+    try:
+        r = httpx.get(LOGO_URL, timeout=10.0)
+        if r.status_code == 200 and r.content:
+            _LOGO_BYTES = r.content
+            return _LOGO_BYTES
+    except Exception as e:  # pragma: no cover
+        logger.warning(f'logo fetch failed: {e}')
+    _LOGO_BYTES = b''  # sentinel so we don't retry every send
+    return None
+
+
+def _address_block(a: dict, include_email: bool = False, include_phone: bool = True) -> list[str]:
+    """Return non-empty lines describing an address for use in either PDF or HTML."""
+    if not a:
+        return []
+    lines = [f"{a.get('first_name', '')} {a.get('last_name', '')}".strip()]
+    if include_email and a.get('email'):
+        lines.append(a['email'])
+    if include_phone and a.get('phone'):
+        lines.append(a['phone'])
+    lines.append(a.get('address1', ''))
+    if a.get('address2'):
+        lines.append(a['address2'])
+    city_pc = ', '.join(x for x in [a.get('city', ''), a.get('postcode', '')] if x)
+    if city_pc:
+        lines.append(city_pc)
+    if a.get('country'):
+        lines.append(a['country'])
+    return [ln for ln in lines if ln]
+
+
+def _billing_differs(shipping: dict, billing: Optional[dict]) -> bool:
+    if not billing:
+        return False
+    return (
+        billing.get('address1') != shipping.get('address1')
+        or billing.get('postcode') != shipping.get('postcode')
+        or billing.get('city') != shipping.get('city')
+        or billing.get('first_name') != shipping.get('first_name')
+        or billing.get('last_name') != shipping.get('last_name')
+    )
 
 
 def _init_resend() -> bool:
@@ -59,10 +111,32 @@ def build_invoice_pdf(order: dict) -> bytes:
 
     elems = []
 
-    # Header
-    elems.append(Paragraph(f"<b>{BUSINESS_NAME}</b>", h1))
-    elems.append(Paragraph(BUSINESS_TAGLINE, small))
-    elems.append(Paragraph(BUSINESS_URL, small))
+    # Header — logo (if available) + brand text side by side
+    logo_bytes = _load_logo_bytes()
+    if logo_bytes:
+        try:
+            logo_img = Image(io.BytesIO(logo_bytes), width=22 * mm, height=22 * mm)
+            brand_cell = [
+                Paragraph(f"<b>{BUSINESS_NAME}</b>", h1),
+                Paragraph(BUSINESS_TAGLINE, small),
+                Paragraph(BUSINESS_URL, small),
+            ]
+            header_tbl = Table([[logo_img, brand_cell]], colWidths=[28 * mm, 145 * mm])
+            header_tbl.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ]))
+            elems.append(header_tbl)
+        except Exception as e:
+            logger.warning(f'logo embed failed: {e}')
+            elems.append(Paragraph(f"<b>{BUSINESS_NAME}</b>", h1))
+            elems.append(Paragraph(BUSINESS_TAGLINE, small))
+            elems.append(Paragraph(BUSINESS_URL, small))
+    else:
+        elems.append(Paragraph(f"<b>{BUSINESS_NAME}</b>", h1))
+        elems.append(Paragraph(BUSINESS_TAGLINE, small))
+        elems.append(Paragraph(BUSINESS_URL, small))
     elems.append(Spacer(1, 8 * mm))
 
     # Invoice title + meta
@@ -184,6 +258,36 @@ def build_invoice_pdf(order: dict) -> bytes:
 
 
 # ---------------- HTML EMAIL ----------------
+def _addresses_html(order: dict) -> str:
+    """Ship-to + bill-to blocks for HTML emails. Two columns when addresses
+    differ, one column when they don't."""
+    ship = order.get('shipping_address') or {}
+    bill = order.get('billing_address') or None
+    differs = _billing_differs(ship, bill)
+
+    def block_html(title: str, lines: list[str]) -> str:
+        inner = '<br/>'.join(lines) if lines else '&mdash;'
+        return (
+            '<td valign="top" style="padding:0 12px 0 0;">'
+            f'<div style="font-size:10px;letter-spacing:1px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:6px;">{title}</div>'
+            f'<div style="font-size:13px;color:#334155;line-height:1.5;">{inner}</div>'
+            '</td>'
+        )
+
+    if differs:
+        cells = (
+            block_html('Bill to', _address_block(bill, include_phone=True))
+            + block_html('Ship to', _address_block(ship, include_phone=True))
+        )
+    else:
+        cells = block_html('Ship to / Bill to', _address_block(ship, include_email=True, include_phone=True))
+    return (
+        f'<table role="presentation" width="100%" style="border-collapse:collapse;margin:16px 0 24px 0;">'
+        f'<tr>{cells}</tr>'
+        f'</table>'
+    )
+
+
 def _order_summary_html(order: dict) -> str:
     items_html = ''
     for it in order.get('items', []):
@@ -207,14 +311,24 @@ def _order_summary_html(order: dict) -> str:
         )
     ship = float(order.get('shipping', 0))
     ship_str = 'FREE' if ship == 0 else f'£{ship:.2f}'
+    addresses_html = _addresses_html(order)
     return f"""
 <table role="presentation" width="100%" style="border-collapse:collapse;background:#f8fafc;padding:24px 0;">
   <tr><td align="center">
     <table role="presentation" width="600" style="border-collapse:collapse;background:#ffffff;border-radius:8px;overflow:hidden;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">
       <tr>
         <td style="padding:24px 32px;background:#0f172a;color:#ffffff;">
-          <div style="font-size:20px;font-weight:800;letter-spacing:0.5px;">{BUSINESS_NAME}</div>
-          <div style="font-size:12px;color:#94a3b8;">{BUSINESS_TAGLINE}</div>
+          <table role="presentation" width="100%" style="border-collapse:collapse;">
+            <tr>
+              <td valign="middle" style="width:56px;">
+                <img src="{LOGO_URL}" alt="{BUSINESS_NAME}" width="48" height="48" style="display:block;border-radius:6px;" />
+              </td>
+              <td valign="middle" style="padding-left:14px;">
+                <div style="font-size:20px;font-weight:800;letter-spacing:0.5px;">{BUSINESS_NAME}</div>
+                <div style="font-size:12px;color:#94a3b8;">{BUSINESS_TAGLINE}</div>
+              </td>
+            </tr>
+          </table>
         </td>
       </tr>
       <tr>
@@ -223,9 +337,10 @@ def _order_summary_html(order: dict) -> str:
           <p style="margin:0 0 16px 0;color:#475569;font-size:14px;">
             We've received your payment and are preparing your order.
           </p>
-          <p style="margin:0 0 24px 0;font-size:13px;color:#334155;">
+          <p style="margin:0 0 8px 0;font-size:13px;color:#334155;">
             Order number: <strong style="font-family:'Courier New',monospace;color:#0284c7;">{order.get('order_number','')}</strong>
           </p>
+          {addresses_html}
           <table role="presentation" width="100%" style="border-collapse:collapse;font-size:14px;color:#334155;">
             {items_html}
             <tr><td style="padding:8px 4px;">Subtotal</td>
@@ -255,19 +370,31 @@ def _order_summary_html(order: dict) -> str:
 
 
 def _admin_notify_html(order: dict) -> str:
-    addr = order.get('shipping_address', {})
-    cust = f"{addr.get('first_name','')} {addr.get('last_name','')}".strip() or '—'
+    ship = order.get('shipping_address', {}) or {}
+    cust = f"{ship.get('first_name','')} {ship.get('last_name','')}".strip() or '—'
     items_str = ', '.join(
         f"{int(i.get('qty',0))}× {i.get('name','')}" for i in order.get('items', [])
     )
+    addresses_html = _addresses_html(order)
     return f"""
-<div style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;padding:16px;">
-  <h2 style="color:#0f172a;">New order — {order.get('order_number','')}</h2>
-  <p><strong>Customer:</strong> {cust} &lt;{addr.get('email','—')}&gt;</p>
-  <p><strong>Items:</strong> {items_str}</p>
-  <p><strong>Total:</strong> £{float(order.get('total',0)):.2f} ({order.get('payment_status','')})</p>
-  <p><strong>Source:</strong> {order.get('source') or 'web'}</p>
-  <p><a href="{BUSINESS_URL}/admin/orders/{order.get('id','')}">Open in admin dashboard</a></p>
+<div style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;padding:16px;max-width:640px;">
+  <table role="presentation" width="100%" style="border-collapse:collapse;margin-bottom:16px;">
+    <tr>
+      <td valign="middle" style="width:56px;">
+        <img src="{LOGO_URL}" alt="{BUSINESS_NAME}" width="44" height="44" style="display:block;border-radius:6px;" />
+      </td>
+      <td valign="middle" style="padding-left:12px;">
+        <h2 style="margin:0;color:#0f172a;font-size:18px;">New order — {order.get('order_number','')}</h2>
+        <p style="margin:2px 0 0 0;font-size:12px;color:#64748b;">{BUSINESS_NAME}</p>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:4px 0;"><strong>Customer:</strong> {cust} &lt;{ship.get('email','—')}&gt;</p>
+  <p style="margin:4px 0;"><strong>Items:</strong> {items_str}</p>
+  <p style="margin:4px 0;"><strong>Total:</strong> £{float(order.get('total',0)):.2f} ({order.get('payment_status','')})</p>
+  <p style="margin:4px 0;"><strong>Source:</strong> {order.get('source') or 'web'}</p>
+  {addresses_html}
+  <p><a href="{BUSINESS_URL}/admin/orders/{order.get('id','')}" style="color:#0284c7;">Open in admin dashboard</a></p>
 </div>
 """.strip()
 

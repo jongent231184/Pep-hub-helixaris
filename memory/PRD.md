@@ -64,6 +64,11 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
     - Displayed as compact pills on both admin orders list and order detail page. Helps spot webhook health issues at a glance.
   - **Auto-verify on order confirmation** (Feb 2026): when a Wallid customer lands back on `/order-confirmation/{orderId}?wallid=1` we poll `/api/wallid/verify-status` every 4s (up to ~30s) to self-heal orders when the webhook is late or missing. Small "Verifying your payment with your bank…" pill shows during polling.
   - **"Sync from Wallid" admin button** (Feb 2026): green refresh button on the order detail page for any Wallid order. One-click force-refresh of status from Wallid's API.
+  - **Branded email + invoice upgrade** (Feb 2026):
+    - GHP-Health logo now appears at the top of the PDF invoice (fetched once, cached in memory as bytes, embedded via ReportLab `Image` flowable — graceful fallback to text if network fails)
+    - Logo image also embedded in the customer HTML order-confirmation email header (dark navy bar)
+    - Logo also in the admin new-order notification email
+    - Both HTML emails now display a **BILL TO / SHIP TO** two-column block when the customer entered different billing and shipping addresses (single block when they match) — matches the PDF invoice
   - Admin invoice now dynamically labels "Pay by Bank (Wallid)" vs "PayPal" vs "Manual" based on `payment_provider`
   - PayPal backend routes (`/api/paypal/*`) intentionally kept for referencing historical PayPal-paid orders
   - **⚠️ £1 real test payment pending** — webhook URL + secret already sent to Wallid by user
