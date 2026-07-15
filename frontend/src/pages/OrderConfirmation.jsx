@@ -3,11 +3,14 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { CheckCircle2, Loader2, Clock } from 'lucide-react';
 import { Orders, Wallid } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 import PaymentSuccessSplash from '../components/PaymentSuccessSplash';
+import GuestAccountPrompt from '../components/GuestAccountPrompt';
 
 const OrderConfirmation = () => {
   const { orderId } = useParams();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(false);
@@ -126,6 +129,7 @@ const OrderConfirmation = () => {
             Continue Shopping
           </Link>
         </div>
+        {!user && paid && <GuestAccountPrompt order={order} />}
       </div>
       {showSplash && (
         <PaymentSuccessSplash

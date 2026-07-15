@@ -11,6 +11,18 @@ from utils import doc_to_dict
 router = APIRouter(prefix='/auth', tags=['auth'])
 
 
+async def _adopt_guest_orders(user_id: str, email: str) -> int:
+    """Any anonymous orders that were placed with this email get linked to
+    the new (or newly-logged-in) account. Returns the number linked."""
+    if not email:
+        return 0
+    res = await db.orders.update_many(
+        {'shipping_address.email': email, '$or': [{'user_id': None}, {'user_id': {'$exists': False}}]},
+        {'$set': {'user_id': user_id}},
+    )
+    return res.modified_count
+
+
 @router.post('/register', response_model=TokenOut)
 async def register(payload: UserCreate):
     existing = await db.users.find_one({'email': payload.email})
@@ -26,6 +38,7 @@ async def register(payload: UserCreate):
         'created_at': datetime.utcnow(),
     }
     await db.users.insert_one(user_doc)
+    await _adopt_guest_orders(user_doc['id'], user_doc['email'])
     token = create_access_token(user_doc['id'], user_doc['role'])
     return TokenOut(access_token=token, user=UserOut(**doc_to_dict(user_doc)))
 
@@ -35,6 +48,9 @@ async def login(payload: UserLogin):
     user = await db.users.find_one({'email': payload.email})
     if not user or not verify_password(payload.password, user.get('password_hash', '')):
         raise HTTPException(401, 'Invalid email or password')
+    # Adopt any guest orders that share this account's email (covers customers
+    # who placed a guest order before creating an account, or from another device).
+    await _adopt_guest_orders(user['id'], user.get('email', ''))
     token = create_access_token(user['id'], user.get('role', 'customer'))
     return TokenOut(access_token=token, user=UserOut(**doc_to_dict(user)))
 

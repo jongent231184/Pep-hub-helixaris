@@ -70,6 +70,10 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
     - Logo also in the admin new-order notification email
     - Both HTML emails now display a **BILL TO / SHIP TO** two-column block when the customer entered different billing and shipping addresses (single block when they match) — matches the PDF invoice
     - Customer email now includes a **"What happens next?"** three-step timeline (Order confirmed → Dispatched within 24h → Delivery in 1-3 days · Royal Mail Tracked) plus a reply-to-us prompt — meant to reduce inbound "where's my order?" queries
+  - **Guest account onboarding** (Feb 2026):
+    - Checkout: guest-only banner *"Already a customer? Log in to auto-fill your details and see all past orders."* above the contact form, with a Log-In button that returns customer to `/checkout` after auth (via `?returnTo=` param)
+    - Order confirmation: guest-only "Save this order to your account" card. Pre-fills the customer's email; they set a password and click Create account — logs them in immediately
+    - Backend: on register AND login, `_adopt_guest_orders(user_id, email)` runs and links any past guest orders (matching the account's email) to the new user_id. Confirmed working via DB check + `/api/orders/mine` returning adopted orders
   - Admin invoice now dynamically labels "Pay by Bank (Wallid)" vs "PayPal" vs "Manual" based on `payment_provider`
   - PayPal backend routes (`/api/paypal/*`) intentionally kept for referencing historical PayPal-paid orders
   - **⚠️ £1 real test payment pending** — webhook URL + secret already sent to Wallid by user

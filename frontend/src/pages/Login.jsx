@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Input } from '../components/ui/input';
@@ -12,6 +12,8 @@ import { Loader2 } from 'lucide-react';
 const Login = () => {
   const { login, register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get('returnTo');
   const { toast } = useToast();
   const [mode, setMode] = useState('login');
   const [busy, setBusy] = useState(false);
@@ -31,7 +33,11 @@ const Login = () => {
         user = await register(form);
         toast({ title: 'Account created' });
       }
-      navigate(user.role === 'admin' ? '/admin' : '/account');
+      if (user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate(returnTo || '/account');
+      }
     } catch (err) {
       const msg = err.response?.data?.detail || err.message;
       toast({ title: mode === 'login' ? 'Login failed' : 'Registration failed', description: String(msg), variant: 'destructive' });

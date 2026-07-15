@@ -268,6 +268,25 @@ const Checkout = () => {
           <div className="lg:col-span-2 space-y-8">
             {step === 'details' && (
               <form id="details-form" onSubmit={submitDetails} className="space-y-8">
+                {!user && (
+                  <div
+                    className="border border-sky-200 bg-sky-50 rounded-lg px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                    data-testid="checkout-login-banner"
+                  >
+                    <div>
+                      <p className="font-bold text-sky-900 text-sm uppercase tracking-wider">Already a customer?</p>
+                      <p className="text-sm text-slate-600 mt-0.5">Log in to auto-fill your details and see all past orders.</p>
+                    </div>
+                    <Link
+                      to="/login?returnTo=/checkout"
+                      className="inline-flex items-center justify-center bg-sky-600 hover:bg-sky-700 text-white font-bold uppercase tracking-wider text-xs px-4 py-2 rounded whitespace-nowrap"
+                      data-testid="checkout-login-btn"
+                    >
+                      Log in
+                    </Link>
+                  </div>
+                )}
+
                 <section className="border rounded-lg p-6 bg-white">
                   <h2 className="text-lg font-bold uppercase mb-4">Contact Information</h2>
                   <div>
