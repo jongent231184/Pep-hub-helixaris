@@ -12,23 +12,7 @@ import { useToast } from '../hooks/use-toast';
 import { Lock, Loader2 } from 'lucide-react';
 import { Checkbox } from '../components/ui/checkbox';
 import { useAuth } from '../context/AuthContext';
-import { Orders, PayPal, Promos, Addresses, Wallid, resolveImage } from '../lib/api';
-
-const loadPayPalScript = (clientId, currency = 'GBP') => new Promise((resolve, reject) => {
-  if (window.paypal) return resolve(window.paypal);
-  const existing = document.getElementById('paypal-sdk');
-  if (existing) {
-    existing.addEventListener('load', () => resolve(window.paypal));
-    existing.addEventListener('error', reject);
-    return;
-  }
-  const s = document.createElement('script');
-  s.id = 'paypal-sdk';
-  s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${currency}&intent=capture`;
-  s.onload = () => resolve(window.paypal);
-  s.onerror = reject;
-  document.head.appendChild(s);
-});
+import { Orders, Promos, Addresses, Wallid, resolveImage } from '../lib/api';
 
 const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
@@ -36,11 +20,9 @@ const Checkout = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const paypalRef = useRef(null);
 
   const [step, setStep] = useState('details'); // 'details' | 'payment'
   const [processing, setProcessing] = useState(false);
-  const [paypalConfig, setPaypalConfig] = useState(null);
   const [wallidConfig, setWallidConfig] = useState(null);
   const [wallidLoading, setWallidLoading] = useState(false);
   const [createdOrder, setCreatedOrder] = useState(null);
@@ -160,58 +142,8 @@ const Checkout = () => {
   const removePromo = () => setPromo(null);
 
   useEffect(() => {
-    PayPal.config().then(setPaypalConfig).catch(() => setPaypalConfig({ configured: false }));
     Wallid.config().then(setWallidConfig).catch(() => setWallidConfig({ configured: false }));
   }, []);
-
-  // Render PayPal buttons after order is created
-  useEffect(() => {
-    if (step !== 'payment' || !createdOrder || !paypalConfig?.configured) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const paypal = await loadPayPalScript(paypalConfig.client_id, 'GBP');
-        if (cancelled || !paypalRef.current) return;
-        paypalRef.current.innerHTML = '';
-        paypal.Buttons({
-          style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'paypal' },
-          createOrder: async () => {
-            try {
-              const { paypal_order_id } = await PayPal.createOrder(createdOrder.id);
-              return paypal_order_id;
-            } catch (e) {
-              const msg = e.response?.data?.detail || e.message || 'Unable to start payment';
-              toast({ title: 'Cannot proceed', description: String(msg), variant: 'destructive' });
-              throw e;
-            }
-          },
-          onApprove: async (data) => {
-            setProcessing(true);
-            try {
-              const res = await PayPal.captureOrder(createdOrder.id, data.orderID);
-              if (res.payment_status === 'paid') {
-                clearCart();
-                toast({ title: 'Payment successful' });
-                navigate(`/order-confirmation/${createdOrder.order_number}`);
-              } else {
-                toast({ title: 'Payment incomplete', description: 'Please try again or contact support.', variant: 'destructive' });
-              }
-            } catch (e) {
-              toast({ title: 'Capture failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
-            } finally {
-              setProcessing(false);
-            }
-          },
-          onError: (err) => {
-            toast({ title: 'PayPal error', description: String(err), variant: 'destructive' });
-          }
-        }).render(paypalRef.current);
-      } catch (e) {
-        toast({ title: 'Failed to load PayPal', description: String(e), variant: 'destructive' });
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [step, createdOrder, paypalConfig, clearCart, navigate, toast]);
 
   const submitDetails = async (e) => {
     e.preventDefault();
@@ -287,14 +219,6 @@ const Checkout = () => {
     } finally {
       setProcessing(false);
     }
-  };
-
-  // Test/manual mark-paid when PayPal not configured
-  const completeTestOrder = async () => {
-    if (!createdOrder) return;
-    clearCart();
-    toast({ title: 'Order placed', description: 'Awaiting payment configuration' });
-    navigate(`/order-confirmation/${createdOrder.order_number}`);
   };
 
   // Wallid Pay-by-Bank: create hosted session, redirect to their checkout
@@ -467,8 +391,8 @@ const Checkout = () => {
                 <h2 className="text-lg font-bold uppercase mb-4">Payment</h2>
                 <p className="text-sm text-slate-600 mb-6">Order <span className="font-mono font-bold">{createdOrder?.order_number}</span> created. Complete payment below.</p>
 
-                {wallidConfig?.configured && (
-                  <div className="mb-6" data-testid="wallid-section">
+                {wallidConfig?.configured ? (
+                  <div data-testid="wallid-section">
                     <Button
                       onClick={payWithWallid}
                       disabled={wallidLoading}
@@ -480,32 +404,15 @@ const Checkout = () => {
                         : <><Lock className="h-4 w-4 mr-2" /> Pay by Bank · £{Number(createdOrder?.total || 0).toFixed(2)}</>}
                     </Button>
                     <p className="text-xs text-slate-500 mt-2 text-center">
-                      Instant secure transfer from your bank · No card details · Powered by Wallid
+                      Instant secure transfer from your bank · No card details required
                     </p>
-                    {paypalConfig?.configured && (
-                      <div className="relative my-6 flex items-center">
-                        <div className="flex-1 border-t border-slate-200"></div>
-                        <span className="px-3 text-xs uppercase tracking-widest text-slate-400">or</span>
-                        <div className="flex-1 border-t border-slate-200"></div>
-                      </div>
-                    )}
+                  </div>
+                ) : (
+                  <div className="border border-amber-200 bg-amber-50 rounded p-4 text-sm text-amber-900">
+                    <p className="font-semibold mb-1">Payment temporarily unavailable.</p>
+                    <p>Your order <span className="font-mono">{createdOrder?.order_number}</span> has been saved. Please contact us at <a href={`mailto:${settings?.contact_email || 'GHP-Health@outlook.com'}`} className="underline">{settings?.contact_email || 'GHP-Health@outlook.com'}</a> for an invoice link.</p>
                   </div>
                 )}
-
-                {paypalConfig?.configured ? (
-                  <div>
-                    <div ref={paypalRef} className="min-h-[100px]"></div>
-                    <p className="text-xs text-slate-500 mt-3 flex items-center gap-1">
-                      <Lock className="h-3 w-3" /> Secured by PayPal
-                    </p>
-                  </div>
-                ) : !wallidConfig?.configured ? (
-                  <div className="border border-amber-200 bg-amber-50 rounded p-4 text-sm text-amber-900">
-                    <p className="font-semibold mb-1">No payment provider configured.</p>
-                    <p>An admin must add payment credentials before payments can be taken. The order has been saved as <span className="font-mono">{createdOrder?.order_number}</span> and can be paid later via an invoice.</p>
-                    <Button onClick={completeTestOrder} className="mt-4 bg-slate-900 hover:bg-slate-800 text-white">Continue (test mode)</Button>
-                  </div>
-                ) : null}
 
                 <button onClick={() => setStep('details')} className="mt-6 text-sm text-sky-600 hover:text-sky-700">← Edit details</button>
               </section>

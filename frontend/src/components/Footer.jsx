@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Instagram } from 'lucide-react';
+import { Instagram, Landmark, Lock } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
 const TikTokIcon = (props) => (
@@ -53,11 +53,16 @@ const Footer = () => {
         </div>
         <div>
           <h4 className="text-white font-bold uppercase tracking-wider mb-4">Payments</h4>
-          <div className="flex flex-wrap gap-2">
-            {['paypal', 'visa', 'mastercard', 'amex', 'maestro', 'visa-electron'].map(p => (
-              <img key={p} src={`https://content.webfactorysite.co.uk/14-${p === 'paypal' ? 'merchant-paypal' : 'card-' + p}.png`} alt={p} className="h-7 bg-white rounded px-1" />
-            ))}
+          <div className="flex items-center gap-3 bg-slate-800 rounded-lg px-4 py-3" data-testid="footer-payment-methods">
+            <Landmark className="h-6 w-6 text-emerald-400 shrink-0" />
+            <div>
+              <p className="text-white text-sm font-bold uppercase tracking-wider leading-tight">Pay by Bank</p>
+              <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Instant · Secure · No card fees</p>
+            </div>
           </div>
+          <p className="text-[11px] text-slate-500 mt-3 flex items-center gap-1.5">
+            <Lock className="h-3 w-3" /> Bank-grade encryption
+          </p>
         </div>
       </div>
       <div className="border-t border-slate-800">

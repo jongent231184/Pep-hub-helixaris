@@ -51,11 +51,11 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
   - LIVE credentials in `backend/.env` (WALLID_KEY_ID, WALLID_KEY_SECRET, WALLID_WEBHOOK_SECRET, WALLID_BASE_URL, FRONTEND_PUBLIC_URL)
   - Webhook does HMAC-SHA256 signature verification on raw body with 5-min replay window and constant-time compare
   - New `wallid_events` collection with unique index on `event_id` — full idempotency across replays/retries
-  - Shared `order_helpers.mark_order_paid()` handles atomic paid transition + stock decrement + promo bump + confirmation email (reusable by both PayPal and Wallid flows)
-  - Checkout shows Wallid button as primary CTA (green "Pay by Bank") with PayPal below as fallback via "OR" divider
-  - Success URL: `/order-confirmation/{order_number}?wallid=1` · Fail URL: `/checkout?wallid=failed`
-  - Verified end-to-end in preview: config OK, create-payment returns real Wallid session, webhook forge with SUCCESS transitions order to paid + decrements stock, replay is idempotent, stale timestamps rejected, invalid signatures rejected
-  - **⚠️ £1 real test payment pending** — requires deploying to production and giving Wallid the production webhook URL + secret
+  - Shared `order_helpers.mark_order_paid()` handles atomic paid transition + stock decrement + promo bump + confirmation email
+  - **PayPal fully removed from UI** — Checkout, PayLinkPage (admin invoice pay page), and Footer icons all switched to Wallid Pay-by-Bank only
+  - Admin invoice now dynamically labels "Pay by Bank (Wallid)" vs "PayPal" vs "Manual" based on `payment_provider`
+  - PayPal backend routes (`/api/paypal/*`) intentionally kept for referencing historical PayPal-paid orders
+  - **⚠️ £1 real test payment pending** — webhook URL + secret already sent to Wallid by user
 
 ## Backlog / Next Tasks
 ### P0 — Ready to Deploy

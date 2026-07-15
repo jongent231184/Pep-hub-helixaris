@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Orders, PayPal } from '../lib/api';
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { Orders, Wallid } from '../lib/api';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
@@ -8,34 +8,17 @@ import { Loader2, Lock, CheckCircle2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import Layout from '../components/Layout';
 
-const loadPayPalScript = (clientId, currency = 'GBP') => new Promise((resolve, reject) => {
-  if (window.paypal) return resolve(window.paypal);
-  const existing = document.getElementById('paypal-sdk');
-  if (existing) {
-    existing.addEventListener('load', () => resolve(window.paypal));
-    existing.addEventListener('error', reject);
-    return;
-  }
-  const s = document.createElement('script');
-  s.id = 'paypal-sdk';
-  s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${currency}&intent=capture`;
-  s.onload = () => resolve(window.paypal);
-  s.onerror = reject;
-  document.head.appendChild(s);
-});
-
 const PayLinkPage = () => {
   const { orderId } = useParams();
-  const navigate = useNavigate();
   const { toast } = useToast();
-  const paypalRef = useRef(null);
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [step, setStep] = useState('address'); // 'address' | 'payment' | 'paid'
   const [processing, setProcessing] = useState(false);
-  const [paypalConfig, setPaypalConfig] = useState(null);
+  const [wallidConfig, setWallidConfig] = useState(null);
+  const [wallidLoading, setWallidLoading] = useState(false);
   const [form, setForm] = useState({
     email: '', firstName: '', lastName: '', phone: '',
     address1: '', address2: '', city: '', postcode: '', country: 'United Kingdom',
@@ -48,10 +31,10 @@ const PayLinkPage = () => {
       try {
         const [o, cfg] = await Promise.all([
           Orders.getPaylink(orderId),
-          PayPal.config().catch(() => null),
+          Wallid.config().catch(() => null),
         ]);
         setOrder(o);
-        setPaypalConfig(cfg);
+        setWallidConfig(cfg);
         // Pre-fill from admin's hint
         setForm(f => ({
           ...f,
@@ -74,53 +57,19 @@ const PayLinkPage = () => {
     })();
   }, [orderId]);
 
-  // Mount PayPal buttons when in payment step
-  useEffect(() => {
-    if (step !== 'payment' || !paypalConfig?.client_id || !order) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const paypal = await loadPayPalScript(paypalConfig.client_id, paypalConfig.currency || 'GBP');
-        if (cancelled || !paypalRef.current) return;
-        paypalRef.current.innerHTML = '';
-        paypal.Buttons({
-          style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'paypal' },
-          createOrder: async () => {
-            try {
-              const { paypal_order_id } = await PayPal.createOrder(order.id);
-              return paypal_order_id;
-            } catch (e) {
-              const msg = e.response?.data?.detail || e.message || 'Unable to start payment';
-              toast({ title: 'Cannot proceed', description: String(msg), variant: 'destructive' });
-              throw e;
-            }
-          },
-          onApprove: async (data) => {
-            setProcessing(true);
-            try {
-              const res = await PayPal.captureOrder(order.id, data.orderID);
-              if (res.payment_status === 'paid') {
-                toast({ title: 'Payment successful' });
-                navigate(`/order-confirmation/${order.order_number}`);
-              } else {
-                toast({ title: 'Payment incomplete', description: 'Please try again or contact support.', variant: 'destructive' });
-              }
-            } catch (e) {
-              toast({ title: 'Capture failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
-            } finally {
-              setProcessing(false);
-            }
-          },
-          onError: (err) => {
-            toast({ title: 'PayPal error', description: String(err), variant: 'destructive' });
-          },
-        }).render(paypalRef.current);
-      } catch (e) {
-        toast({ title: 'Failed to load PayPal', description: String(e), variant: 'destructive' });
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [step, order, paypalConfig, navigate, toast]);
+  const payWithWallid = async () => {
+    if (!order) return;
+    setWallidLoading(true);
+    try {
+      const res = await Wallid.createPayment(order.id);
+      if (!res?.payment_link) throw new Error('No payment link returned');
+      window.location.href = res.payment_link;
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      toast({ title: 'Could not start payment', description: detail || err.message, variant: 'destructive' });
+      setWallidLoading(false);
+    }
+  };
 
   const submitAddress = async (e) => {
     e.preventDefault();
@@ -247,15 +196,22 @@ const PayLinkPage = () => {
                     Edit details
                   </button>
                 </div>
-                {paypalConfig?.client_id ? (
+                {wallidConfig?.configured ? (
                   <div>
-                    <p className="text-sm text-slate-700 mb-3">Choose a payment method:</p>
-                    <div ref={paypalRef} className="min-h-[120px]" />
-                    {processing && (
-                      <p className="text-xs text-slate-500 mt-2 flex items-center gap-2">
-                        <Loader2 className="h-3 w-3 animate-spin" /> Confirming payment…
-                      </p>
-                    )}
+                    <p className="text-sm text-slate-700 mb-3">Complete your payment:</p>
+                    <Button
+                      onClick={payWithWallid}
+                      disabled={wallidLoading || processing}
+                      className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-wider text-base"
+                      data-testid="paylink-wallid-pay-btn"
+                    >
+                      {wallidLoading
+                        ? <Loader2 className="h-5 w-5 animate-spin" />
+                        : <><Lock className="h-4 w-4 mr-2" /> Pay by Bank · £{Number(order.total).toFixed(2)}</>}
+                    </Button>
+                    <p className="text-xs text-slate-500 mt-2 text-center">
+                      Instant secure transfer from your bank · No card details required
+                    </p>
                   </div>
                 ) : (
                   <div className="border border-amber-200 bg-amber-50 rounded p-4 text-sm text-amber-800">

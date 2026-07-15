@@ -98,7 +98,7 @@ const AdminOrderInvoice = () => {
             <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">Details</p>
             <p className="text-sm"><span className="text-slate-500">Order number:</span> <span className="font-mono">{order.order_number}</span></p>
             <p className="text-sm"><span className="text-slate-500">Order date:</span> {created.toLocaleString('en-GB')}</p>
-            <p className="text-sm"><span className="text-slate-500">Payment method:</span> PayPal</p>
+            <p className="text-sm"><span className="text-slate-500">Payment method:</span> {order.payment_provider === 'wallid' ? 'Pay by Bank (Wallid)' : (order.payment_provider === 'paypal' ? 'PayPal' : 'Manual')}</p>
             <p className="text-sm"><span className="text-slate-500">Payment status:</span> <span className={`font-bold uppercase ${paid ? 'text-emerald-700' : 'text-amber-700'}`}>{order.payment_status}</span></p>
             <p className="text-sm"><span className="text-slate-500">Fulfilment:</span> <span className="capitalize font-semibold">{order.status}</span></p>
             {order.payment_id && <p className="text-[10px] font-mono text-slate-500 mt-1 break-all">PayPal ID: {order.payment_id}</p>}
