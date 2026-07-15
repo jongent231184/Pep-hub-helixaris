@@ -12,6 +12,7 @@ import { useToast } from '../hooks/use-toast';
 import { Lock, Loader2 } from 'lucide-react';
 import { Checkbox } from '../components/ui/checkbox';
 import BankTrustBadges from '../components/BankTrustBadges';
+import WallidPaymentModal from '../components/WallidPaymentModal';
 import { useAuth } from '../context/AuthContext';
 import { Orders, Promos, Addresses, Wallid, resolveImage } from '../lib/api';
 
@@ -26,6 +27,7 @@ const Checkout = () => {
   const [processing, setProcessing] = useState(false);
   const [wallidConfig, setWallidConfig] = useState(null);
   const [wallidLoading, setWallidLoading] = useState(false);
+  const [wallidPaymentLink, setWallidPaymentLink] = useState(null); // opens modal when set
   const [createdOrder, setCreatedOrder] = useState(null);
   const [form, setForm] = useState({
     email: '', firstName: '', lastName: '', phone: '',
@@ -222,18 +224,18 @@ const Checkout = () => {
     }
   };
 
-  // Wallid Pay-by-Bank: create hosted session, redirect to their checkout
+  // Wallid Pay-by-Bank: open hosted checkout inside an iframe modal
   const payWithWallid = async () => {
     if (!createdOrder) return;
     setWallidLoading(true);
     try {
       const res = await Wallid.createPayment(createdOrder.id);
       if (!res?.payment_link) throw new Error('No payment link returned');
-      clearCart();
-      window.location.href = res.payment_link;
+      setWallidPaymentLink(res.payment_link);
     } catch (err) {
       const detail = err.response?.data?.detail;
-      toast({ title: 'Could not start Wallid payment', description: detail || err.message, variant: 'destructive' });
+      toast({ title: 'Could not start payment', description: detail || err.message, variant: 'destructive' });
+    } finally {
       setWallidLoading(false);
     }
   };
@@ -508,6 +510,28 @@ const Checkout = () => {
           </div>
         </div>
       </div>
+
+      {wallidPaymentLink && createdOrder && (
+        <WallidPaymentModal
+          orderId={createdOrder.id}
+          orderNumber={createdOrder.order_number}
+          paymentLink={wallidPaymentLink}
+          onClose={() => setWallidPaymentLink(null)}
+          onPaid={() => {
+            clearCart();
+            toast({ title: 'Payment successful' });
+            navigate(`/order-confirmation/${createdOrder.order_number}`);
+          }}
+          onFailed={(res) => {
+            setWallidPaymentLink(null);
+            toast({
+              title: 'Payment not completed',
+              description: `Status: ${res.wallid_status}. You can try again or contact support.`,
+              variant: 'destructive',
+            });
+          }}
+        />
+      )}
     </Layout>
   );
 };

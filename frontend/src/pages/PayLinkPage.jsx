@@ -8,6 +8,7 @@ import { Loader2, Lock, CheckCircle2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import Layout from '../components/Layout';
 import BankTrustBadges from '../components/BankTrustBadges';
+import WallidPaymentModal from '../components/WallidPaymentModal';
 
 const PayLinkPage = () => {
   const { orderId } = useParams();
@@ -20,6 +21,7 @@ const PayLinkPage = () => {
   const [processing, setProcessing] = useState(false);
   const [wallidConfig, setWallidConfig] = useState(null);
   const [wallidLoading, setWallidLoading] = useState(false);
+  const [wallidPaymentLink, setWallidPaymentLink] = useState(null);
   const [form, setForm] = useState({
     email: '', firstName: '', lastName: '', phone: '',
     address1: '', address2: '', city: '', postcode: '', country: 'United Kingdom',
@@ -64,10 +66,11 @@ const PayLinkPage = () => {
     try {
       const res = await Wallid.createPayment(order.id);
       if (!res?.payment_link) throw new Error('No payment link returned');
-      window.location.href = res.payment_link;
+      setWallidPaymentLink(res.payment_link);
     } catch (err) {
       const detail = err.response?.data?.detail;
       toast({ title: 'Could not start payment', description: detail || err.message, variant: 'destructive' });
+    } finally {
       setWallidLoading(false);
     }
   };
@@ -226,6 +229,28 @@ const PayLinkPage = () => {
           <OrderSummary />
         </div>
       </div>
+
+      {wallidPaymentLink && order && (
+        <WallidPaymentModal
+          orderId={order.id}
+          orderNumber={order.order_number}
+          paymentLink={wallidPaymentLink}
+          onClose={() => setWallidPaymentLink(null)}
+          onPaid={() => {
+            setWallidPaymentLink(null);
+            setStep('paid');
+            toast({ title: 'Payment successful' });
+          }}
+          onFailed={(res) => {
+            setWallidPaymentLink(null);
+            toast({
+              title: 'Payment not completed',
+              description: `Status: ${res.wallid_status}. You can try again or contact us.`,
+              variant: 'destructive',
+            });
+          }}
+        />
+      )}
     </Layout>
   );
 };
