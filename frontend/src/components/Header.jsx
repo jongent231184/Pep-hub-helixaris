@@ -56,10 +56,16 @@ const Header = () => {
         </form>
 
         {/* Account & Cart */}
-        <div className="flex items-center gap-6">
-          <Link to={user ? '/account' : '/login'} className="hidden sm:flex flex-col items-center text-slate-700 hover:text-sky-600 transition-colors">
+        <div className="flex items-center gap-4 sm:gap-6">
+          <Link
+            to={user ? '/account' : '/login'}
+            className="flex flex-col items-center text-slate-700 hover:text-sky-600 transition-colors"
+            data-testid="header-account-link"
+          >
             <User className="h-6 w-6" />
-            <span className="text-[11px] mt-0.5">My Account</span>
+            <span className="hidden sm:block text-[11px] mt-0.5">
+              {user ? 'My Account' : 'Log In'}
+            </span>
           </Link>
           <Link to="/cart" className="flex flex-col items-center text-slate-700 hover:text-sky-600 transition-colors relative">
             <div className="relative">
@@ -70,7 +76,7 @@ const Header = () => {
                 </span>
               )}
             </div>
-            <span className="text-[11px] mt-0.5">My Bag</span>
+            <span className="hidden sm:block text-[11px] mt-0.5">My Bag</span>
           </Link>
           <button onClick={() => setMobileOpen(true)} className="md:hidden p-2" aria-label="Open menu">
             <Menu className="h-6 w-6" />
@@ -122,19 +128,30 @@ const Header = () => {
           <div className="p-4 flex justify-end">
             <button aria-label="Close menu" className="p-2"><X className="h-6 w-6" /></button>
           </div>
-          <ul className="flex flex-col items-center gap-2 pt-4" onClick={e => e.stopPropagation()}>
-            {[...NAV, { to: '/contact', label: 'Contact' }].map(item => (
-              <li key={item.to}>
-                <Link
-                  to={item.to}
-                  onClick={() => setMobileOpen(false)}
-                  className="block px-6 py-3 text-base font-bold uppercase tracking-wider hover:text-sky-400"
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <div onClick={e => e.stopPropagation()} className="px-6">
+            <Link
+              to={user ? '/account' : '/login'}
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-3 bg-sky-500 hover:bg-sky-600 rounded-lg px-5 py-4 mb-6 font-bold uppercase tracking-wider text-sm transition-colors"
+              data-testid="mobile-account-link"
+            >
+              <User className="h-5 w-5" />
+              {user ? `Hi, ${user.first_name || 'account'}` : 'Log in / Register'}
+            </Link>
+            <ul className="flex flex-col items-center gap-2">
+              {[...NAV, { to: '/contact', label: 'Contact' }].map(item => (
+                <li key={item.to}>
+                  <Link
+                    to={item.to}
+                    onClick={() => setMobileOpen(false)}
+                    className="block px-6 py-3 text-base font-bold uppercase tracking-wider hover:text-sky-400"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
     </header>

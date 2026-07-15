@@ -70,6 +70,7 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
     - Logo also in the admin new-order notification email
     - Both HTML emails now display a **BILL TO / SHIP TO** two-column block when the customer entered different billing and shipping addresses (single block when they match) — matches the PDF invoice
     - Customer email now includes a **"What happens next?"** three-step timeline (Order confirmed → Dispatched within 24h → Delivery in 1-3 days · Royal Mail Tracked) plus a reply-to-us prompt — meant to reduce inbound "where's my order?" queries
+  - **Mobile header account link fix** (Feb 2026): the "My Account" link was hidden below the `sm:` breakpoint (640px) so it was invisible on iPhone Safari. Now shows as a User icon on all sizes (label "Log In" when guest, "My Account" when authed). The mobile hamburger drawer also gets a prominent blue **"Log In / Register"** pill at the top — impossible to miss.
   - **Guest account onboarding** (Feb 2026):
     - Checkout: guest-only banner *"Already a customer? Log in to auto-fill your details and see all past orders."* above the contact form, with a Log-In button that returns customer to `/checkout` after auth (via `?returnTo=` param)
     - Order confirmation: guest-only "Save this order to your account" card. Pre-fills the customer's email; they set a password and click Create account — logs them in immediately
