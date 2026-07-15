@@ -8,6 +8,7 @@ import { Loader2, Lock, CheckCircle2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import Layout from '../components/Layout';
 import BankTrustBadges from '../components/BankTrustBadges';
+import RedirectingOverlay from '../components/RedirectingOverlay';
 
 const PayLinkPage = () => {
   const { orderId } = useParams();
@@ -226,6 +227,7 @@ const PayLinkPage = () => {
           <OrderSummary />
         </div>
       </div>
+      {wallidLoading && <RedirectingOverlay />}
     </Layout>
   );
 };

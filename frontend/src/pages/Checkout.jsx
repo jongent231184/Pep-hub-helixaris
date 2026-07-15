@@ -12,6 +12,7 @@ import { useToast } from '../hooks/use-toast';
 import { Lock, Loader2 } from 'lucide-react';
 import { Checkbox } from '../components/ui/checkbox';
 import BankTrustBadges from '../components/BankTrustBadges';
+import RedirectingOverlay from '../components/RedirectingOverlay';
 import { useAuth } from '../context/AuthContext';
 import { Orders, Promos, Addresses, Wallid, resolveImage } from '../lib/api';
 
@@ -513,6 +514,7 @@ const Checkout = () => {
         </div>
       </div>
 
+      {wallidLoading && <RedirectingOverlay />}
     </Layout>
   );
 };
