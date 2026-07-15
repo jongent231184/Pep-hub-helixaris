@@ -69,6 +69,7 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
     - Logo image also embedded in the customer HTML order-confirmation email header (dark navy bar)
     - Logo also in the admin new-order notification email
     - Both HTML emails now display a **BILL TO / SHIP TO** two-column block when the customer entered different billing and shipping addresses (single block when they match) — matches the PDF invoice
+    - Customer email now includes a **"What happens next?"** three-step timeline (Order confirmed → Dispatched within 24h → Delivery in 1-3 days · Royal Mail Tracked) plus a reply-to-us prompt — meant to reduce inbound "where's my order?" queries
   - Admin invoice now dynamically labels "Pay by Bank (Wallid)" vs "PayPal" vs "Manual" based on `payment_provider`
   - PayPal backend routes (`/api/paypal/*`) intentionally kept for referencing historical PayPal-paid orders
   - **⚠️ £1 real test payment pending** — webhook URL + secret already sent to Wallid by user

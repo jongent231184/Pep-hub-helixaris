@@ -355,6 +355,44 @@ def _order_summary_html(order: dict) -> str:
           <p style="margin:24px 0 0 0;color:#475569;font-size:13px;line-height:1.5;">
             A PDF invoice is attached to this email for your records.
           </p>
+
+          <div style="margin-top:32px;padding:20px 20px 16px 20px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+            <div style="font-size:11px;letter-spacing:1.5px;font-weight:700;color:#0284c7;text-transform:uppercase;margin-bottom:14px;">What happens next?</div>
+            <table role="presentation" width="100%" style="border-collapse:collapse;">
+              <tr>
+                <td valign="top" style="width:32px;padding-bottom:12px;">
+                  <div style="width:26px;height:26px;border-radius:50%;background:#0f172a;color:#ffffff;font-weight:700;font-size:12px;text-align:center;line-height:26px;">1</div>
+                </td>
+                <td valign="top" style="padding-bottom:12px;padding-left:8px;">
+                  <div style="font-size:13px;font-weight:700;color:#0f172a;">Order confirmed</div>
+                  <div style="font-size:12px;color:#64748b;line-height:1.5;">We're preparing your parcel today.</div>
+                </td>
+              </tr>
+              <tr>
+                <td valign="top" style="padding-bottom:12px;">
+                  <div style="width:26px;height:26px;border-radius:50%;background:#0f172a;color:#ffffff;font-weight:700;font-size:12px;text-align:center;line-height:26px;">2</div>
+                </td>
+                <td valign="top" style="padding-bottom:12px;padding-left:8px;">
+                  <div style="font-size:13px;font-weight:700;color:#0f172a;">Dispatched within 24 hours</div>
+                  <div style="font-size:12px;color:#64748b;line-height:1.5;">You'll receive a tracking email as soon as your parcel is on its way.</div>
+                </td>
+              </tr>
+              <tr>
+                <td valign="top">
+                  <div style="width:26px;height:26px;border-radius:50%;background:#0f172a;color:#ffffff;font-weight:700;font-size:12px;text-align:center;line-height:26px;">3</div>
+                </td>
+                <td valign="top" style="padding-left:8px;">
+                  <div style="font-size:13px;font-weight:700;color:#0f172a;">Delivery in 1&ndash;3 working days</div>
+                  <div style="font-size:12px;color:#64748b;line-height:1.5;">Royal Mail Tracked delivery to your shipping address.</div>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <p style="margin:20px 0 0 0;color:#64748b;font-size:12px;line-height:1.5;">
+            Any questions? Just reply to this email or write to
+            <a href="mailto:{ADMIN_NOTIFY_EMAIL}" style="color:#0284c7;">{ADMIN_NOTIFY_EMAIL}</a>.
+          </p>
         </td>
       </tr>
       <tr>
