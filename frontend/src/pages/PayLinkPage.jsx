@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 import { Loader2, Lock, CheckCircle2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import Layout from '../components/Layout';
+import BankTrustBadges from '../components/BankTrustBadges';
 
 const PayLinkPage = () => {
   const { orderId } = useParams();
@@ -212,6 +213,7 @@ const PayLinkPage = () => {
                     <p className="text-xs text-slate-500 mt-2 text-center">
                       Instant secure transfer from your bank · No card details required
                     </p>
+                    <BankTrustBadges />
                   </div>
                 ) : (
                   <div className="border border-amber-200 bg-amber-50 rounded p-4 text-sm text-amber-800">

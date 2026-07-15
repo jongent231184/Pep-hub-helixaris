@@ -11,6 +11,7 @@ import { useStore } from '../context/StoreContext';
 import { useToast } from '../hooks/use-toast';
 import { Lock, Loader2 } from 'lucide-react';
 import { Checkbox } from '../components/ui/checkbox';
+import BankTrustBadges from '../components/BankTrustBadges';
 import { useAuth } from '../context/AuthContext';
 import { Orders, Promos, Addresses, Wallid, resolveImage } from '../lib/api';
 
@@ -406,6 +407,7 @@ const Checkout = () => {
                     <p className="text-xs text-slate-500 mt-2 text-center">
                       Instant secure transfer from your bank · No card details required
                     </p>
+                    <BankTrustBadges />
                   </div>
                 ) : (
                   <div className="border border-amber-200 bg-amber-50 rounded p-4 text-sm text-amber-900">
