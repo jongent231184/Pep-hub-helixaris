@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Orders, resolveImage } from '../../lib/api';
+import { Orders, Wallid, resolveImage } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
-import { ArrowLeft, Loader2, FileText, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, FileText, Trash2, RefreshCw } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 
 const STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -17,6 +17,7 @@ const AdminOrderDetail = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('');
   const [notes, setNotes] = useState('');
@@ -45,6 +46,20 @@ const AdminOrderDetail = () => {
     } finally { setSaving(false); }
   };
 
+  const syncFromWallid = async () => {
+    setSyncing(true);
+    try {
+      const res = await Wallid.verifyStatus(order.id);
+      toast({
+        title: 'Synced from Wallid',
+        description: `Wallid status: ${res.wallid_status}. Payment: ${res.payment_status}.`,
+      });
+      load();
+    } catch (e) {
+      toast({ title: 'Sync failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally { setSyncing(false); }
+  };
+
   if (loading) return <div className="grid place-items-center py-20"><Loader2 className="h-8 w-8 animate-spin text-sky-500" /></div>;
   if (!order) return <p>Order not found.</p>;
 
@@ -71,6 +86,18 @@ const AdminOrderDetail = () => {
           <Link to={`/admin/orders/${order.id}/invoice`}>
             <Button variant="outline" className="gap-2"><FileText className="h-4 w-4" /> View invoice</Button>
           </Link>
+          {order.wallid_api_payment_id && (
+            <Button
+              variant="outline"
+              className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              onClick={syncFromWallid}
+              disabled={syncing}
+              data-testid="wallid-sync-btn"
+            >
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Sync from Wallid
+            </Button>
+          )}
           <Button
             variant="outline"
             className="gap-2 text-red-600 hover:bg-red-50 border-red-200"
