@@ -54,6 +54,7 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
   - Shared `order_helpers.mark_order_paid()` handles atomic paid transition + stock decrement + promo bump + confirmation email
   - **PayPal fully removed from UI** — Checkout, PayLinkPage (admin invoice pay page), and Footer icons all switched to Wallid Pay-by-Bank only
   - **Bank trust badges** (Feb 2026): new `BankTrustBadges` component rendered under the Pay-by-Bank CTA on both Checkout and PayLinkPage. Shows Barclays, HSBC, Monzo, Starling, Revolut logos + "+ Lloyds, NatWest, Santander & 50+ more" text for breadth. Uses `cdn.simpleicons.org` in slate tint.
+  - **Iframe modal overlay** (Feb 2026): new `WallidPaymentModal` component. Instead of redirecting the customer to `pay.wallid.co`, we embed it in a full-screen modal so the customer never leaves the GHP-Health shell. Polls `/api/wallid/verify-status` every 3s; auto-closes on paid/failed. "Open in new tab" fallback link for banks that refuse to render in iframes.
   - Admin invoice now dynamically labels "Pay by Bank (Wallid)" vs "PayPal" vs "Manual" based on `payment_provider`
   - PayPal backend routes (`/api/paypal/*`) intentionally kept for referencing historical PayPal-paid orders
   - **⚠️ £1 real test payment pending** — webhook URL + secret already sent to Wallid by user
