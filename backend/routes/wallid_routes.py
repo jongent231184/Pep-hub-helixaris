@@ -381,12 +381,24 @@ async def sync_pending_orders(_=Depends(require_admin)):
     isn't already paid, and update local state. Returns a summary."""
     if not _configured():
         raise HTTPException(500, 'Wallid is not configured')
+    return await _sync_pending_impl()
 
-    cursor = db.orders.find({
+
+async def _sync_pending_impl(max_age_hours: Optional[int] = None) -> dict:
+    """Shared implementation used by both the admin endpoint and the background
+    poller. If `max_age_hours` is set, only orders created within that window
+    are polled (used by the background loop to avoid pounding Wallid with
+    stale orders forever)."""
+    query: dict = {
         'wallid_api_payment_id': {'$exists': True, '$nin': [None, '']},
         'payment_status': {'$ne': 'paid'},
-    })
-    orders = await cursor.to_list(500)
+    }
+    if max_age_hours is not None:
+        from datetime import timedelta as _td
+        cutoff = datetime.utcnow() - _td(hours=max_age_hours)
+        query['created_at'] = {'$gte': cutoff}
+
+    orders = await db.orders.find(query).to_list(500)
     updated = 0
     now_paid = 0
     failed_lookups = 0
@@ -433,3 +445,36 @@ async def sync_pending_orders(_=Depends(require_admin)):
         'failed_lookups': failed_lookups,
         'changes': changes,
     }
+
+
+# Background poller — safety net for missed webhooks
+POLLER_INTERVAL_SECONDS = int(os.environ.get('WALLID_POLLER_INTERVAL_SECONDS', '60'))
+POLLER_MAX_AGE_HOURS = int(os.environ.get('WALLID_POLLER_MAX_AGE_HOURS', '24'))
+
+
+async def start_wallid_poller():
+    """Long-running background task that periodically polls Wallid for any
+    pending order created within the last N hours. This is the safety net
+    that catches webhook deliveries that never arrived. Idempotent — orders
+    already paid are ignored via the DB query."""
+    import asyncio
+    if not _configured():
+        logger.info('[wallid poller] Wallid not configured — background poller disabled')
+        return
+    logger.info(
+        f'[wallid poller] Started (interval={POLLER_INTERVAL_SECONDS}s, '
+        f'max_age={POLLER_MAX_AGE_HOURS}h)'
+    )
+    while True:
+        try:
+            await asyncio.sleep(POLLER_INTERVAL_SECONDS)
+            result = await _sync_pending_impl(max_age_hours=POLLER_MAX_AGE_HOURS)
+            if result.get('now_paid'):
+                logger.info(
+                    f'[wallid poller] Recovered {result["now_paid"]} order(s): '
+                    + ', '.join(f"{c['order_number']} → {c['to']}" for c in result.get('changes', []))
+                )
+            elif result.get('checked'):
+                logger.debug(f'[wallid poller] Checked {result["checked"]} pending order(s), no changes')
+        except Exception as e:  # noqa: BLE001 — never let the loop die
+            logger.exception(f'[wallid poller] Iteration failed (will continue): {e}')

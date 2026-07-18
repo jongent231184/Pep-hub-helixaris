@@ -87,7 +87,12 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
 - Pen Protocol tab: click-to-mg reference table + custom-dose click calculator
 - **Pen Duration estimator**: input weekly dose → returns weeks/days of supply and estimated run-out date
 - Save/Load dose plans for logged-in users (`/api/dose-plans`)
-- **Ambassador programme** (NEW): admin creates ambassador accounts with linked promo codes; ambassadors get a restricted portal at `/ambassador` showing their orders, earnings (15% of net sales by default) and payout history. CSV export available. Admin can record payouts from the Ambassadors tab.
+- **Ambassador programme**: admin creates ambassador accounts with linked promo codes; ambassadors get a restricted portal at `/ambassador` showing their orders, earnings (15% of net sales by default) and payout history. CSV export available. Admin can record payouts from the Ambassadors tab.
+- **Wallid resilience** (NEW):
+  - Bulk "Sync from Wallid" button on Admin → Orders (polls every pending order in one shot)
+  - Webhook attempt logging: every webhook delivery is stored in `wallid_webhook_attempts` with reason if rejected (signature mismatch, timestamp skew, missing headers, etc.)
+  - `GET /api/wallid/debug/webhook-health` (admin) — surfaces secret loaded state + last 20 attempts for RCA
+  - **Background poller**: on server startup, spawns an asyncio task that every 60s polls Wallid for any pending order created in the last 24h. Catches missed webhook deliveries automatically without user action. Tunable via `WALLID_POLLER_INTERVAL_SECONDS` / `WALLID_POLLER_MAX_AGE_HOURS`.
 
 ## New endpoints (Ambassador)
 - `POST/GET/PUT/DELETE /api/ambassadors/admin[/:id]` – admin management

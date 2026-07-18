@@ -25,6 +25,7 @@ from routes.address_routes import router as address_router  # noqa: E402
 from routes.wallid_routes import router as wallid_router  # noqa: E402
 from routes.dose_plan_routes import router as dose_plan_router  # noqa: E402
 from routes.ambassador_routes import router as ambassador_router  # noqa: E402
+from routes.wallid_routes import start_wallid_poller  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s - %(message)s')
 logger = logging.getLogger('ghp')
@@ -101,4 +102,5 @@ async def on_startup():
             logger.exception(f'Background init error (server still running): {e}')
 
     asyncio.create_task(_background_init())
+    asyncio.create_task(start_wallid_poller())
     logger.info('Startup: background init scheduled; server ready to accept requests')
