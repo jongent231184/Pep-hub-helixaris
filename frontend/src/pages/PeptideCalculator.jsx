@@ -1,10 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Layout from '../components/Layout';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
-import { Beaker, Syringe, Droplet, Target, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Beaker, Syringe, Droplet, Target, AlertTriangle, CheckCircle2, Save, Trash2, BookmarkPlus, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../hooks/use-toast';
+import { DosePlans } from '../lib/api';
 
 const SYRINGES = [
   { ml: 0.3, units: 30, label: '0.3 ml · 30 units' },
@@ -62,6 +66,8 @@ const StepCard = ({ icon: Icon, label, children }) => (
 );
 
 const PeptideCalculator = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [syringe, setSyringe] = useState(SYRINGES[1]);
   const [vial, setVial] = useState(5);
   const [vialOther, setVialOther] = useState('');
@@ -70,9 +76,68 @@ const PeptideCalculator = () => {
   const [dose, setDose] = useState(250);
   const [doseOther, setDoseOther] = useState('');
 
+  // Saved plans
+  const [plans, setPlans] = useState([]);
+  const [planTitle, setPlanTitle] = useState('');
+  const [saving, setSaving] = useState(false);
+
   const vialMg = Number(vialOther) > 0 ? Number(vialOther) : vial;
   const bacMl = Number(bacOther) > 0 ? Number(bacOther) : bac;
   const doseMcg = Number(doseOther) > 0 ? Number(doseOther) : dose;
+
+  const loadPlans = () => {
+    if (!user) { setPlans([]); return; }
+    DosePlans.mine().then(setPlans).catch(() => setPlans([]));
+  };
+  useEffect(loadPlans, [user]);
+
+  const applyPlan = (p) => {
+    const s = SYRINGES.find((x) => x.units === p.syringe_units) || SYRINGES[1];
+    setSyringe(s);
+    if (VIAL_MG.includes(p.vial_mg)) { setVial(p.vial_mg); setVialOther(''); }
+    else { setVialOther(String(p.vial_mg)); }
+    if (BAC_ML.includes(p.bac_ml)) { setBac(p.bac_ml); setBacOther(''); }
+    else { setBacOther(String(p.bac_ml)); }
+    if (DOSE_MCG.includes(p.dose_mcg)) { setDose(p.dose_mcg); setDoseOther(''); }
+    else { setDoseOther(String(p.dose_mcg)); }
+    toast({ title: `Loaded "${p.title}"` });
+  };
+
+  const savePlan = async () => {
+    if (!planTitle.trim()) {
+      toast({ title: 'Give this plan a title', description: 'e.g. "Retatrutide 5mg — weekly protocol"', variant: 'destructive' });
+      return;
+    }
+    setSaving(true);
+    try {
+      await DosePlans.create({
+        title: planTitle.trim(),
+        syringe_units: syringe.units,
+        syringe_ml: syringe.ml,
+        vial_mg: vialMg,
+        bac_ml: bacMl,
+        dose_mcg: doseMcg,
+      });
+      setPlanTitle('');
+      toast({ title: 'Plan saved' });
+      loadPlans();
+    } catch (e) {
+      toast({ title: 'Could not save', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removePlan = async (p) => {
+    if (!window.confirm(`Delete plan "${p.title}"?`)) return;
+    try {
+      await DosePlans.remove(p.id);
+      toast({ title: 'Plan removed' });
+      loadPlans();
+    } catch (e) {
+      toast({ title: 'Delete failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    }
+  };
 
   const result = useMemo(() => {
     if (!vialMg || !bacMl || !doseMcg) return null;
@@ -103,6 +168,38 @@ const PeptideCalculator = () => {
         <div className="grid lg:grid-cols-[1.35fr_1fr] gap-6 lg:gap-8">
           {/* Inputs */}
           <div className="space-y-4">
+            {user && plans.length > 0 && (
+              <div className="bg-white border border-slate-200 rounded-lg p-6" data-testid="saved-plans-panel">
+                <div className="flex items-center gap-2 mb-3">
+                  <BookmarkPlus className="h-5 w-5 text-sky-600" />
+                  <h2 className="font-bold uppercase text-sm tracking-wider">My saved plans</h2>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {plans.map((p) => (
+                    <div key={p.id} className="group flex items-center bg-slate-100 hover:bg-slate-200 rounded-full text-xs font-semibold pr-1 transition-colors" data-testid={`plan-chip-${p.id}`}>
+                      <button
+                        type="button"
+                        onClick={() => applyPlan(p)}
+                        className="px-3 py-1.5 pr-2 text-slate-700"
+                        title={`${p.vial_mg}mg vial · ${p.bac_ml}ml BAC · ${p.dose_mcg}mcg dose · ${p.syringe_units}u syringe`}
+                      >
+                        {p.title}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removePlan(p)}
+                        className="p-1 rounded-full text-slate-400 hover:text-red-600 hover:bg-white"
+                        aria-label={`Delete plan ${p.title}`}
+                        data-testid={`plan-delete-${p.id}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <StepCard icon={Syringe} label="1 · Insulin syringe size">
               <div className="grid grid-cols-3 gap-2 mt-3">
                 {SYRINGES.map((s) => (
@@ -153,6 +250,44 @@ const PeptideCalculator = () => {
                 onOtherChange={setDoseOther}
               />
             </StepCard>
+
+            {user ? (
+              <div className="bg-white border border-slate-200 rounded-lg p-6" data-testid="save-plan-panel">
+                <div className="flex items-center gap-2 mb-3">
+                  <Save className="h-5 w-5 text-sky-600" />
+                  <h2 className="font-bold uppercase text-sm tracking-wider">Save this plan</h2>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input
+                    value={planTitle}
+                    onChange={(e) => setPlanTitle(e.target.value)}
+                    placeholder='e.g. "Retatrutide 5mg — weekly protocol"'
+                    maxLength={80}
+                    className="flex-1"
+                    data-testid="save-plan-title-input"
+                  />
+                  <Button
+                    onClick={savePlan}
+                    disabled={saving}
+                    className="bg-sky-500 hover:bg-sky-600 text-white uppercase tracking-wider font-bold text-sm h-10 px-6"
+                    data-testid="save-plan-btn"
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save plan'}
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Saves your current syringe, vial, water and dose settings under this title so you can reload it in one click.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-sky-50 border border-sky-200 rounded-lg p-5 text-sm text-slate-700" data-testid="save-plan-guest-cta">
+                <p className="font-semibold text-sky-900 mb-1">Want to save this dose plan?</p>
+                <p>
+                  <Link to="/login?returnTo=/peptide-calculator" className="text-sky-700 font-semibold underline">Log in</Link> or
+                  <Link to="/login?returnTo=/peptide-calculator" className="text-sky-700 font-semibold underline"> create an account</Link> to save your reconstitution plans and reload them in one click.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Result */}

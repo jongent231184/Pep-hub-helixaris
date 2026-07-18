@@ -84,6 +84,12 @@ export const Wallid = {
   verifyStatus: (orderId) => api.get(`/wallid/verify-status/${orderId}`).then(r => r.data),
 };
 
+export const DosePlans = {
+  mine: () => api.get('/dose-plans/mine').then(r => r.data),
+  create: (data) => api.post('/dose-plans', data).then(r => r.data),
+  remove: (id) => api.delete(`/dose-plans/${id}`).then(r => r.data),
+};
+
 export const Settings = {
   get: () => api.get('/settings').then(r => r.data),
   update: (data) => api.put('/settings', data).then(r => r.data),
