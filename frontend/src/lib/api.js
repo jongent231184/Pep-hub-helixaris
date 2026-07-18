@@ -90,6 +90,22 @@ export const DosePlans = {
   remove: (id) => api.delete(`/dose-plans/${id}`).then(r => r.data),
 };
 
+export const Ambassadors = {
+  // Admin
+  adminList: () => api.get('/ambassadors/admin').then(r => r.data),
+  adminGet: (id) => api.get(`/ambassadors/admin/${id}`).then(r => r.data),
+  adminCreate: (data) => api.post('/ambassadors/admin', data).then(r => r.data),
+  adminUpdate: (id, data) => api.put(`/ambassadors/admin/${id}`, data).then(r => r.data),
+  adminRemove: (id) => api.delete(`/ambassadors/admin/${id}`).then(r => r.data),
+  adminCreatePayout: (id, data) => api.post(`/ambassadors/admin/${id}/payouts`, data).then(r => r.data),
+  adminDeletePayout: (id, payoutId) => api.delete(`/ambassadors/admin/${id}/payouts/${payoutId}`).then(r => r.data),
+  // Ambassador self-service
+  me: () => api.get('/ambassadors/me').then(r => r.data),
+  orders: () => api.get('/ambassadors/orders').then(r => r.data),
+  order: (id) => api.get(`/ambassadors/orders/${id}`).then(r => r.data),
+  payouts: () => api.get('/ambassadors/payouts').then(r => r.data),
+};
+
 export const Settings = {
   get: () => api.get('/settings').then(r => r.data),
   update: (data) => api.put('/settings', data).then(r => r.data),

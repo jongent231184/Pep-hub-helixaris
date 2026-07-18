@@ -64,3 +64,12 @@ async def require_admin(user: dict = Depends(get_current_user)):
     if user.get('role') != 'admin':
         raise HTTPException(status.HTTP_403_FORBIDDEN, 'Admin only')
     return user
+
+
+async def require_ambassador(user: dict = Depends(get_current_user)):
+    role = user.get('role')
+    if role not in ('ambassador', 'admin'):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, 'Ambassador only')
+    if role == 'ambassador' and not user.get('ambassador_active', True):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, 'Ambassador account is disabled')
+    return user

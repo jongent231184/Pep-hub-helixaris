@@ -36,6 +36,13 @@ import AdminCustomers from './pages/admin/AdminCustomers';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminPromos from './pages/admin/AdminPromos';
 import AdminPaylinks from './pages/admin/AdminPaylinks';
+import AdminAmbassadors from './pages/admin/AdminAmbassadors';
+
+import AmbassadorLayout from './pages/ambassador/AmbassadorLayout';
+import AmbassadorDashboard from './pages/ambassador/AmbassadorDashboard';
+import AmbassadorOrders from './pages/ambassador/AmbassadorOrders';
+import AmbassadorOrderDetail from './pages/ambassador/AmbassadorOrderDetail';
+import AmbassadorPayouts from './pages/ambassador/AmbassadorPayouts';
 
 import './App.css';
 
@@ -60,8 +67,17 @@ function App() {
                 <Route path="orders/:orderId/invoice" element={<AdminOrderInvoice />} />
                 <Route path="promos" element={<AdminPromos />} />
                 <Route path="paylinks" element={<AdminPaylinks />} />
+                <Route path="ambassadors" element={<AdminAmbassadors />} />
                 <Route path="customers" element={<AdminCustomers />} />
                 <Route path="settings" element={<AdminSettings />} />
+              </Route>
+
+              {/* Ambassador portal */}
+              <Route path="/ambassador" element={<AmbassadorLayout />}>
+                <Route index element={<AmbassadorDashboard />} />
+                <Route path="orders" element={<AmbassadorOrders />} />
+                <Route path="orders/:orderId" element={<AmbassadorOrderDetail />} />
+                <Route path="payouts" element={<AmbassadorPayouts />} />
               </Route>
 
               {/* Storefront */}

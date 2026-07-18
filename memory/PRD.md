@@ -85,8 +85,17 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
 ## Recent additions (Feb 2026)
 - Peptide Tools page with tabs: Reconstitution Calculator + Pen Protocol
 - Pen Protocol tab: click-to-mg reference table + custom-dose click calculator
-- **Pen Duration estimator** (NEW): input weekly dose → returns weeks/days of supply and estimated run-out date. Retention driver: nudges customers on when to reorder.
+- **Pen Duration estimator**: input weekly dose → returns weeks/days of supply and estimated run-out date
 - Save/Load dose plans for logged-in users (`/api/dose-plans`)
+- **Ambassador programme** (NEW): admin creates ambassador accounts with linked promo codes; ambassadors get a restricted portal at `/ambassador` showing their orders, earnings (15% of net sales by default) and payout history. CSV export available. Admin can record payouts from the Ambassadors tab.
+
+## New endpoints (Ambassador)
+- `POST/GET/PUT/DELETE /api/ambassadors/admin[/:id]` – admin management
+- `POST/DELETE /api/ambassadors/admin/:id/payouts` – record payouts
+- `GET /api/ambassadors/me` – ambassador self-service profile + earnings
+- `GET /api/ambassadors/orders` – orders using their code (paid only)
+- `GET /api/ambassadors/orders/:id` – single order detail
+- `GET /api/ambassadors/payouts` – payout history
 
 ## Backlog / Next Tasks
 ### P2

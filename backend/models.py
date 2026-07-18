@@ -27,7 +27,10 @@ class UserOut(BaseModel):
     email: EmailStr
     first_name: str = ''
     last_name: str = ''
-    role: Literal['customer', 'admin'] = 'customer'
+    role: Literal['customer', 'admin', 'ambassador'] = 'customer'
+    ambassador_code: Optional[str] = None
+    commission_rate: Optional[float] = None
+    ambassador_active: Optional[bool] = None
     created_at: datetime
 
 
@@ -318,3 +321,36 @@ class AddressOut(AddressBase):
     user_id: str
     created_at: datetime
     updated_at: datetime
+
+
+# ---------- AMBASSADORS ----------
+class AmbassadorCreate(BaseModel):
+    email: EmailStr
+    password: str
+    first_name: str = ''
+    last_name: str = ''
+    ambassador_code: str  # promo code they share (uppercase, unique)
+    commission_rate: float = 15.0  # % of net sales they earn
+    customer_discount: float = 10.0  # % off the code gives to customers
+
+
+class AmbassadorUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    ambassador_code: Optional[str] = None
+    commission_rate: Optional[float] = None
+    customer_discount: Optional[float] = None
+    ambassador_active: Optional[bool] = None
+
+
+class PayoutCreate(BaseModel):
+    amount: float
+    note: str = ''
+
+
+class PayoutOut(BaseModel):
+    id: str
+    ambassador_user_id: str
+    amount: float
+    note: str = ''
+    created_at: datetime
