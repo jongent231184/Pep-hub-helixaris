@@ -82,22 +82,23 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
   - PayPal backend routes (`/api/paypal/*`) intentionally kept for referencing historical PayPal-paid orders
   - **⚠️ £1 real test payment pending** — webhook URL + secret already sent to Wallid by user
 
+## Recent additions (Feb 2026)
+- Peptide Tools page with tabs: Reconstitution Calculator + Pen Protocol
+- Pen Protocol tab: click-to-mg reference table + custom-dose click calculator
+- **Pen Duration estimator** (NEW): input weekly dose → returns weeks/days of supply and estimated run-out date. Retention driver: nudges customers on when to reorder.
+- Save/Load dose plans for logged-in users (`/api/dose-plans`)
+
 ## Backlog / Next Tasks
-### P0 — Ready to Deploy
-- User to click **Deploy** to push to production: Invoice generator, Delete Order feature, Apple Pay verification file, stock decrement/guard logic
-
-### P1
-- Test "Delete Order" feature end-to-end (backend + admin UI)
-- Generate branded AI images for Syringes & Wipes, category cover tiles, home page hero
-
 ### P2
-- Automated order confirmation emails (Resend/SendGrid — needs user API key)
-- Google Analytics / Meta Pixel tracking (needs user tracking IDs)
+- "For research use only" checkbox on age-gate modal
+- "Order shipped" automated email with tracking info
+- Low-stock dashboard banner (any product/variant ≤ 1 unit)
+- Google Analytics / Meta Pixel (needs user tracking IDs)
 
 ### P3
-- Promo / discount codes
-- Restock notifications / low-stock admin alert
-- Automated re-hide product when stock reaches 0 (currently just badge + disabled button)
+- Branded AI images for remaining generic items (syringes/wipes, category tiles, hero)
+- Promo / discount codes UI improvements
+- Auto-hide product when stock reaches 0
 
 ## Key Endpoints
 - `POST /api/paypal/create-order` (with stock guard)

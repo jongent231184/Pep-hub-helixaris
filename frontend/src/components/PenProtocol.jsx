@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { CircleDot, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { CircleDot, AlertTriangle, CheckCircle2, CalendarClock } from 'lucide-react';
 
 // Pens grouped by click-to-mg ratio.
 // Group A (10/20/30 mg pens): 10 clicks = 1 mg  →  0.1 mg per click
@@ -20,6 +20,7 @@ const REFERENCE_DOSES_MG = [0.25, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5];
 const PenProtocol = () => {
   const [pen, setPen] = useState(PEN_SIZES[3]); // default 40 mg
   const [customDose, setCustomDose] = useState('');
+  const [weeklyDose, setWeeklyDose] = useState('');
 
   const totalClicks = pen.mg * pen.clicksPerMg;
   const clicksForCustom = useMemo(() => {
@@ -32,6 +33,23 @@ const PenProtocol = () => {
       whole: Number.isInteger(clicks),
     };
   }, [customDose, pen, totalClicks]);
+
+  const duration = useMemo(() => {
+    const w = Number(weeklyDose);
+    if (!w || w <= 0) return null;
+    const weeks = pen.mg / w;
+    const whole = Math.floor(weeks);
+    const days = Math.round((weeks - whole) * 7);
+    const runOut = new Date();
+    runOut.setDate(runOut.getDate() + Math.round(weeks * 7));
+    return {
+      weeks,
+      whole,
+      days,
+      exceedsPen: w > pen.mg,
+      runOutDate: runOut.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+    };
+  }, [weeklyDose, pen]);
 
   return (
     <div className="grid lg:grid-cols-[1.35fr_1fr] gap-6 lg:gap-8">
@@ -137,6 +155,60 @@ const PenProtocol = () => {
             </>
           ) : (
             <p className="text-sm text-slate-300">Enter a dose to see the exact click count.</p>
+          )}
+        </div>
+
+        {/* Pen duration estimator */}
+        <div className="bg-white border border-slate-200 rounded-xl p-6" data-testid="pen-duration-card">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-9 w-9 shrink-0 rounded-lg bg-emerald-100 text-emerald-700 grid place-items-center">
+              <CalendarClock className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-emerald-700 font-bold">How long will this pen last?</p>
+              <p className="text-xs text-slate-500">Enter your weekly dose to estimate supply.</p>
+            </div>
+          </div>
+          <label className="text-xs text-slate-500 uppercase tracking-wider block mb-1.5">Weekly dose (mg)</label>
+          <Input
+            type="number"
+            step="0.1"
+            min="0"
+            value={weeklyDose}
+            onChange={(e) => setWeeklyDose(e.target.value)}
+            placeholder="e.g. 2.5"
+            className="h-11 mb-4"
+            data-testid="pen-weekly-dose-input"
+          />
+
+          {duration ? (
+            duration.exceedsPen ? (
+              <div className="flex items-start gap-2 border border-amber-300 bg-amber-50 rounded-lg p-3 text-xs text-amber-900">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>
+                  Your weekly dose (<strong>{Number(weeklyDose)} mg</strong>) is greater than the entire {pen.mg} mg pen. You&apos;ll need multiple pens per week.
+                </span>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-slate-600 mb-1">A {pen.mg} mg pen at <strong>{Number(weeklyDose)} mg/week</strong> lasts:</p>
+                <div className="text-4xl font-black tracking-tight text-slate-900" data-testid="pen-duration-result">
+                  {duration.whole}
+                  <span className="text-2xl text-slate-500 font-bold ml-1.5">weeks</span>
+                  {duration.days > 0 && (
+                    <>
+                      <span className="text-2xl text-slate-400 font-bold ml-2">·</span>
+                      <span className="text-2xl text-slate-500 font-bold ml-2">{duration.days} days</span>
+                    </>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Estimated run-out date: <strong className="text-slate-700">{duration.runOutDate}</strong>
+                </p>
+              </>
+            )
+          ) : (
+            <p className="text-sm text-slate-500">Enter your weekly dose to see how many weeks this pen will last.</p>
           )}
         </div>
 
