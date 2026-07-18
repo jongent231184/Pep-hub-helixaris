@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Orders } from '../../lib/api';
-import { Loader2, Download, Trash2, Link as LinkIcon } from 'lucide-react';
+import { Orders, Wallid } from '../../lib/api';
+import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
@@ -25,11 +25,39 @@ const AdminOrders = () => {
   const [query, setQuery] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [paylinkOpen, setPaylinkOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const { toast } = useToast();
 
   const load = () => Orders.all().then(setOrders).catch(() => setOrders([])).finally(() => setLoading(false));
 
   useEffect(() => { load(); }, []);
+
+  const handleSyncFromWallid = async () => {
+    setSyncing(true);
+    try {
+      const res = await Wallid.syncPending();
+      const changesText = (res.changes || [])
+        .map(c => `${c.order_number}: ${c.from} → ${c.to}`)
+        .join(', ');
+      toast({
+        title: `Checked ${res.checked} pending order${res.checked !== 1 ? 's' : ''}`,
+        description: res.updated
+          ? `${res.now_paid} newly paid · ${res.updated} updated${changesText ? ` (${changesText})` : ''}`
+          : res.checked === 0
+            ? 'No pending Wallid orders to sync.'
+            : 'No changes — all pending orders are still awaiting payment.',
+      });
+      if (res.updated > 0) load();
+    } catch (e) {
+      toast({
+        title: 'Sync failed',
+        description: String(e.response?.data?.detail || e.message),
+        variant: 'destructive',
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleDelete = async (order) => {
     if (!window.confirm(`Delete order ${order.order_number}? This cannot be undone.`)) return;
@@ -78,7 +106,18 @@ const AdminOrders = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl md:text-3xl font-black uppercase">Orders</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            onClick={handleSyncFromWallid}
+            disabled={syncing}
+            variant="outline"
+            className="gap-2"
+            data-testid="sync-all-wallid-btn"
+            title="Poll Wallid for every pending order and update their payment status"
+          >
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Sync from Wallid
+          </Button>
           <Button
             onClick={() => setPaylinkOpen(true)}
             className="bg-sky-500 hover:bg-sky-600 text-white gap-2"

@@ -8,11 +8,12 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request, Body
+from fastapi import APIRouter, HTTPException, Request, Body, Depends
 from pymongo.errors import DuplicateKeyError
 
 from db import db
 from order_helpers import mark_order_paid
+from auth import require_admin
 
 router = APIRouter(prefix='/wallid', tags=['wallid'])
 
@@ -305,4 +306,64 @@ async def verify_status(order_id: str):
         'wallid_status': wallid_status,
         'payment_status': refreshed.get('payment_status'),
         'order_number': refreshed.get('order_number'),
+    }
+
+
+@router.post('/sync-pending')
+async def sync_pending_orders(_=Depends(require_admin)):
+    """Admin — poll Wallid for every order that has a Wallid payment ID and
+    isn't already paid, and update local state. Returns a summary."""
+    if not _configured():
+        raise HTTPException(500, 'Wallid is not configured')
+
+    cursor = db.orders.find({
+        'wallid_api_payment_id': {'$exists': True, '$nin': [None, '']},
+        'payment_status': {'$ne': 'paid'},
+    })
+    orders = await cursor.to_list(500)
+    updated = 0
+    now_paid = 0
+    failed_lookups = 0
+    changes = []
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        for order in orders:
+            api_payment_id = order.get('wallid_api_payment_id')
+            prev_payment_status = order.get('payment_status')
+            try:
+                resp = await client.get(
+                    f"{WALLID_BASE_URL}/status",
+                    params={'apiPaymentId': api_payment_id},
+                    headers={'Authorization': _basic_auth_header()},
+                )
+                if resp.status_code >= 400:
+                    failed_lookups += 1
+                    continue
+                data = resp.json()
+                wallid_status = (data.get('status') or '').upper()
+            except httpx.RequestError:
+                failed_lookups += 1
+                continue
+
+            await _apply_status(order, wallid_status, payment_ref=api_payment_id, source='polling')
+            refreshed = await db.orders.find_one({'id': order['id']})
+            new_status = refreshed.get('payment_status') if refreshed else prev_payment_status
+            if new_status != prev_payment_status:
+                updated += 1
+                if new_status == 'paid':
+                    now_paid += 1
+                changes.append({
+                    'order_number': order.get('order_number'),
+                    'from': prev_payment_status,
+                    'to': new_status,
+                    'wallid_status': wallid_status,
+                })
+
+    return {
+        'ok': True,
+        'checked': len(orders),
+        'updated': updated,
+        'now_paid': now_paid,
+        'failed_lookups': failed_lookups,
+        'changes': changes,
     }

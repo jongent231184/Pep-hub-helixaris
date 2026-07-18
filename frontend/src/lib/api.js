@@ -82,6 +82,7 @@ export const Wallid = {
   config: () => api.get('/wallid/config').then(r => r.data),
   createPayment: (orderId) => api.post('/wallid/create-payment', { order_id: orderId }).then(r => r.data),
   verifyStatus: (orderId) => api.get(`/wallid/verify-status/${orderId}`).then(r => r.data),
+  syncPending: () => api.post('/wallid/sync-pending').then(r => r.data),
 };
 
 export const DosePlans = {
