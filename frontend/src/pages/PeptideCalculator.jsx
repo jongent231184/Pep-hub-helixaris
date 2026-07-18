@@ -4,11 +4,12 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
-import { Beaker, Syringe, Droplet, Target, AlertTriangle, CheckCircle2, Save, Trash2, BookmarkPlus, Loader2 } from 'lucide-react';
+import { Beaker, Syringe, Droplet, Target, AlertTriangle, CheckCircle2, Save, Trash2, BookmarkPlus, Loader2, Calculator, CircleDot } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/use-toast';
 import { DosePlans } from '../lib/api';
+import PenProtocol from '../components/PenProtocol';
 
 const SYRINGES = [
   { ml: 0.3, units: 30, label: '0.3 ml · 30 units' },
@@ -68,6 +69,7 @@ const StepCard = ({ icon: Icon, label, children }) => (
 const PeptideCalculator = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [tab, setTab] = useState('reconstitution');
   const [syringe, setSyringe] = useState(SYRINGES[1]);
   const [vial, setVial] = useState(5);
   const [vialOther, setVialOther] = useState('');
@@ -158,13 +160,49 @@ const PeptideCalculator = () => {
     <Layout>
       <div className="max-w-5xl mx-auto px-4 py-10">
         <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Peptide Calculator' }]} />
-        <div className="mt-4 mb-8">
-          <h1 className="text-4xl sm:text-5xl font-black uppercase tracking-tight text-slate-900">Peptide Calculator</h1>
+        <div className="mt-4 mb-6">
+          <h1 className="text-4xl sm:text-5xl font-black uppercase tracking-tight text-slate-900">Peptide Tools</h1>
           <p className="mt-3 text-slate-600 text-base max-w-2xl">
-            Work out exactly how many insulin-syringe units to draw for a specific research dose. Set your syringe size, vial strength, bacteriostatic water volume, and target dose — the result updates instantly.
+            {tab === 'reconstitution'
+              ? 'Work out exactly how many insulin-syringe units to draw for a specific research dose.'
+              : 'Convert pen clicks to a milligram dose based on your pen strength — no guesswork.'}
           </p>
         </div>
 
+        {/* Tab strip */}
+        <div className="flex border-b border-slate-200 mb-8" data-testid="tools-tabs">
+          <button
+            type="button"
+            onClick={() => setTab('reconstitution')}
+            className={`inline-flex items-center gap-2 px-5 py-3 text-sm font-bold uppercase tracking-wider border-b-2 -mb-px transition-colors ${
+              tab === 'reconstitution'
+                ? 'border-sky-500 text-sky-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+            data-testid="tab-reconstitution"
+          >
+            <Calculator className="h-4 w-4" />
+            Reconstitution
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('pen')}
+            className={`inline-flex items-center gap-2 px-5 py-3 text-sm font-bold uppercase tracking-wider border-b-2 -mb-px transition-colors ${
+              tab === 'pen'
+                ? 'border-sky-500 text-sky-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+            data-testid="tab-pen"
+          >
+            <CircleDot className="h-4 w-4" />
+            Pen Protocol
+          </button>
+        </div>
+
+        {tab === 'pen' && <PenProtocol />}
+
+        {tab === 'reconstitution' && (
+        <>
         <div className="grid lg:grid-cols-[1.35fr_1fr] gap-6 lg:gap-8">
           {/* Inputs */}
           <div className="space-y-4">
@@ -365,6 +403,8 @@ const PeptideCalculator = () => {
             </Button>
           </div>
         </div>
+        </>
+        )}
       </div>
     </Layout>
   );
