@@ -2,6 +2,7 @@
 import base64
 import hashlib
 import hmac
+import logging
 import os
 import time
 from datetime import datetime, timezone
@@ -15,6 +16,7 @@ from db import db
 from order_helpers import mark_order_paid
 from auth import require_admin
 
+logger = logging.getLogger('ghp.wallid')
 router = APIRouter(prefix='/wallid', tags=['wallid'])
 
 WALLID_BASE_URL = os.environ.get('WALLID_BASE_URL', 'https://payment-api.wallid.co/api/payment-gw/v1')
@@ -56,6 +58,31 @@ def _frontend_base(request: Request) -> str:
 @router.get('/config')
 async def wallid_config():
     return {'configured': _configured()}
+
+
+@router.get('/debug/webhook-health')
+async def webhook_health(_=Depends(require_admin)):
+    """Admin — show whether the webhook secret is loaded (without revealing it)
+    and return the most recent 20 webhook attempts to diagnose why auto-sync
+    might be failing."""
+    attempts = await db.wallid_webhook_attempts.find().sort(
+        'received_at', -1
+    ).limit(20).to_list(20)
+    for a in attempts:
+        a.pop('_id', None)
+        if 'received_at' in a and hasattr(a['received_at'], 'isoformat'):
+            a['received_at'] = a['received_at'].isoformat()
+    secret = WALLID_WEBHOOK_SECRET or ''
+    return {
+        'webhook_secret_configured': bool(secret),
+        'webhook_secret_length': len(secret),
+        'webhook_secret_starts_with': secret[:3] + '...' if len(secret) >= 3 else '',
+        'wallid_api_configured': _configured(),
+        'frontend_public_url': FRONTEND_PUBLIC_URL or '(auto-detect from origin)',
+        'attempts_total': await db.wallid_webhook_attempts.count_documents({}),
+        'recent_attempts': attempts,
+        'server_time_utc': datetime.now(timezone.utc).isoformat(),
+    }
 
 
 @router.post('/create-payment')
@@ -211,23 +238,54 @@ async def _apply_status(order: dict, wallid_status: str, payment_ref: str = '', 
 
 @router.post('/webhook')
 async def wallid_webhook(request: Request):
-    """Verify HMAC-SHA256 signature on the RAW body, then process events."""
-    if not WALLID_WEBHOOK_SECRET:
-        raise HTTPException(500, 'Webhook secret not configured')
-
+    """Verify HMAC-SHA256 signature on the RAW body, then process events.
+    Every attempt is recorded to `wallid_webhook_attempts` for diagnostics."""
     raw_body = await request.body()
     ts_str = request.headers.get('x-webhook-timestamp', '')
     sig = request.headers.get('x-webhook-signature', '')
+    attempt_doc = {
+        'received_at': datetime.now(timezone.utc),
+        'has_timestamp': bool(ts_str),
+        'has_signature': bool(sig),
+        'body_len': len(raw_body),
+        'body_preview': raw_body[:500].decode('utf-8', errors='replace'),
+        'result': 'unknown',
+    }
+
+    async def _record(result: str, **extra):
+        attempt_doc['result'] = result
+        attempt_doc.update(extra)
+        try:
+            await db.wallid_webhook_attempts.insert_one(attempt_doc)
+            # Keep only the most recent 200 attempts to bound the collection
+            count = await db.wallid_webhook_attempts.count_documents({})
+            if count > 200:
+                oldest = await db.wallid_webhook_attempts.find().sort('received_at', 1).limit(count - 200).to_list(count - 200)
+                if oldest:
+                    await db.wallid_webhook_attempts.delete_many({'_id': {'$in': [o['_id'] for o in oldest]}})
+        except Exception as e:
+            logger.exception(f'Failed to log webhook attempt: {e}')
+
+    if not WALLID_WEBHOOK_SECRET:
+        logger.error('[wallid webhook] Rejected: WALLID_WEBHOOK_SECRET not configured on this environment')
+        await _record('rejected_no_secret')
+        raise HTTPException(500, 'Webhook secret not configured')
 
     if not ts_str or not sig:
+        logger.warning('[wallid webhook] Rejected: missing signature headers')
+        await _record('rejected_missing_headers')
         raise HTTPException(400, 'Missing signature headers')
 
     # Replay window: reject if timestamp is more than 5 minutes off.
     try:
         ts = int(ts_str)
     except ValueError:
+        await _record('rejected_bad_timestamp', ts_str=ts_str)
         raise HTTPException(400, 'Bad timestamp header')
-    if abs(int(time.time()) - ts) > 300:
+    skew = int(time.time()) - ts
+    if abs(skew) > 300:
+        logger.warning(f'[wallid webhook] Rejected: timestamp skew {skew}s (limit ±300s)')
+        await _record('rejected_timestamp_skew', skew_seconds=skew)
         raise HTTPException(400, 'Timestamp outside allowed window')
 
     # Message = "{timestamp}.{raw_body_bytes}" — use bytes concatenation to
@@ -239,6 +297,11 @@ async def wallid_webhook(request: Request):
         hashlib.sha256,
     ).hexdigest()
     if not hmac.compare_digest(expected, sig):
+        logger.warning(
+            f'[wallid webhook] Rejected: signature mismatch. Expected prefix={expected[:20]}... got={sig[:20]}...'
+        )
+        await _record('rejected_signature_mismatch',
+                      expected_prefix=expected[:20], received_prefix=sig[:20])
         raise HTTPException(400, 'Invalid signature')
 
     # Only now parse JSON
@@ -246,6 +309,7 @@ async def wallid_webhook(request: Request):
         import json as _json
         payload = _json.loads(raw_body.decode('utf-8'))
     except Exception:
+        await _record('rejected_bad_json')
         raise HTTPException(400, 'Invalid JSON body')
 
     events = payload.get('events', []) or []
@@ -274,6 +338,8 @@ async def wallid_webhook(request: Request):
             await _apply_status(order, status_str, payment_ref=api_payment_id, source='webhook')
         processed += 1
 
+    logger.info(f'[wallid webhook] Accepted: {processed} event(s) processed')
+    await _record('accepted', events_processed=processed, total_events=len(events))
     return {'ok': True, 'processed': processed}
 
 
