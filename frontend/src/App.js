@@ -22,6 +22,7 @@ import Bundles from './pages/Bundles';
 import Search from './pages/Search';
 import Wholesale from './pages/Wholesale';
 import Terms from './pages/Terms';
+import PeptideCalculator from './pages/PeptideCalculator';
 
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -77,6 +78,7 @@ function App() {
               <Route path="/search" element={<Search />} />
               <Route path="/wholesale" element={<Wholesale />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/peptide-calculator" element={<PeptideCalculator />} />
               <Route path="/:categorySlug" element={<CategoryPage />} />
               <Route path="/:categorySlug/:productSlug" element={<ProductDetail />} />
               </Routes>
