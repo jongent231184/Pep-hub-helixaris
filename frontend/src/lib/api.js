@@ -70,6 +70,19 @@ export const Uploads = {
     fd.append('file', file);
     return api.post('/uploads', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
   },
+  uploadDocument: (file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post('/uploads/document', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
+  },
+};
+
+export const Coas = {
+  list: () => api.get('/coas').then(r => r.data),
+  listAll: () => api.get('/coas/all').then(r => r.data),
+  create: (data) => api.post('/coas', data).then(r => r.data),
+  update: (id, data) => api.put(`/coas/${id}`, data).then(r => r.data),
+  remove: (id) => api.delete(`/coas/${id}`).then(r => r.data),
 };
 
 export const PayPal = {

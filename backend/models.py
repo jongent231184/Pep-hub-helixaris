@@ -354,3 +354,38 @@ class PayoutOut(BaseModel):
     amount: float
     note: str = ''
     created_at: datetime
+
+
+# ---------- COAs (Certificates of Analysis) ----------
+class CoaBase(BaseModel):
+    title: str
+    product_name: Optional[str] = ''
+    batch_number: Optional[str] = ''
+    test_date: Optional[str] = ''  # ISO date string 'YYYY-MM-DD'
+    notes: Optional[str] = ''
+    file_url: str
+    file_type: Literal['pdf', 'image'] = 'pdf'
+    visible: bool = True
+    sort_order: int = 0
+
+
+class CoaCreate(CoaBase):
+    pass
+
+
+class CoaUpdate(BaseModel):
+    title: Optional[str] = None
+    product_name: Optional[str] = None
+    batch_number: Optional[str] = None
+    test_date: Optional[str] = None
+    notes: Optional[str] = None
+    file_url: Optional[str] = None
+    file_type: Optional[Literal['pdf', 'image']] = None
+    visible: Optional[bool] = None
+    sort_order: Optional[int] = None
+
+
+class CoaOut(CoaBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime

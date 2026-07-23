@@ -23,6 +23,7 @@ import Search from './pages/Search';
 import Wholesale from './pages/Wholesale';
 import Terms from './pages/Terms';
 import PeptideCalculator from './pages/PeptideCalculator';
+import Coa from './pages/Coa';
 
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -37,6 +38,7 @@ import AdminSettings from './pages/admin/AdminSettings';
 import AdminPromos from './pages/admin/AdminPromos';
 import AdminPaylinks from './pages/admin/AdminPaylinks';
 import AdminAmbassadors from './pages/admin/AdminAmbassadors';
+import AdminCoas from './pages/admin/AdminCoas';
 
 import AmbassadorLayout from './pages/ambassador/AmbassadorLayout';
 import AmbassadorDashboard from './pages/ambassador/AmbassadorDashboard';
@@ -68,6 +70,7 @@ function App() {
                 <Route path="promos" element={<AdminPromos />} />
                 <Route path="paylinks" element={<AdminPaylinks />} />
                 <Route path="ambassadors" element={<AdminAmbassadors />} />
+                <Route path="coas" element={<AdminCoas />} />
                 <Route path="customers" element={<AdminCustomers />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
@@ -95,6 +98,8 @@ function App() {
               <Route path="/wholesale" element={<Wholesale />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/peptide-calculator" element={<PeptideCalculator />} />
+              <Route path="/coa" element={<Coa />} />
+              <Route path="/coas" element={<Coa />} />
               <Route path="/:categorySlug" element={<CategoryPage />} />
               <Route path="/:categorySlug/:productSlug" element={<ProductDetail />} />
               </Routes>

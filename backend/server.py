@@ -25,6 +25,7 @@ from routes.address_routes import router as address_router  # noqa: E402
 from routes.wallid_routes import router as wallid_router  # noqa: E402
 from routes.dose_plan_routes import router as dose_plan_router  # noqa: E402
 from routes.ambassador_routes import router as ambassador_router  # noqa: E402
+from routes.coa_routes import router as coa_router  # noqa: E402
 from routes.wallid_routes import start_wallid_poller  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s - %(message)s')
@@ -42,7 +43,9 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
-# Static uploads (served at /api/uploads/<filename>)
+# Static uploads (served at /api/uploads/<filename>) — mounted AFTER the API
+# router below, so specific POST endpoints like /api/uploads and
+# /api/uploads/document take precedence over the static file catch-all.
 UPLOADS_DIR = Path(os.environ.get('UPLOADS_DIR', '/app/backend/uploads'))
 try:
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
@@ -51,7 +54,6 @@ except Exception as e:
     logger_boot.warning(f'Could not create UPLOADS_DIR {UPLOADS_DIR}: {e}. Using /tmp/uploads instead.')
     UPLOADS_DIR = Path('/tmp/uploads')
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-app.mount('/api/uploads', StaticFiles(directory=str(UPLOADS_DIR)), name='uploads')
 
 # Main API router with /api prefix
 api_router = APIRouter(prefix='/api')
@@ -81,8 +83,13 @@ api_router.include_router(address_router)
 api_router.include_router(wallid_router)
 api_router.include_router(dose_plan_router)
 api_router.include_router(ambassador_router)
+api_router.include_router(coa_router)
 
 app.include_router(api_router)
+
+# Mount static uploads AFTER the router so specific POST endpoints win over
+# the static file catch-all (StaticFiles otherwise intercepts POST with 405).
+app.mount('/api/uploads', StaticFiles(directory=str(UPLOADS_DIR)), name='uploads')
 
 
 @app.on_event('startup')

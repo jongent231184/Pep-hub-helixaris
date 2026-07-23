@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Package, Tag, ShoppingBag, Users, Settings as SettingsIcon,
-  LogOut, Loader2, ExternalLink, Ticket, Link as LinkIcon, Award
+  LogOut, Loader2, ExternalLink, Ticket, Link as LinkIcon, Award, FileCheck
 } from 'lucide-react';
 
 const NAV = [
@@ -14,6 +14,7 @@ const NAV = [
   { to: '/admin/paylinks', label: 'Pay Links', icon: LinkIcon },
   { to: '/admin/promos', label: 'Promos', icon: Ticket },
   { to: '/admin/ambassadors', label: 'Ambassadors', icon: Award },
+  { to: '/admin/coas', label: 'COAs', icon: FileCheck },
   { to: '/admin/customers', label: 'Customers', icon: Users },
   { to: '/admin/settings', label: 'Settings', icon: SettingsIcon },
 ];

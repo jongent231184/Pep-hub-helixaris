@@ -34,6 +34,8 @@ const Footer = () => {
             {shopCats.map(c => (
               <li key={c.slug}><Link to={`/${c.slug}`} className="hover:text-sky-400">{c.name}</Link></li>
             ))}
+            <li><Link to="/coa" className="hover:text-sky-400">Certificates of Analysis</Link></li>
+            <li><Link to="/peptide-calculator" className="hover:text-sky-400">Peptide Tools</Link></li>
           </ul>
         </div>
         <div>
