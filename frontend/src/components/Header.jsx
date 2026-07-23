@@ -15,6 +15,7 @@ const NAV = [
   { to: '/syringes-and-wipes', label: 'Syringes & Wipes' },
   { to: '/bundles', label: 'Bundles' },
   { to: '/peptide-calculator', label: 'Calculator' },
+  { to: '/coa', label: 'COAs' },
 ];
 
 const Header = () => {
