@@ -94,7 +94,8 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
   - `GET /api/wallid/debug/webhook-health` (admin) — surfaces secret loaded state + last 20 attempts for RCA
   - **Background poller**: on server startup, spawns an asyncio task that every 60s polls Wallid for any pending order created in the last 24h
 - **Inline stock editing** on Admin → Products (replaces old "Featured" column). Amber highlight when ≤ 3.
-- **Certificates of Analysis** (NEW): admin uploads PDF/image lab reports via `/admin/coas` (max 20MB). Public gallery at `/coa` with search, batch labels, test date, download button. Linked from footer.
+- **Certificates of Analysis**: admin uploads PDF/image lab reports via `/admin/coas` (max 20MB). Public gallery at `/coa` with search, batch labels, test date, download button. Linked from footer + main header nav.
+- **Checkout retry fix** (NEW — bug fix): Wallid payment failures no longer create duplicate orders. Root cause: cart was cleared before the Wallid redirect and `?wallid=failed` was ignored — so customers saw an empty basket, re-added items, and checked out again, generating a fresh order each attempt. Fix: cart is preserved through the payment flow (only cleared on the confirmation page when `payment_status='paid'`), and `?wallid=failed` now restores the pending order from `localStorage.ghp_pending_wallid_order`, jumps to the payment step, and shows a red "Payment didn't complete — retry" banner. The Retry button reuses the same order id. Verified end-to-end by testing agent (10/10 backend tests + frontend simulation pass, no duplicate orders on retry).
 
 ## New endpoints (Ambassador)
 - `POST/GET/PUT/DELETE /api/ambassadors/admin[/:id]` – admin management

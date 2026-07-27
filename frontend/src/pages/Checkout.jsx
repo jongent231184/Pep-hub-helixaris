@@ -527,33 +527,50 @@ const Checkout = () => {
 
           <div className="border rounded-lg p-6 bg-slate-50 h-fit sticky top-32">
             <h2 className="text-lg font-bold uppercase border-b pb-3">Order Summary</h2>
-            <div className="space-y-3 mt-4 max-h-72 overflow-y-auto">
-              {items.map(it => (
-                <div key={it._key} className="flex gap-3 text-sm">
-                  <img src={resolveImage(it.image)} alt={it.name} className="w-14 h-14 bg-white rounded border object-contain p-1 shrink-0" />
-                  <div className="flex-1">
-                    <p className="font-semibold leading-tight">{it.name}</p>
-                    {it.option && <p className="text-xs text-slate-500">{it.option}</p>}
-                    <p className="text-xs text-slate-500">Qty: {it.qty}</p>
+            {(() => {
+              // When we're in the payment step, show the actual order figures
+              // (particularly important on the wallid=failed retry path where
+              // the customer's live cart state could diverge from the order).
+              const showFromOrder = step === 'payment' && createdOrder;
+              const displayItems = showFromOrder
+                ? (createdOrder.items || []).map((it, i) => ({ ...it, _key: `co-${i}` }))
+                : items;
+              const displaySubtotal = showFromOrder ? Number(createdOrder.subtotal || 0) : subtotal;
+              const displayDiscount = showFromOrder ? Number(createdOrder.discount || 0) : discount;
+              const displayShipping = showFromOrder ? Number(createdOrder.shipping || 0) : shipping;
+              const displayTotal = showFromOrder ? Number(createdOrder.total || 0) : total;
+              return (
+                <>
+                  <div className="space-y-3 mt-4 max-h-72 overflow-y-auto">
+                    {displayItems.map(it => (
+                      <div key={it._key} className="flex gap-3 text-sm">
+                        <img src={resolveImage(it.image)} alt={it.name} className="w-14 h-14 bg-white rounded border object-contain p-1 shrink-0" />
+                        <div className="flex-1">
+                          <p className="font-semibold leading-tight">{it.name}</p>
+                          {it.option && <p className="text-xs text-slate-500">{it.option}</p>}
+                          <p className="text-xs text-slate-500">Qty: {it.qty}</p>
+                        </div>
+                        <p className="font-semibold">£{(Number(it.price) * Number(it.qty)).toFixed(2)}</p>
+                      </div>
+                    ))}
                   </div>
-                  <p className="font-semibold">£{(it.price * it.qty).toFixed(2)}</p>
-                </div>
-              ))}
-            </div>
-            <div className="border-t mt-4 pt-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span>Subtotal</span><span>£{subtotal.toFixed(2)}</span></div>
-              {discount > 0 && (
-                <div className="flex justify-between text-emerald-700">
-                  <span>Discount ({promo.code})</span>
-                  <span>-£{discount.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span>Shipping{promo?.shipping_discount > 0 && ' (free)'}</span>
-                <span>{shipping === 0 ? 'FREE' : `£${shipping.toFixed(2)}`}</span>
-              </div>
-              <div className="flex justify-between font-bold text-base pt-2 border-t"><span>Total</span><span>£{total.toFixed(2)}</span></div>
-            </div>
+                  <div className="border-t mt-4 pt-4 space-y-2 text-sm">
+                    <div className="flex justify-between"><span>Subtotal</span><span>£{displaySubtotal.toFixed(2)}</span></div>
+                    {displayDiscount > 0 && (
+                      <div className="flex justify-between text-emerald-700">
+                        <span>Discount{promo?.code ? ` (${promo.code})` : (createdOrder?.promo_code ? ` (${createdOrder.promo_code})` : '')}</span>
+                        <span>-£{displayDiscount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span>Shipping{(!showFromOrder && promo?.shipping_discount > 0) || (showFromOrder && displayShipping === 0) ? ' (free)' : ''}</span>
+                      <span>{displayShipping === 0 ? 'FREE' : `£${displayShipping.toFixed(2)}`}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-base pt-2 border-t"><span>Total</span><span>£{displayTotal.toFixed(2)}</span></div>
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Promo code */}
             <div className="mt-4 border-t pt-4">
