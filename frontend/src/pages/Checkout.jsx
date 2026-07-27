@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Input } from '../components/ui/input';
@@ -9,25 +9,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
 import { useToast } from '../hooks/use-toast';
-import { Lock, Loader2 } from 'lucide-react';
+import { Lock, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Checkbox } from '../components/ui/checkbox';
 import BankTrustBadges from '../components/BankTrustBadges';
 import RedirectingOverlay from '../components/RedirectingOverlay';
 import { useAuth } from '../context/AuthContext';
 import { Orders, Promos, Addresses, Wallid, resolveImage } from '../lib/api';
 
+const PENDING_ORDER_STORAGE_KEY = 'ghp_pending_wallid_order';
+
 const Checkout = () => {
-  const { items, subtotal, clearCart } = useCart();
+  const { items, subtotal } = useCart();
   const { settings } = useStore();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [step, setStep] = useState('details'); // 'details' | 'payment'
   const [processing, setProcessing] = useState(false);
   const [wallidConfig, setWallidConfig] = useState(null);
   const [wallidLoading, setWallidLoading] = useState(false);
   const [createdOrder, setCreatedOrder] = useState(null);
+  const [wallidFailed, setWallidFailed] = useState(false);
   const [form, setForm] = useState({
     email: '', firstName: '', lastName: '', phone: '',
     address1: '', address2: '', city: '', postcode: '', country: 'United Kingdom',
@@ -74,6 +78,47 @@ const Checkout = () => {
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  // If we come back from Wallid with a failure, restore the pending order and
+  // jump straight to the payment step so the customer can retry — without
+  // creating a duplicate order.
+  useEffect(() => {
+    const wallidParam = searchParams.get('wallid');
+    if (wallidParam !== 'failed') return;
+    let stashed = null;
+    try {
+      const raw = localStorage.getItem(PENDING_ORDER_STORAGE_KEY);
+      if (raw) stashed = JSON.parse(raw);
+    } catch (_) { /* ignore */ }
+
+    if (stashed?.id) {
+      // Verify the order still exists and isn't already paid
+      Orders.get(stashed.id)
+        .then((fresh) => {
+          if (fresh?.payment_status === 'paid') {
+            // Already paid via webhook / poller — jump straight to confirmation
+            localStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
+            navigate(`/order-confirmation/${fresh.order_number}?wallid=1`, { replace: true });
+            return;
+          }
+          setCreatedOrder(fresh);
+          setStep('payment');
+          setWallidFailed(true);
+          // Strip the ?wallid=failed from the URL so a refresh doesn't retrigger
+          setSearchParams({}, { replace: true });
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        })
+        .catch(() => {
+          // Order not found any more — start fresh silently
+          localStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
+          setSearchParams({}, { replace: true });
+        });
+    } else {
+      // No stash — nothing we can safely restore, just clear the param
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const update = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   const updateBilling = (k) => (e) => setBilling(b => ({ ...b, [k]: e.target.value }));
@@ -231,10 +276,21 @@ const Checkout = () => {
   const payWithWallid = async () => {
     if (!createdOrder) return;
     setWallidLoading(true);
+    setWallidFailed(false);
     try {
       const res = await Wallid.createPayment(createdOrder.id);
       if (!res?.payment_link) throw new Error('No payment link returned');
-      clearCart();
+      // Persist the pending order id so we can restore it on retry if Wallid
+      // redirects the customer back with ?wallid=failed. Cart is *not*
+      // cleared here — that happens on the confirmation page only after the
+      // order is confirmed paid. Prevents duplicate orders on retry.
+      try {
+        localStorage.setItem(PENDING_ORDER_STORAGE_KEY, JSON.stringify({
+          id: createdOrder.id,
+          order_number: createdOrder.order_number,
+          created_at: Date.now(),
+        }));
+      } catch (_) { /* localStorage may be unavailable */ }
       window.location.href = res.payment_link;
     } catch (err) {
       const detail = err.response?.data?.detail;
@@ -414,7 +470,25 @@ const Checkout = () => {
             {step === 'payment' && (
               <section className="border rounded-lg p-6 bg-white">
                 <h2 className="text-lg font-bold uppercase mb-4">Payment</h2>
-                <p className="text-sm text-slate-600 mb-6">Order <span className="font-mono font-bold">{createdOrder?.order_number}</span> created. Complete payment below.</p>
+
+                {wallidFailed && (
+                  <div
+                    className="mb-5 border-l-4 border-red-500 bg-red-50 rounded p-4 flex items-start gap-3"
+                    data-testid="wallid-failed-banner"
+                  >
+                    <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-bold text-red-900 uppercase text-xs tracking-widest mb-1">
+                        Payment didn&apos;t complete
+                      </p>
+                      <p className="text-red-800">
+                        No charge was taken. Your order is still saved — click <strong>Pay by Bank</strong> below to try again with the same order (no duplicate order will be created).
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-sm text-slate-600 mb-6">Order <span className="font-mono font-bold">{createdOrder?.order_number}</span> {wallidFailed ? 'is ready to retry' : 'created'}. Complete payment below.</p>
 
                 {wallidConfig?.configured ? (
                   <div data-testid="wallid-section">
@@ -426,7 +500,13 @@ const Checkout = () => {
                     >
                       {wallidLoading
                         ? <Loader2 className="h-5 w-5 animate-spin" />
-                        : <><Lock className="h-4 w-4 mr-2" /> Pay by Bank · £{Number(createdOrder?.total || 0).toFixed(2)}</>}
+                        : (
+                          <>
+                            {wallidFailed ? <RefreshCw className="h-4 w-4 mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
+                            {wallidFailed ? 'Retry payment · ' : 'Pay by Bank · '}
+                            £{Number(createdOrder?.total || 0).toFixed(2)}
+                          </>
+                        )}
                     </Button>
                     <p className="text-xs text-slate-500 mt-2 text-center">
                       Instant secure transfer from your bank · No card details required

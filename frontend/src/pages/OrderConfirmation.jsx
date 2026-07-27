@@ -4,13 +4,17 @@ import Layout from '../components/Layout';
 import { CheckCircle2, Loader2, Clock } from 'lucide-react';
 import { Orders, Wallid } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import PaymentSuccessSplash from '../components/PaymentSuccessSplash';
 import GuestAccountPrompt from '../components/GuestAccountPrompt';
+
+const PENDING_ORDER_STORAGE_KEY = 'ghp_pending_wallid_order';
 
 const OrderConfirmation = () => {
   const { orderId } = useParams();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { clearCart } = useCart();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(false);
@@ -22,6 +26,13 @@ const OrderConfirmation = () => {
   const applyOrder = (o) => {
     setOrder(o);
     if (o?.payment_status === 'paid') {
+      // Payment confirmed — safe to clear the cart and the pending-order
+      // stash. The cart is intentionally preserved until this moment so that
+      // failed payments can be retried without the customer losing items.
+      try {
+        clearCart();
+        localStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
+      } catch (_) { /* ignore */ }
       const key = `ghp_splash_${o.id}`;
       if (!sessionStorage.getItem(key)) {
         sessionStorage.setItem(key, '1');

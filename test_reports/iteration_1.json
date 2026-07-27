@@ -1,0 +1,32 @@
+{
+  "summary": "Verified the Wallid retry-flow bug fix end-to-end. Backend pytest suite (10 tests) passes 100%. Frontend simulation confirms: (a) navigating to /checkout?wallid=failed with a stashed pending order in localStorage restores the SAME order, jumps to payment step, and renders the wallid-failed-banner; (b) the Retry payment button shows 'Retry payment · £<same_total>' matching the original order; (c) clicking the retry button POSTs /api/wallid/create-payment with the SAME order_id (no new order created); (d) the ?wallid=failed query param is stripped from the URL; (e) the ghp_pending_wallid_order localStorage stash is preserved through retry and only removed on confirmation-page paid state; (f) regression pages /admin/ambassadors, /admin/coas, /admin/products all load; (g) confirmation page renders 'Thank you for your order' for a paid order.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Checkout payment step when returning via ?wallid=failed", "issues": ["Order Summary sidebar shows Subtotal £0.00 / Total £4.99 (shipping only) when the customer returns from Wallid with a failed payment, while the Pay-by-Bank button correctly shows the original order total. In our real-flow scenario the cart is preserved so this may not surface, but if the customer's session/cart state was lost or if they cleared cart in another tab, the sidebar values would be misleading. Consider deriving the sidebar totals from createdOrder when in payment step, not from live cart state."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_wallid_retry_flow.py",
+    "/app/test_reports/pytest/wallid_retry_results.xml"
+  ],
+  "action_items": [
+    "Optional polish: in payment step, render the Order Summary from createdOrder.items/subtotal/shipping/total instead of the live cart, so the sidebar totals always match the amount on the Pay button (particularly important after a wallid=failed restore where the cart state might have diverged)."
+  ],
+  "critical_code_review_comments": [
+    "Checkout.jsx is 622 lines — approaching the 700-line split threshold. Consider extracting the payment step, wallid-failed restore effect, and promo-code panel into sub-components.",
+    "The wallid-failed restore useEffect (lines 85-121) uses eslint-disable-next-line react-hooks/exhaustive-deps with [] — this is intentional (one-shot on mount) and correct, but a short code comment explaining why would help maintainability.",
+    "In OrderConfirmation.jsx applyOrder (line 26-42), clearCart() and localStorage.removeItem run inside a try/catch that swallows all errors — fine, but consider logging in dev.",
+    "Bug-fix core logic is clean: cart is intentionally NOT cleared before window.location.href in payWithWallid (line 294), and the stash is written BEFORE redirect (line 287-293). Payment provider reuse on retry is handled server-side in wallid_routes.py by $set on the existing order (line 189-197), never creating a new orders row — verified by test_create_payment_reuse_does_not_create_duplicate_order."
+  ],
+  "updated_files": ["/app/backend/tests/test_wallid_retry_flow.py"],
+  "success_rate": {"backend": "100% (10/10 pytest)", "frontend": "100% on critical bug-fix flow"},
+  "test_credentials": "admin@ghp-health.com / GHP-Health26 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Created 3 test orders (GHP-004..GHP-006) via /api/orders during testing. GHP-006 was marked payment_status='paid' via admin PATCH to verify OrderConfirmation. All prefixed with TEST_ address labels for identification.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Wallid retry-flow bug fix is verified. Key data-testids in use: wallid-failed-banner, wallid-pay-btn, wallid-section, checkout-form-section (each section has its own testid). To reproduce the retry sim without real Wallid: seed localStorage.setItem('ghp_pending_wallid_order', JSON.stringify({id, order_number, created_at: Date.now()})) then navigate to /checkout?wallid=failed — the effect at Checkout.jsx line 85-121 restores the order. Note the age gate modal requires clicking the Yes radio label then Submit — the age localStorage bypass keys do NOT actually bypass the modal in this build (minor observation, not a bug).",
+  "rca of the issue": "Original bug: customers seeing 2-3 failed orders before one succeeds. Root cause: (1) Checkout.jsx used to call clearCart() right before window.location.href = wallid.payment_link, so when Wallid redirected back to /checkout?wallid=failed the basket was empty; (2) /checkout had no handler for the wallid=failed query param — customer saw 'Your basket is empty', re-added items, and re-checked-out, creating a fresh order each time. Fix (all verified): (a) removed the pre-redirect clearCart() — cart is only cleared on the confirmation page when payment_status==='paid'; (b) added a mount-time useEffect that reads ghp_pending_wallid_order from localStorage, GETs the fresh order, restores createdOrder state, jumps to payment step, and shows the red wallid-failed-banner; (c) the Retry button reuses the SAME order_id — /api/wallid/create-payment does a $set on wallid_api_payment_id (wallid_routes.py:189) rather than inserting a new order document. Confirmed no duplicate order is created on retry via before/after count on /api/orders/all."
+}
