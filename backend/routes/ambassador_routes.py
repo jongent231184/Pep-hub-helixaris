@@ -37,46 +37,54 @@ def _norm_code(code: str) -> str:
 async def _compute_earnings(user_id: str, code: str, commission_rate: float) -> dict:
     """Aggregate paid orders using the ambassador's code and compute earnings.
     Commission base = subtotal - discount (net product sales, ex-shipping).
-    """
+    Paid vs pending commission is derived from the `ambassador_commission_paid`
+    flag on each order — the payout record is the audit trail, but the per-order
+    flag is the source of truth for what's settled."""
     if not code:
         return {
-            'orders_count': 0, 'net_sales': 0.0, 'gross_total': 0.0,
+            'orders_count': 0, 'orders_paid_count': 0, 'orders_pending_count': 0,
+            'net_sales': 0.0, 'gross_total': 0.0,
             'commission_earned': 0.0, 'total_paid_out': 0.0, 'pending_payout': 0.0,
         }
+    rate = float(commission_rate or 0) / 100.0
     pipeline = [
         {'$match': {'promo_code': code, 'payment_status': 'paid'}},
         {'$group': {
-            '_id': None,
-            'orders_count': {'$sum': 1},
+            '_id': {'$ifNull': ['$ambassador_commission_paid', False]},
+            'count': {'$sum': 1},
             'net_sales': {'$sum': {'$subtract': [
                 {'$ifNull': ['$subtotal', 0]}, {'$ifNull': ['$discount', 0]}
             ]}},
             'gross_total': {'$sum': {'$ifNull': ['$total', 0]}},
         }},
     ]
-    agg = await db.orders.aggregate(pipeline).to_list(1)
-    if agg:
-        net = float(agg[0].get('net_sales', 0) or 0)
-        gross = float(agg[0].get('gross_total', 0) or 0)
-        count = int(agg[0].get('orders_count', 0) or 0)
-    else:
-        net, gross, count = 0.0, 0.0, 0
+    total_count = 0
+    total_net = 0.0
+    total_gross = 0.0
+    paid_net = 0.0
+    paid_count = 0
+    async for grp in db.orders.aggregate(pipeline):
+        cnt = int(grp.get('count', 0) or 0)
+        net = float(grp.get('net_sales', 0) or 0)
+        gross = float(grp.get('gross_total', 0) or 0)
+        total_count += cnt
+        total_net += net
+        total_gross += gross
+        if grp['_id'] is True:
+            paid_net += net
+            paid_count += cnt
 
-    commission = round(net * (float(commission_rate or 0) / 100.0), 2)
-
-    payout_agg = await db.payouts.aggregate([
-        {'$match': {'ambassador_user_id': user_id}},
-        {'$group': {'_id': None, 'total': {'$sum': '$amount'}}},
-    ]).to_list(1)
-    paid_out = float(payout_agg[0]['total']) if payout_agg else 0.0
-
+    commission_earned = round(total_net * rate, 2)
+    commission_paid = round(paid_net * rate, 2)
     return {
-        'orders_count': count,
-        'net_sales': round(net, 2),
-        'gross_total': round(gross, 2),
-        'commission_earned': commission,
-        'total_paid_out': round(paid_out, 2),
-        'pending_payout': round(commission - paid_out, 2),
+        'orders_count': total_count,
+        'orders_paid_count': paid_count,
+        'orders_pending_count': total_count - paid_count,
+        'net_sales': round(total_net, 2),
+        'gross_total': round(total_gross, 2),
+        'commission_earned': commission_earned,
+        'total_paid_out': commission_paid,
+        'pending_payout': round(commission_earned - commission_paid, 2),
     }
 
 
@@ -257,24 +265,67 @@ async def create_payout(ambassador_id: str, payload: PayoutCreate, _=Depends(req
         raise HTTPException(404, 'Ambassador not found')
     if float(payload.amount) <= 0:
         raise HTTPException(400, 'Amount must be > 0')
+
+    code = existing.get('ambassador_code', '')
+    order_ids = list(dict.fromkeys(payload.order_ids or []))  # dedupe, keep order
+    order_numbers: list[str] = []
+
+    if order_ids:
+        # Validate: each order must belong to this ambassador, be paid, and
+        # have commission not-yet-paid — otherwise we'd double-pay.
+        docs = await db.orders.find({'id': {'$in': order_ids}}).to_list(len(order_ids))
+        by_id = {d['id']: d for d in docs}
+        for oid in order_ids:
+            o = by_id.get(oid)
+            if not o:
+                raise HTTPException(400, f'Order not found: {oid}')
+            if o.get('promo_code') != code:
+                raise HTTPException(400, f'Order {o.get("order_number")} does not use this ambassador’s code')
+            if o.get('payment_status') != 'paid':
+                raise HTTPException(400, f'Order {o.get("order_number")} is not marked paid yet')
+            if o.get('ambassador_commission_paid'):
+                raise HTTPException(400, f'Order {o.get("order_number")} commission is already paid')
+            order_numbers.append(o.get('order_number', ''))
+
+    payout_id = str(uuid.uuid4())
     doc = {
-        'id': str(uuid.uuid4()),
+        'id': payout_id,
         'ambassador_user_id': ambassador_id,
         'amount': round(float(payload.amount), 2),
         'note': payload.note or '',
+        'order_ids': order_ids,
+        'order_numbers': order_numbers,
         'created_at': datetime.utcnow(),
     }
     await db.payouts.insert_one(doc)
+
+    if order_ids:
+        await db.orders.update_many(
+            {'id': {'$in': order_ids}},
+            {'$set': {
+                'ambassador_commission_paid': True,
+                'ambassador_payout_id': payout_id,
+                'ambassador_commission_paid_at': datetime.utcnow(),
+            }}
+        )
+
     return PayoutOut(**doc_to_dict(doc))
 
 
 @router.delete('/admin/{ambassador_id}/payouts/{payout_id}')
 async def delete_payout(ambassador_id: str, payout_id: str, _=Depends(require_admin)):
-    res = await db.payouts.delete_one(
-        {'id': payout_id, 'ambassador_user_id': ambassador_id}
-    )
-    if res.deleted_count == 0:
+    payout = await db.payouts.find_one({'id': payout_id, 'ambassador_user_id': ambassador_id})
+    if not payout:
         raise HTTPException(404, 'Payout not found')
+    order_ids = payout.get('order_ids') or []
+    if order_ids:
+        # Revert paid flag on the orders this payout covered
+        await db.orders.update_many(
+            {'id': {'$in': order_ids}, 'ambassador_payout_id': payout_id},
+            {'$set': {'ambassador_commission_paid': False},
+             '$unset': {'ambassador_payout_id': '', 'ambassador_commission_paid_at': ''}}
+        )
+    await db.payouts.delete_one({'id': payout_id, 'ambassador_user_id': ambassador_id})
     return {'ok': True}
 
 

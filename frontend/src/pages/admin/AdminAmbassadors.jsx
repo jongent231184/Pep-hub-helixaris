@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Ambassadors } from '../../lib/api';
-import { Loader2, Plus, Trash2, PoundSterling, ChevronRight, X } from 'lucide-react';
+import { Loader2, Plus, Trash2, PoundSterling, ChevronRight, X, CheckCircle2 } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { Switch } from '../../components/ui/switch';
+import { Checkbox } from '../../components/ui/checkbox';
 import { useToast } from '../../hooks/use-toast';
 
 const EMPTY_FORM = {
@@ -26,6 +27,7 @@ const AdminAmbassadors = () => {
   const [selected, setSelected] = useState(null); // detail modal
   const [detail, setDetail] = useState(null);
   const [payoutForm, setPayoutForm] = useState({ amount: '', note: '' });
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
   const [savingPayout, setSavingPayout] = useState(false);
   const [editForm, setEditForm] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -40,6 +42,8 @@ const AdminAmbassadors = () => {
   const openDetail = async (a) => {
     setSelected(a);
     setDetail(null);
+    setSelectedOrderIds([]);
+    setPayoutForm({ amount: '', note: '' });
     setEditForm({
       first_name: a.user.first_name || '',
       last_name: a.user.last_name || '',
@@ -129,9 +133,18 @@ const AdminAmbassadors = () => {
     }
     setSavingPayout(true);
     try {
-      await Ambassadors.adminCreatePayout(selected.user.id, { amount: amt, note: payoutForm.note });
+      await Ambassadors.adminCreatePayout(selected.user.id, {
+        amount: amt,
+        note: payoutForm.note,
+        order_ids: selectedOrderIds,
+      });
       setPayoutForm({ amount: '', note: '' });
-      toast({ title: 'Payout recorded', description: `£${amt.toFixed(2)}` });
+      setSelectedOrderIds([]);
+      const covered = selectedOrderIds.length;
+      toast({
+        title: 'Payout recorded',
+        description: `£${amt.toFixed(2)}${covered ? ` · ${covered} order${covered === 1 ? '' : 's'} marked paid` : ''}`,
+      });
       await openDetail(selected);
       load();
     } catch (err) {
@@ -309,13 +322,40 @@ const AdminAmbassadors = () => {
                         Orders using {selected.user.ambassador_code} ({(detail.orders || []).length})
                       </h3>
                       {(detail.orders || []).length > 0 && (
-                        <span className="text-[10px] text-slate-500">Paid orders only · Commission = {selected.user.commission_rate}% of net sales</span>
+                        <span className="text-[10px] text-slate-500">Paid orders only · Tick pending rows to include in a payout</span>
                       )}
                     </div>
-                    <div className="border rounded-lg overflow-x-auto max-h-72 overflow-y-auto">
+                    <div className="border rounded-lg overflow-x-auto max-h-80 overflow-y-auto">
                       <table className="w-full text-xs">
                         <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] sticky top-0 z-10">
                           <tr>
+                            <th className="p-2 w-8">
+                              {(() => {
+                                const pendingOrders = (detail.orders || []).filter(o => !o.ambassador_commission_paid);
+                                const allSelected = pendingOrders.length > 0 && pendingOrders.every(o => selectedOrderIds.includes(o.id));
+                                return (
+                                  <Checkbox
+                                    checked={allSelected}
+                                    disabled={pendingOrders.length === 0}
+                                    onCheckedChange={(v) => {
+                                      if (v) {
+                                        const ids = pendingOrders.map(o => o.id);
+                                        setSelectedOrderIds(ids);
+                                        const rate = Number(selected.user.commission_rate || 0);
+                                        const total = pendingOrders.reduce((s, o) => s + ((Number(o.subtotal || 0) - Number(o.discount || 0)) * (rate / 100)), 0);
+                                        setPayoutForm(f => ({ ...f, amount: total.toFixed(2) }));
+                                      } else {
+                                        setSelectedOrderIds([]);
+                                        setPayoutForm(f => ({ ...f, amount: '' }));
+                                      }
+                                    }}
+                                    aria-label="Select all pending"
+                                    data-testid="select-all-pending"
+                                  />
+                                );
+                              })()}
+                            </th>
+                            <th className="p-2 text-left">Status</th>
                             <th className="p-2 text-left">Order</th>
                             <th className="p-2 text-left">Date</th>
                             <th className="p-2 text-left">Customer</th>
@@ -331,8 +371,44 @@ const AdminAmbassadors = () => {
                             const rate = Number(selected.user.commission_rate || 0);
                             const net = Number(o.subtotal || 0) - Number(o.discount || 0);
                             const commission = net * (rate / 100);
+                            const isPaid = !!o.ambassador_commission_paid;
+                            const isSelected = selectedOrderIds.includes(o.id);
                             return (
-                              <tr key={o.id} className="hover:bg-slate-50" data-testid={`amb-order-row-${o.order_number}`}>
+                              <tr
+                                key={o.id}
+                                className={`hover:bg-slate-50 ${isPaid ? 'bg-slate-50/50 text-slate-500' : ''} ${isSelected ? 'bg-emerald-50/60' : ''}`}
+                                data-testid={`amb-order-row-${o.order_number}`}
+                              >
+                                <td className="p-2">
+                                  {isPaid ? (
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                  ) : (
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={(v) => {
+                                        const nextIds = v
+                                          ? [...selectedOrderIds, o.id]
+                                          : selectedOrderIds.filter(id => id !== o.id);
+                                        setSelectedOrderIds(nextIds);
+                                        // Auto-total the amount field
+                                        const pendingById = new Map((detail.orders || []).filter(x => !x.ambassador_commission_paid).map(x => [x.id, x]));
+                                        const total = nextIds
+                                          .map(id => pendingById.get(id))
+                                          .filter(Boolean)
+                                          .reduce((s, x) => s + ((Number(x.subtotal || 0) - Number(x.discount || 0)) * (rate / 100)), 0);
+                                        setPayoutForm(f => ({ ...f, amount: total ? total.toFixed(2) : '' }));
+                                      }}
+                                      data-testid={`select-order-${o.order_number}`}
+                                    />
+                                  )}
+                                </td>
+                                <td className="p-2">
+                                  {isPaid ? (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold text-[10px] uppercase tracking-wider">Paid</span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-semibold text-[10px] uppercase tracking-wider">Pending</span>
+                                  )}
+                                </td>
                                 <td className="p-2 font-mono font-bold text-emerald-700">{o.order_number}</td>
                                 <td className="p-2 text-slate-600">{new Date(o.created_at).toLocaleDateString('en-GB')}</td>
                                 <td className="p-2">
@@ -349,7 +425,7 @@ const AdminAmbassadors = () => {
                           })}
                           {(detail.orders || []).length === 0 && (
                             <tr>
-                              <td colSpan={8} className="p-6 text-center text-slate-500">
+                              <td colSpan={10} className="p-6 text-center text-slate-500">
                                 No paid orders have used this code yet.
                               </td>
                             </tr>
@@ -358,7 +434,7 @@ const AdminAmbassadors = () => {
                         {(detail.orders || []).length > 0 && (
                           <tfoot className="bg-slate-50 font-bold sticky bottom-0">
                             <tr>
-                              <td className="p-2" colSpan={5}>Totals</td>
+                              <td className="p-2" colSpan={7}>Totals</td>
                               <td className="p-2 text-right">£{detail.earnings.net_sales.toFixed(2)}</td>
                               <td className="p-2 text-right">£{detail.earnings.gross_total.toFixed(2)}</td>
                               <td className="p-2 text-right text-emerald-700">£{detail.earnings.commission_earned.toFixed(2)}</td>
@@ -367,6 +443,18 @@ const AdminAmbassadors = () => {
                         )}
                       </table>
                     </div>
+                    {selectedOrderIds.length > 0 && (
+                      <div className="mt-3 flex items-center justify-between rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm">
+                        <span className="text-emerald-900">
+                          <strong>{selectedOrderIds.length}</strong> order{selectedOrderIds.length === 1 ? '' : 's'} selected · <strong>£{Number(payoutForm.amount || 0).toFixed(2)}</strong> commission
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedOrderIds([]); setPayoutForm(f => ({ ...f, amount: '' })); }}
+                          className="text-xs text-emerald-700 hover:underline"
+                        >Clear selection</button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Edit fields */}
@@ -408,10 +496,24 @@ const AdminAmbassadors = () => {
                   {/* Record payout */}
                   <div className="border-t pt-6">
                     <h3 className="text-xs uppercase tracking-widest text-slate-600 font-bold mb-3">Record a payout</h3>
+                    <p className="text-xs text-slate-500 mb-3">
+                      {selectedOrderIds.length > 0
+                        ? <>Payout will settle <strong>{selectedOrderIds.length}</strong> selected order{selectedOrderIds.length === 1 ? '' : 's'} · they&apos;ll flip to <span className="text-emerald-700 font-semibold">Paid</span>.</>
+                        : <>Tick pending orders above to include them, or record a manual amount that doesn&apos;t link to specific orders.</>}
+                    </p>
                     <div className="grid md:grid-cols-3 gap-3">
                       <div>
                         <Label>Amount (£)</Label>
-                        <Input type="number" min="0" step="0.01" value={payoutForm.amount} onChange={e => setPayoutForm(f => ({ ...f, amount: e.target.value }))} className="mt-1" placeholder={detail.earnings.pending_payout.toFixed(2)} />
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={payoutForm.amount}
+                          onChange={e => setPayoutForm(f => ({ ...f, amount: e.target.value }))}
+                          className="mt-1"
+                          placeholder={detail.earnings.pending_payout.toFixed(2)}
+                          data-testid="payout-amount-input"
+                        />
                       </div>
                       <div className="md:col-span-2">
                         <Label>Note (optional)</Label>
@@ -419,7 +521,10 @@ const AdminAmbassadors = () => {
                       </div>
                     </div>
                     <Button onClick={handlePayout} disabled={savingPayout} className="mt-3 bg-emerald-500 hover:bg-emerald-600 text-white gap-2" data-testid="record-payout-btn">
-                      {savingPayout ? <Loader2 className="h-4 w-4 animate-spin" /> : <PoundSterling className="h-4 w-4" />} Record payout
+                      {savingPayout ? <Loader2 className="h-4 w-4 animate-spin" /> : <PoundSterling className="h-4 w-4" />}
+                      {selectedOrderIds.length > 0
+                        ? `Record payout for ${selectedOrderIds.length} order${selectedOrderIds.length === 1 ? '' : 's'}`
+                        : 'Record payout'}
                     </Button>
                   </div>
 
@@ -431,6 +536,7 @@ const AdminAmbassadors = () => {
                         <thead className="bg-slate-50 text-xs text-slate-600 uppercase">
                           <tr>
                             <th className="p-2 text-left">Date</th>
+                            <th className="p-2 text-left">Orders</th>
                             <th className="p-2 text-left">Note</th>
                             <th className="p-2 text-right">Amount</th>
                             <th className="p-2"></th>
@@ -440,17 +546,24 @@ const AdminAmbassadors = () => {
                           {(detail.payouts || []).map(p => (
                             <tr key={p.id}>
                               <td className="p-2 text-xs">{new Date(p.created_at).toLocaleDateString('en-GB')}</td>
+                              <td className="p-2 text-xs text-slate-600 font-mono max-w-[220px] truncate" title={(p.order_numbers || []).join(', ')}>
+                                {(p.order_numbers || []).length > 0
+                                  ? (p.order_numbers.length <= 3
+                                      ? p.order_numbers.join(', ')
+                                      : `${p.order_numbers.slice(0, 2).join(', ')} +${p.order_numbers.length - 2} more`)
+                                  : <span className="italic text-slate-400">Manual</span>}
+                              </td>
                               <td className="p-2 text-xs text-slate-600">{p.note || '—'}</td>
                               <td className="p-2 text-right font-semibold">£{Number(p.amount).toFixed(2)}</td>
                               <td className="p-2 text-right">
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:bg-red-50" onClick={() => handleDeletePayout(p.id)}>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:bg-red-50" onClick={() => handleDeletePayout(p.id)} title="Delete payout (reverts linked orders back to Pending)">
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
                               </td>
                             </tr>
                           ))}
                           {(detail.payouts || []).length === 0 && (
-                            <tr><td colSpan={4} className="p-4 text-center text-slate-500 text-sm">No payouts recorded yet.</td></tr>
+                            <tr><td colSpan={5} className="p-4 text-center text-slate-500 text-sm">No payouts recorded yet.</td></tr>
                           )}
                         </tbody>
                       </table>

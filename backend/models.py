@@ -346,6 +346,7 @@ class AmbassadorUpdate(BaseModel):
 class PayoutCreate(BaseModel):
     amount: float
     note: str = ''
+    order_ids: list[str] = []  # orders whose commission this payout settles
 
 
 class PayoutOut(BaseModel):
@@ -353,6 +354,8 @@ class PayoutOut(BaseModel):
     ambassador_user_id: str
     amount: float
     note: str = ''
+    order_ids: list[str] = []
+    order_numbers: list[str] = []
     created_at: datetime
 
 
