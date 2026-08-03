@@ -302,8 +302,75 @@ const AdminAmbassadors = () => {
                     </div>
                   </div>
 
-                  {/* Edit fields */}
+                  {/* Orders using this code */}
                   <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-xs uppercase tracking-widest text-slate-600 font-bold">
+                        Orders using {selected.user.ambassador_code} ({(detail.orders || []).length})
+                      </h3>
+                      {(detail.orders || []).length > 0 && (
+                        <span className="text-[10px] text-slate-500">Paid orders only · Commission = {selected.user.commission_rate}% of net sales</span>
+                      )}
+                    </div>
+                    <div className="border rounded-lg overflow-x-auto max-h-72 overflow-y-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] sticky top-0 z-10">
+                          <tr>
+                            <th className="p-2 text-left">Order</th>
+                            <th className="p-2 text-left">Date</th>
+                            <th className="p-2 text-left">Customer</th>
+                            <th className="p-2 text-right">Subtotal</th>
+                            <th className="p-2 text-right">Discount</th>
+                            <th className="p-2 text-right">Net</th>
+                            <th className="p-2 text-right">Total</th>
+                            <th className="p-2 text-right">Commission</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {(detail.orders || []).map((o) => {
+                            const rate = Number(selected.user.commission_rate || 0);
+                            const net = Number(o.subtotal || 0) - Number(o.discount || 0);
+                            const commission = net * (rate / 100);
+                            return (
+                              <tr key={o.id} className="hover:bg-slate-50" data-testid={`amb-order-row-${o.order_number}`}>
+                                <td className="p-2 font-mono font-bold text-emerald-700">{o.order_number}</td>
+                                <td className="p-2 text-slate-600">{new Date(o.created_at).toLocaleDateString('en-GB')}</td>
+                                <td className="p-2">
+                                  <p className="font-semibold text-slate-900 leading-tight">{o.shipping_address?.first_name} {o.shipping_address?.last_name}</p>
+                                  <p className="text-[10px] text-slate-500 truncate max-w-[160px]">{o.shipping_address?.email}</p>
+                                </td>
+                                <td className="p-2 text-right">£{Number(o.subtotal || 0).toFixed(2)}</td>
+                                <td className="p-2 text-right text-emerald-700">{Number(o.discount || 0) > 0 ? `−£${Number(o.discount).toFixed(2)}` : '—'}</td>
+                                <td className="p-2 text-right font-semibold">£{net.toFixed(2)}</td>
+                                <td className="p-2 text-right">£{Number(o.total || 0).toFixed(2)}</td>
+                                <td className="p-2 text-right font-bold text-emerald-700">£{commission.toFixed(2)}</td>
+                              </tr>
+                            );
+                          })}
+                          {(detail.orders || []).length === 0 && (
+                            <tr>
+                              <td colSpan={8} className="p-6 text-center text-slate-500">
+                                No paid orders have used this code yet.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                        {(detail.orders || []).length > 0 && (
+                          <tfoot className="bg-slate-50 font-bold sticky bottom-0">
+                            <tr>
+                              <td className="p-2" colSpan={5}>Totals</td>
+                              <td className="p-2 text-right">£{detail.earnings.net_sales.toFixed(2)}</td>
+                              <td className="p-2 text-right">£{detail.earnings.gross_total.toFixed(2)}</td>
+                              <td className="p-2 text-right text-emerald-700">£{detail.earnings.commission_earned.toFixed(2)}</td>
+                            </tr>
+                          </tfoot>
+                        )}
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Edit fields */}
+                  <div className="border-t pt-6">
                     <h3 className="text-xs uppercase tracking-widest text-slate-600 font-bold mb-3">Settings</h3>
                     <div className="grid md:grid-cols-2 gap-3">
                       <div>

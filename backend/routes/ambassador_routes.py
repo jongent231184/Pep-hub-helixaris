@@ -168,16 +168,23 @@ async def get_ambassador(ambassador_id: str, _=Depends(require_admin)):
     d = await db.users.find_one({'id': ambassador_id, 'role': 'ambassador'})
     if not d:
         raise HTTPException(404, 'Ambassador not found')
+    code = d.get('ambassador_code', '')
     earnings = await _compute_earnings(
-        d['id'], d.get('ambassador_code', ''), d.get('commission_rate', 15.0)
+        d['id'], code, d.get('commission_rate', 15.0)
     )
     payouts_docs = await db.payouts.find(
         {'ambassador_user_id': ambassador_id}
     ).sort('created_at', -1).to_list(500)
+    orders_docs = []
+    if code:
+        orders_docs = await db.orders.find(
+            {'promo_code': code, 'payment_status': 'paid'}
+        ).sort('created_at', -1).to_list(500)
     return {
         'user': doc_to_dict(d),
         'earnings': earnings,
         'payouts': [doc_to_dict(p) for p in payouts_docs],
+        'orders': [doc_to_dict(o) for o in orders_docs],
     }
 
 
