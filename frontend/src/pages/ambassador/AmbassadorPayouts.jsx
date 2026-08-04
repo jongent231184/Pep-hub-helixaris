@@ -45,6 +45,7 @@ const AmbassadorPayouts = () => {
           <thead className="bg-slate-50 text-slate-600 uppercase text-xs">
             <tr>
               <th className="p-3 text-left">Date</th>
+              <th className="p-3 text-left">Orders covered</th>
               <th className="p-3 text-left">Note</th>
               <th className="p-3 text-right">Amount</th>
             </tr>
@@ -53,13 +54,20 @@ const AmbassadorPayouts = () => {
             {payouts.map(p => (
               <tr key={p.id}>
                 <td className="p-3">{new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                <td className="p-3 text-xs font-mono text-slate-700 max-w-[240px]" title={(p.order_numbers || []).join(', ')}>
+                  {(p.order_numbers || []).length > 0
+                    ? (p.order_numbers.length <= 4
+                        ? p.order_numbers.join(', ')
+                        : `${p.order_numbers.slice(0, 3).join(', ')} +${p.order_numbers.length - 3} more`)
+                    : <span className="italic text-slate-400 font-sans">Manual adjustment</span>}
+                </td>
                 <td className="p-3 text-slate-700">{p.note || '—'}</td>
                 <td className="p-3 text-right font-bold text-emerald-700">£{Number(p.amount).toFixed(2)}</td>
               </tr>
             ))}
             {payouts.length === 0 && (
               <tr>
-                <td colSpan={3} className="p-10 text-center text-slate-500">
+                <td colSpan={4} className="p-10 text-center text-slate-500">
                   <PoundSterling className="h-8 w-8 mx-auto text-slate-300 mb-2" />
                   No payouts have been settled yet.
                 </td>

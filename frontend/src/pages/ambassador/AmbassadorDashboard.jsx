@@ -90,6 +90,7 @@ const AmbassadorDashboard = () => {
         <StatCard
           label="Orders using your code"
           value={earnings.orders_count}
+          sublabel={earnings.orders_pending_count > 0 ? `${earnings.orders_pending_count} awaiting payout` : 'All paid out'}
           icon={Package}
           accent="sky"
           testid="stat-orders"
@@ -111,7 +112,7 @@ const AmbassadorDashboard = () => {
           testid="stat-commission"
         />
         <StatCard
-          label="Pending payout"
+          label="Outstanding"
           value={`£${earnings.pending_payout.toFixed(2)}`}
           sublabel={`£${earnings.total_paid_out.toFixed(2)} already paid`}
           icon={Wallet}
