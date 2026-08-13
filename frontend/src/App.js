@@ -111,6 +111,7 @@ function App() {
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
               <Route path="/pay/:orderId" element={<PayLinkPage />} />
+              <Route path="/paylink/:orderId" element={<PayLinkPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/account" element={<Account />} />
               <Route path="/contact" element={<Contact />} />

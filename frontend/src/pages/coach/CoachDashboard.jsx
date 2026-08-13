@@ -7,11 +7,12 @@ const CoachDashboard = () => {
   const [me, setMe] = useState(null);
   const [requests, setRequests] = useState([]);
   const [clients, setClients] = useState([]);
+  const [atRisk, setAtRisk] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([Coaches.me(), Coaches.requests(), Coaches.clients()])
-      .then(([m, r, c]) => { setMe(m); setRequests(r); setClients(c); })
+    Promise.all([Coaches.me(), Coaches.requests(), Coaches.clients(), Coaches.atRisk()])
+      .then(([m, r, c, ar]) => { setMe(m); setRequests(r); setClients(c); setAtRisk(ar); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -59,6 +60,23 @@ const CoachDashboard = () => {
           <p className="text-3xl font-black text-slate-900">{counts.accepted}</p>
         </div>
       </div>
+
+      {atRisk.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6" data-testid="at-risk-panel">
+          <h2 className="text-xs uppercase tracking-widest text-amber-800 font-bold mb-4">⚠️ Clients at risk — missed doses in the last 3 days</h2>
+          <ul className="divide-y divide-amber-200">
+            {atRisk.map(c => (
+              <li key={c.id} className="flex items-center justify-between py-2">
+                <div>
+                  <p className="font-bold text-slate-900">{c.customer_name}</p>
+                  <p className="text-xs text-slate-600">{c.customer_email} · <strong>{c.missed_count} missed dose{c.missed_count === 1 ? '' : 's'}</strong></p>
+                </div>
+                <Link to={`/coach/clients/${c.id}`} className="text-sm text-sky-600 hover:underline">Check in →</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {counts.inbox > 0 && (
         <div className="bg-white border border-slate-200 rounded-xl p-6">

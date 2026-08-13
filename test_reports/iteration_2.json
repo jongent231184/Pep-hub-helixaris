@@ -1,0 +1,47 @@
+{
+  "summary": "End-to-end smoke test of GHP-Health Coaching Stages 4 & 5 (paylink + messaging + at-risk). Backend pytest suite (5 tests) 100% pass — full lifecycle (request→accept→client→protocol→paylink), payment gate (paid=false → admin marks paid → paid=true), bidirectional messaging (from_role='coach'/'client'), at-risk widget (missed_count=2, today excluded), cross-tenant security (customer-B sees no protocol; coach cannot post to unknown/foreign client → 404). Frontend coach dashboard + client detail + messaging verified. FOUND ONE CRITICAL BUG: customer 'Pay by Bank' button navigates to /paylink/{orderId} but no React route is registered for that path — the page renders the storefront catch-all 'Product not found'. Backend response and MyCoaching.jsx both emit /paylink/, but App.js only declares Route path='/pay/:orderId'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/coaching/my/protocol", "issue": "Returns full items+calendar even when paid=false (before the coach has generated a paylink at all). Only the frontend gates the display. If the frontend ever forgets the paid check, protocol contents leak pre-payment. Consider stripping items/calendar server-side when paid is false AND a payment_order_id exists."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "MyCoaching payment gate", "issue": "'Pay by Bank' button (data-testid=pay-coaching-btn) links to /paylink/{orderId} which has NO route — user lands on 'Product not found' catch-all. React only has /pay/:orderId. Blocks the entire customer payment funnel for coaching.", "selector": "[data-testid='pay-coaching-btn']", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [
+      {"flow": "Coach paylink copy-to-clipboard", "issue": "createPaylink in CoachClientDetail.jsx builds the shared URL as `${origin}${res.payment_link}` = `${origin}/paylink/...` — same broken route. Coaches will copy a URL that 404s when clients open it.", "affected_selectors": ["[data-testid='send-paylink-btn']"]}
+    ],
+    "design_issues": [
+      {"screen": "Coach dashboard /coach", "issues": ["Two console 403 errors seen on load (unknown source — likely a background fetch to an admin-only endpoint the coach dashboard is trying to call). Non-blocking but noisy."]},
+      {"screen": "Age modal", "issues": ["Age gate modal blocks automation and does not expose data-testid attributes on the Yes/No radios or Submit button. sessionStorage key ghp_age_verified works as a bypass but is undocumented."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_coaching_stage45.py",
+    "/app/test_reports/pytest/coaching_stage45.xml"
+  ],
+  "action_items": [
+    "CRITICAL: Register a React route for /paylink/:orderId → <PayLinkPage /> in /app/frontend/src/App.js (OR change MyCoaching.jsx line 62 and backend /coaching/coach/protocols/{id}/paylink response payment_link to use /pay/{orderId}). Either fix restores the customer payment funnel.",
+    "MINOR: Consider stripping items+calendar from GET /api/coaching/my/protocol when paid=false, so payment gate is enforced server-side.",
+    "MINOR: Investigate 403s on the coach dashboard fetch — the coach role appears to be calling an admin-only endpoint.",
+    "MINOR: Add data-testid to AgeModal Yes/No/Submit for future automation reliability."
+  ],
+  "critical_code_review_comments": [
+    "coaching_routes.py:435 — hard-coded /paylink/ path is inconsistent with the registered React route /pay/. Prefer building the payment_link from a single frontend base or from an env-driven constant, and route it through the same PayLinkPage component.",
+    "coaching_routes.py:412-421 _sync_protocol_payment does a read-then-write on every /my/protocol call; if the linked order document is missing (deleted) it silently returns unpaid. Log a warning when payment_order_id exists but the order document does not.",
+    "coaching_routes.py:544-566 coach_at_risk uses `date` as an ISO string comparison — fragile if a calendar entry ever gets stored as a datetime rather than YYYY-MM-DD. Add a type check or normalise on insert.",
+    "MyCoaching.jsx:34 useEffect deps [proto?.id] — refetches messages on protocol change but not on send failure/success; polling or SSE would improve real-time feel.",
+    "CoachClientDetail.jsx is 387 lines with multiple concerns (protocol builder, items, calendar, paylink, messages). Approaching the split threshold — consider extracting the Messages panel and Calendar section.",
+    "AgeModal.jsx radios/submit have no data-testid — blocks automated E2E across the whole site until sessionStorage bypass is discovered."
+  ],
+  "updated_files": ["/app/backend/tests/test_coaching_stage45.py"],
+  "success_rate": {"backend": "100% (5/5 pytest)", "frontend": "Coach flow ok · Customer paylink navigation BROKEN (404)"},
+  "test_credentials": "Admin: admin@ghp-health.com / GHP-Health26 · Coach: coachghp@gmail.com / CoachGHP26 · Fresh customers created during test with pattern testclient+{ts}@example.com / Passw0rd! and testunpaid+{ts}@example.com / Passw0rd!",
+  "seed_data_creation": "Created via API during tests: 2 coaching requests + 2 coaching_clients + 2 protocols (one paid, one unpaid GHP-015) + past-dated calendar entries (2 x TEST-A/TEST-B) + one today-dated entry (TEST-TODAY, intentionally excluded from at-risk) + coach<->client messages ('TEST coach hello', 'TEST client reply', 'TEST coach playwright msg'). All prefixed TEST or with test emails.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Age gate bypass: page.add_init_script(\"sessionStorage.setItem('ghp_age_verified','true')\") before goto — required for ALL Playwright runs. Coach dashboard is at /coach (not /coach/dashboard). Customer account is at /account (also /my-account resolves). data-testid coverage on the coach client detail page confirmed: send-paylink-btn (only visible when !proto.paid), create-proto-btn, proto-title-input, item-dose, item-frequency, cal-date, cal-item, add-cal-btn, add-item-btn, product-search. The routing bug means clicking pay-coaching-btn 404s onto the storefront catch-all — verify fix by asserting page.url ends with /pay/ (or /paylink/ if a new route is added) AND body contains 'Pay by Bank' / order number after click.",
+  "rca of the issue": "BUG: Customer Pay-by-Bank button on /account (My Coaching section) leads to 'Product not found'. Repro: (1) log in as coachghp / accept a coaching request / create a protocol / POST /coaching/coach/protocols/{id}/paylink → returns payment_link '/paylink/{order_id}'. (2) log in as the customer / open /account → see amber 'Payment required' banner with data-testid=pay-coaching-btn href='/paylink/{order_id}'. (3) Click → URL becomes /paylink/{uuid} → React Router has no matching route → SPA falls back to a product catch-all (or 404 page) which fires GET /api/products/paylink/{id} → 404 and renders 'Product not found'. Root cause: The React app registers only <Route path='/pay/:orderId' element={<PayLinkPage/>} /> in App.js:113, but MyCoaching.jsx:62 and coaching_routes.py:435 both emit /paylink/. Fix (recommended): add <Route path='/paylink/:orderId' element={<PayLinkPage/>} /> alongside the existing /pay route so both aliases resolve to the same page (this also keeps any coach-copied URLs from before the fix working). Alternative: change MyCoaching.jsx:62 to `/pay/${proto.payment_order_id}` and coaching_routes.py:435,483 to f'/pay/{order_doc[\"id\"]}' — but this leaves any copy-pasted paylinks broken. After the fix, re-run backend suite (still passes) and repeat Playwright step 3 above expecting the PayLinkPage to render with order £9.99 and a Pay by Bank CTA."
+}

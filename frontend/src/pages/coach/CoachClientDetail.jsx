@@ -113,6 +113,41 @@ const CoachClientDetail = () => {
     load();
   };
 
+  const [paylinkBusy, setPaylinkBusy] = useState(false);
+  const createPaylink = async () => {
+    setPaylinkBusy(true);
+    try {
+      const res = await Coaches.createPaylink(proto.id);
+      const url = `${window.location.origin}${res.payment_link}`;
+      try { await navigator.clipboard.writeText(url); } catch (_) { /* ignore */ }
+      toast({ title: 'Paylink ready · copied to clipboard', description: `${res.order_number} · £${Number(res.amount).toFixed(2)}` });
+      load();
+    } catch (e) {
+      toast({ title: 'Paylink failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally {
+      setPaylinkBusy(false);
+    }
+  };
+
+  const [msgs, setMsgs] = useState([]);
+  const [msgDraft, setMsgDraft] = useState('');
+  const [msgSending, setMsgSending] = useState(false);
+  useEffect(() => { if (client) Coaches.clientMessages(client.id).then(setMsgs).catch(() => {}); }, [client]);
+  const sendMsg = async () => {
+    if (!msgDraft.trim()) return;
+    setMsgSending(true);
+    try {
+      await Coaches.sendMessage(client.id, msgDraft.trim());
+      setMsgDraft('');
+      const fresh = await Coaches.clientMessages(client.id);
+      setMsgs(fresh);
+    } catch (e) {
+      toast({ title: 'Send failed', variant: 'destructive' });
+    } finally {
+      setMsgSending(false);
+    }
+  };
+
   const endProtocol = async () => {
     if (!window.confirm('End (deactivate) this protocol? You can create a new one afterwards.')) return;
     await Coaches.deleteProtocol(proto.id);
@@ -161,13 +196,28 @@ const CoachClientDetail = () => {
       {/* Protocol exists — show builder */}
       {proto && (
         <>
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6">
+          <div className={`border rounded-xl p-6 ${proto.paid ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
             <div className="flex justify-between items-start gap-4">
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-emerald-700 font-bold">Active protocol</p>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className={`text-[10px] uppercase tracking-widest font-bold ${proto.paid ? 'text-emerald-700' : 'text-amber-700'}`}>Active protocol</p>
+                  <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded ${proto.paid ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'}`}>
+                    {proto.paid ? 'Paid · Unlocked' : 'Payment pending'}
+                  </span>
+                </div>
                 <h2 className="text-2xl font-black text-slate-900">{proto.title}</h2>
-                <p className="text-sm text-slate-600 mt-1">{proto.duration_weeks} weeks · {proto.items?.length || 0} item{proto.items?.length === 1 ? '' : 's'} · {proto.calendar?.length || 0} scheduled dose{proto.calendar?.length === 1 ? '' : 's'}</p>
+                <p className="text-sm text-slate-600 mt-1">{proto.duration_weeks} weeks · {proto.items?.length || 0} item{proto.items?.length === 1 ? '' : 's'} · {proto.calendar?.length || 0} scheduled dose{proto.calendar?.length === 1 ? '' : 's'} · £{Number(proto.price || 9.99).toFixed(2)}</p>
                 {proto.notes && <p className="text-xs text-slate-600 mt-2 whitespace-pre-wrap">{proto.notes}</p>}
+                {!proto.paid && (
+                  <div className="mt-3">
+                    <Button onClick={createPaylink} disabled={paylinkBusy} className="bg-sky-500 hover:bg-sky-600 text-white gap-2" data-testid="send-paylink-btn">
+                      {paylinkBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : '💳'} {proto.payment_order_id ? 'Copy payment link' : 'Send payment link'}
+                    </Button>
+                    {proto.payment_order_id && (
+                      <p className="text-xs text-slate-600 mt-2">Client sees the protocol only once paid.</p>
+                    )}
+                  </div>
+                )}
               </div>
               <Button onClick={endProtocol} variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 gap-1"><X className="h-4 w-4" />End</Button>
             </div>
@@ -308,6 +358,25 @@ const CoachClientDetail = () => {
             ) : (
               <p className="text-sm text-slate-500 italic">No scheduled doses yet — add entries above.</p>
             )}
+          </div>
+
+          {/* Messages */}
+          <div className="bg-white border rounded-xl p-6">
+            <h3 className="text-sm font-bold uppercase tracking-wide text-slate-600 mb-4">💬 Messages with client</h3>
+            <div className="max-h-72 overflow-y-auto space-y-2 mb-4 border rounded p-3 bg-slate-50">
+              {msgs.length === 0 ? (
+                <p className="text-xs text-slate-500 italic">No messages yet.</p>
+              ) : msgs.map(m => (
+                <div key={m.id} className={`text-sm p-2 rounded max-w-[80%] ${m.from_role === 'coach' ? 'bg-sky-100 ml-auto' : 'bg-white border'}`}>
+                  <p className="whitespace-pre-wrap">{m.body}</p>
+                  <p className="text-[10px] text-slate-500 mt-1">{new Date(m.created_at).toLocaleString('en-GB')} · {m.from_role}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input value={msgDraft} onChange={e => setMsgDraft(e.target.value)} placeholder="Type a message to your client…" onKeyDown={e => e.key === 'Enter' && sendMsg()} />
+              <Button onClick={sendMsg} disabled={msgSending || !msgDraft.trim()} className="bg-sky-500 hover:bg-sky-600 text-white">Send</Button>
+            </div>
           </div>
         </>
       )}

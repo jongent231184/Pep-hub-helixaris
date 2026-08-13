@@ -390,6 +390,7 @@ async def my_protocol(user: dict = Depends(get_current_user)):
     proto = await db.protocols.find_one({'client_id': client['id'], 'active': True})
     if not proto:
         return None
+    proto = await _sync_protocol_payment(proto)
     return await _hydrate_protocol(proto)
 
 
@@ -405,3 +406,161 @@ async def toggle_calendar_entry(entry_id: str, done: bool, user: dict = Depends(
         raise HTTPException(403, 'Not your entry')
     await db.calendar_entries.update_one({'id': entry_id}, {'$set': {'done': bool(done)}})
     return {'ok': True, 'done': bool(done)}
+
+
+# ============ STAGE 4 — PAID SESSION FLOW ============
+async def _sync_protocol_payment(proto: dict) -> dict:
+    """If protocol has a linked paylink order, sync its paid state."""
+    order_id = proto.get('payment_order_id')
+    if not order_id or proto.get('paid'):
+        return proto
+    order = await db.orders.find_one({'id': order_id})
+    if order and order.get('payment_status') == 'paid' and not proto.get('paid'):
+        await db.protocols.update_one({'id': proto['id']}, {'$set': {'paid': True, 'paid_at': datetime.utcnow()}})
+        proto['paid'] = True
+    return proto
+
+
+@router.post('/coach/protocols/{proto_id}/paylink')
+async def create_protocol_paylink(proto_id: str, user: dict = Depends(require_coach)):
+    """Coach: generate a Wallid pay link for this protocol. Creates a paylink
+    order tied to the protocol; when paid, the protocol unlocks for the client."""
+    proto = await db.protocols.find_one({'id': proto_id, 'coach_id': user['id']})
+    if not proto:
+        raise HTTPException(404, 'Protocol not found')
+    if proto.get('payment_order_id'):
+        existing_order = await db.orders.find_one({'id': proto['payment_order_id']})
+        if existing_order:
+            return {'order_id': existing_order['id'], 'order_number': existing_order.get('order_number'),
+                    'payment_link': f"/paylink/{existing_order['id']}"}
+
+    price = float(proto.get('price') or user.get('default_price') or 9.99)
+    client = await db.coaching_clients.find_one({'id': proto['client_id']})
+    if not client:
+        raise HTTPException(400, 'Client not found for protocol')
+
+    from routes.order_routes import _next_order_number  # existing counter helper
+    order_number = await _next_order_number()
+
+    order_doc = {
+        'id': str(uuid.uuid4()),
+        'order_number': order_number,
+        'source': 'paylink',
+        'purpose': 'coaching',
+        'protocol_id': proto_id,
+        'items': [{
+            'product_id': None,
+            'slug': 'coaching-plan',
+            'name': f"Coaching plan · {proto['title']}",
+            'qty': 1,
+            'price': price,
+        }],
+        'subtotal': price,
+        'shipping': 0,
+        'discount': 0,
+        'total': price,
+        'shipping_address': {
+            'first_name': (client.get('customer_name') or '').split(' ')[0],
+            'last_name': ' '.join((client.get('customer_name') or '').split(' ')[1:]),
+            'email': client.get('customer_email', ''),
+            'phone': '', 'address1': 'Coaching plan',
+            'city': '', 'postcode': '', 'country': 'United Kingdom',
+        },
+        'payment_status': 'pending',
+        'status': 'processing',
+        'created_at': datetime.utcnow(),
+        'updated_at': datetime.utcnow(),
+    }
+    await db.orders.insert_one(order_doc)
+
+    await db.protocols.update_one(
+        {'id': proto_id},
+        {'$set': {'payment_order_id': order_doc['id'], 'price': price, 'paid': False}}
+    )
+    return {
+        'order_id': order_doc['id'],
+        'order_number': order_number,
+        'payment_link': f"/paylink/{order_doc['id']}",
+        'amount': price,
+    }
+
+
+# ============ STAGE 5 — MESSAGES + AT-RISK ============
+from pydantic import BaseModel as _BaseModel
+
+
+class MessageIn(_BaseModel):
+    body: str
+
+
+@router.get('/coach/clients/{client_id}/messages')
+async def coach_messages(client_id: str, user: dict = Depends(require_coach)):
+    await _get_coach_client(client_id, user['id'])
+    msgs = await db.coach_messages.find({'client_id': client_id}).sort('created_at', 1).to_list(500)
+    return [doc_to_dict(m) for m in msgs]
+
+
+@router.post('/coach/clients/{client_id}/messages')
+async def coach_send_message(client_id: str, payload: MessageIn, user: dict = Depends(require_coach)):
+    await _get_coach_client(client_id, user['id'])
+    doc = {
+        'id': str(uuid.uuid4()), 'client_id': client_id, 'from_role': 'coach',
+        'coach_id': user['id'], 'body': payload.body.strip(),
+        'created_at': datetime.utcnow(),
+    }
+    await db.coach_messages.insert_one(doc)
+    return doc_to_dict(doc)
+
+
+@router.get('/my/messages')
+async def my_messages(user: dict = Depends(get_current_user)):
+    email = (user.get('email') or '').lower()
+    client = await db.coaching_clients.find_one({
+        '$or': [{'customer_user_id': user['id']}, {'customer_email': email}], 'active': True,
+    })
+    if not client:
+        return []
+    msgs = await db.coach_messages.find({'client_id': client['id']}).sort('created_at', 1).to_list(500)
+    return [doc_to_dict(m) for m in msgs]
+
+
+@router.post('/my/messages')
+async def my_send_message(payload: MessageIn, user: dict = Depends(get_current_user)):
+    email = (user.get('email') or '').lower()
+    client = await db.coaching_clients.find_one({
+        '$or': [{'customer_user_id': user['id']}, {'customer_email': email}], 'active': True,
+    })
+    if not client:
+        raise HTTPException(404, 'No active coaching relationship')
+    doc = {
+        'id': str(uuid.uuid4()), 'client_id': client['id'], 'from_role': 'client',
+        'coach_id': client.get('coach_id'), 'body': payload.body.strip(),
+        'created_at': datetime.utcnow(),
+    }
+    await db.coach_messages.insert_one(doc)
+    return doc_to_dict(doc)
+
+
+@router.get('/coach/at-risk')
+async def coach_at_risk(user: dict = Depends(require_coach)):
+    """Clients who missed a scheduled dose in the last 3 days."""
+    from datetime import timedelta
+    today = datetime.utcnow().date().isoformat()
+    three_days_ago = (datetime.utcnow().date() - timedelta(days=3)).isoformat()
+    proto_ids = [p['id'] async for p in db.protocols.find({'coach_id': user['id'], 'active': True}, {'id': 1})]
+    if not proto_ids:
+        return []
+    entries = await db.calendar_entries.find({
+        'protocol_id': {'$in': proto_ids},
+        'date': {'$gte': three_days_ago, '$lt': today},
+        'done': False,
+    }).to_list(500)
+    missed_by_client: dict[str, int] = {}
+    for e in entries:
+        missed_by_client[e['client_id']] = missed_by_client.get(e['client_id'], 0) + 1
+    if not missed_by_client:
+        return []
+    clients = await db.coaching_clients.find(
+        {'id': {'$in': list(missed_by_client.keys())}}
+    ).to_list(100)
+    return [{**doc_to_dict(c), 'missed_count': missed_by_client.get(c['id'], 0)} for c in clients]

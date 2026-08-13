@@ -106,6 +106,15 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
 - `GET /api/ambassadors/payouts` – payout history
 
 ## Backlog / Next Tasks
+## Coaching Feature (Feb 2026 — Stages 1-5 complete)
+- Stage 1: Public intake form (`/coaching`) with waiver checkbox → coaching_requests collection + coach notification email
+- Stage 2: Coach role + coach portal at `/coach` (dashboard, requests inbox, clients list)
+- Stage 3: Protocol builder — coach creates a titled protocol per client, adds items (linked to store products or custom), schedules dose calendar entries
+- Stage 4: **Paid session gate** — coach clicks "Send payment link" on a protocol; backend creates a paylink order tied to the protocol (default £9.99, via coach's `default_price`). Customer sees an amber "Payment required" banner in their My Account > My Coaching section. Once the order is marked paid (webhook / poll / admin), `_sync_protocol_payment` flips `protocol.paid=true` on next fetch and the full plan (items + calendar) unlocks.
+- Stage 5: **Coach ↔ client messaging** thread in `coach_messages` collection — both parties can send/read from their respective pages. Also new "At-risk clients" widget on `/coach` dashboard that surfaces clients with unmarked calendar entries in the last 3 days (with `missed_count`).
+- Compliance guardrails: uses "peer education", "protocol", "client" (never "prescribe", "patient", "medical").
+- **Routing fix**: added `<Route path="/paylink/:orderId">` alongside `/pay/:orderId` so both aliases resolve to `PayLinkPage`. Backend `/api/coaching/coach/protocols/{id}/paylink` emits `payment_link=/paylink/{orderId}`.
+
 ### P2
 - "For research use only" checkbox on age-gate modal
 - "Order shipped" automated email with tracking info
