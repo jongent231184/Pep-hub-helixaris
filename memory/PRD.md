@@ -114,6 +114,7 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
 - Stage 5: **Coach ↔ client messaging** thread in `coach_messages` collection — both parties can send/read from their respective pages. Also new "At-risk clients" widget on `/coach` dashboard that surfaces clients with unmarked calendar entries in the last 3 days (with `missed_count`).
 - Compliance guardrails: uses "peer education", "protocol", "client" (never "prescribe", "patient", "medical").
 - **Routing fix**: added `<Route path="/paylink/:orderId">` alongside `/pay/:orderId` so both aliases resolve to `PayLinkPage`. Backend `/api/coaching/coach/protocols/{id}/paylink` emits `payment_link=/paylink/{orderId}`.
+- **Coach portal tweaks (Feb 2026)**: (a) product search now uses public `Products.list()` (was calling admin-only endpoint → dropdown was empty); (b) Frequency input replaced with multi-select day chips (Mon…Sun) + AM/PM/AM+PM dropdown — stored as e.g. `"Mon+Wed+Fri · AM"`; (c) new 7-day visual week grid above the calendar table with a `Week 1..N` selector (N = protocol.duration_weeks) — calendar entries render as colored pills inside their day cell (sky = pending, emerald + strike-through = done), today's cell gets a sky ring.
 
 ### P2
 - "For research use only" checkbox on age-gate modal

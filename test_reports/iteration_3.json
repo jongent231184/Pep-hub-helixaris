@@ -1,0 +1,37 @@
+{
+  "summary": "Frontend-only verification of the 3 coach-portal tweaks in CoachClientDetail.jsx: (1) product search dropdown, (2) day-chips + AM/PM frequency, (3) 7-day week view with Week 1..N selector. All three tweaks work correctly. Regression flows (add item, add calendar entry, send paylink, send message) still work.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "CoachClientDetail — week visual", "issues": ["Week grid label shows the week's Mon-Sun range in UTC, but 'Today' highlight compares an ISO date derived from local now vs UTC weekStart. For coaches near midnight (UK edge cases) today's ring may appear on the wrong cell. Non-blocking."]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_3.json"],
+  "action_items": [
+    "None blocking. Optional: rename 'reta' in the review prompt/documentation — the store catalog uses obfuscated leetspeak names (R3T4TRUT1D3, GHKcu, K1SSP3PT1N-ish, etc.) so a literal search for 'reta' correctly returns zero. Search functionality works for actual product substrings (verified 'R3T4' → 3 matches, 'GHK' → 2 matches, click populates the 🛒 chip and item name).",
+    "Optional: consider adding a 'No matches' hint under the search input when query is non-empty and productMatches is empty, so coaches don't think the dropdown is broken."
+  ],
+  "critical_code_review_comments": [
+    "CoachClientDetail.jsx is 507 lines — nearing the >500 threshold. Consider splitting into ItemsPanel / CalendarPanel / MessagesPanel sub-components for maintainability.",
+    "weekStart() and 'todayISO' mix UTC-based day arithmetic (getUTCDay/setUTCDate) with a local-timezone Date for 'today' — see design_issues note above.",
+    "frequency is stored as an arbitrary composed string ('Mon+Wed+Fri · AM'); if the client-side UI ever needs to parse it back, consider storing structured fields (freq_days: [...], freq_time: 'AM') alongside the display string.",
+    "Preview/dev overlay injects a <span> child inside <option> elements causing a hydration warning in console; not caused by app code but by the emergent dev instrumentation."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "100% (6/6 tested flows pass)"},
+  "test_credentials": "Coach: coachghp@gmail.com / CoachGHP26",
+  "seed_data_creation": "Reused existing client Jon gent (1ea55fd4-9ae8-46c0-afa8-050b66f17f78) with active 'weight loss' protocol (8 weeks). Added one throwaway item 'TESTTweak Item A' + one calendar entry on 2026-08-18 to verify freq composition and week-pill rendering. Not deleted (harmless, easy to remove).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All coach tweaks verified. Test grid used data-testid selectors: product-search, freq-day-{Mon..Sun}, item-freq-time, week-select, week-day-0..6, add-item-btn, add-cal-btn, send-paylink-btn, cal-date, cal-item, item-dose. Note: two 'Send' buttons exist on the page (paylink button includes 'Send payment link' text and messages footer has a 'Send' button) — always disambiguate by data-testid. For the paylink test, remember to grant clipboard permissions in the browser context.",
+  "test_details": {
+    "product_search": "PASS — dropdown appears with up to 8 matches. 'R3T4' → 3 real results (R3T4/TESA/MOTSc, R3T4TRUT1D3, R3T4TRUT1D3 Pen). Clicking a product populates the 🛒 chip and item name. 'reta' returns 0 because the catalog names are obfuscated (leetspeak), not a bug.",
+    "freq_chips": "PASS — Mon/Wed/Fri toggled show bg-sky-500 highlight. Selecting AM from item-freq-time and adding item persists frequency 'Mon+Wed+Fri · AM' visible in the item list.",
+    "week_visual": "PASS — 8 options (Week 1..Week 8) with duration_weeks=8. All 7 week-day-0..6 cells render. Week 1 Day0 = 'Mon 10 Aug', Week 2 Day0 = 'Mon 17 Aug' (exactly +7). Today's cell has sky ring highlight.",
+    "cal_add_and_pill": "PASS — calendar entry added via table form (data-testid add-cal-btn) appears both in the table AND as a colored sky pill inside the correct week-day cell for Week 2.",
+    "send_paylink": "PASS — 'Send payment link' click produced 'Paylink ready · copied to clipboard' toast with order number GHP-016 · £9.99. After first click the button now reads 'Copy payment link' with the 'Client sees the protocol only once paid.' subtext.",
+    "send_message": "PASS on second attempt — first attempt failed only because get_by_role('button', name='Send') matched both the paylink button and the message Send button. Using specific selectors resolved this."
+  }
+}

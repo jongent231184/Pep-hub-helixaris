@@ -9,6 +9,20 @@ import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
 
 const AREA_LABEL = { weightloss: 'Weight loss', peptide_info: 'Peptide Information', dosage_guide: 'Dosage Guide', how_to_guide: 'How-to Guide' };
+const DAY_CODES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+// JS Date.getDay(): 0=Sun..6=Sat. Convert to Mon=0..Sun=6
+const jsDayToIdx = (d) => (d + 6) % 7;
+
+// Compute Monday of the ISO week containing the given ISO date string
+const weekStart = (isoDate) => {
+  const d = new Date(isoDate + 'T00:00:00Z');
+  const dow = jsDayToIdx(d.getUTCDay());
+  d.setUTCDate(d.getUTCDate() - dow);
+  return d;
+};
+const addDays = (d, n) => { const c = new Date(d); c.setUTCDate(c.getUTCDate() + n); return c; };
+const toISO = (d) => d.toISOString().slice(0, 10);
+const shortDate = (d) => d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 
 const CoachClientDetail = () => {
   const { clientId } = useParams();
@@ -20,11 +34,12 @@ const CoachClientDetail = () => {
   // Forms
   const [protoForm, setProtoForm] = useState({ title: '', duration_weeks: 8, notes: '' });
   const [creatingProto, setCreatingProto] = useState(false);
-  const [itemForm, setItemForm] = useState({ product_id: null, name: '', dose: '', frequency: '', notes: '' });
+  const [itemForm, setItemForm] = useState({ product_id: null, name: '', dose: '', freqDays: [], freqTime: '', notes: '' });
   const [productSearch, setProductSearch] = useState('');
   const [addingItem, setAddingItem] = useState(false);
   const [calForm, setCalForm] = useState({ date: '', item_name: '', dose: '', time_of_day: '', notes: '' });
   const [addingCal, setAddingCal] = useState(false);
+  const [selectedWeek, setSelectedWeek] = useState(1);
 
   const load = () => {
     setLoading(true);
@@ -34,7 +49,7 @@ const CoachClientDetail = () => {
       .finally(() => setLoading(false));
   };
   useEffect(() => { load(); }, [clientId]);
-  useEffect(() => { Products.listAll().then(setProducts).catch(() => setProducts([])); }, []);
+  useEffect(() => { Products.list().then(setProducts).catch(() => setProducts([])); }, []);
 
   const productMatches = useMemo(() => {
     const q = productSearch.trim().toLowerCase();
@@ -76,8 +91,12 @@ const CoachClientDetail = () => {
     if (!itemForm.name) return toast({ title: 'Item name required', variant: 'destructive' });
     setAddingItem(true);
     try {
-      await Coaches.addItem(proto.id, itemForm);
-      setItemForm({ product_id: null, name: '', dose: '', frequency: '', notes: '' });
+      const frequency = [
+        itemForm.freqDays.length ? itemForm.freqDays.join('+') : '',
+        itemForm.freqTime,
+      ].filter(Boolean).join(' · ');
+      await Coaches.addItem(proto.id, { ...itemForm, frequency });
+      setItemForm({ product_id: null, name: '', dose: '', freqDays: [], freqTime: '', notes: '' });
       toast({ title: 'Item added' });
       load();
     } catch (e) {
@@ -85,6 +104,13 @@ const CoachClientDetail = () => {
     } finally {
       setAddingItem(false);
     }
+  };
+
+  const toggleFreqDay = (day) => {
+    setItemForm(f => ({
+      ...f,
+      freqDays: f.freqDays.includes(day) ? f.freqDays.filter(d => d !== day) : [...f.freqDays, day],
+    }));
   };
 
   const removeItem = async (itemId) => {
@@ -267,10 +293,41 @@ const CoachClientDetail = () => {
                   </div>
                 )}
                 <Input value={itemForm.dose} onChange={e => setItemForm(f => ({ ...f, dose: e.target.value }))} placeholder="Dose (e.g. 2.5mg)" data-testid="item-dose" />
-                <Input value={itemForm.frequency} onChange={e => setItemForm(f => ({ ...f, frequency: e.target.value }))} placeholder="Frequency (e.g. Weekly Mon)" data-testid="item-frequency" />
                 <Button onClick={addItem} disabled={addingItem || (!itemForm.name && !itemForm.product_id)} className="bg-sky-500 hover:bg-sky-600 text-white gap-1" data-testid="add-item-btn">
                   {addingItem ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Add
                 </Button>
+              </div>
+
+              {/* Frequency: multi-day chips + AM/PM */}
+              <div className="mt-3">
+                <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500 mb-1.5">Frequency</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {DAY_CODES.map(d => {
+                    const on = itemForm.freqDays.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => toggleFreqDay(d)}
+                        className={`px-2.5 py-1 rounded text-xs font-bold border transition ${on ? 'bg-sky-500 text-white border-sky-500' : 'bg-white text-slate-600 border-slate-200 hover:border-sky-300'}`}
+                        data-testid={`freq-day-${d}`}
+                      >
+                        {d}
+                      </button>
+                    );
+                  })}
+                  <select
+                    value={itemForm.freqTime}
+                    onChange={e => setItemForm(f => ({ ...f, freqTime: e.target.value }))}
+                    className="border border-slate-200 rounded px-2 py-1 text-xs bg-white font-semibold"
+                    data-testid="item-freq-time"
+                  >
+                    <option value="">Time…</option>
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                    <option value="AM+PM">AM & PM</option>
+                  </select>
+                </div>
               </div>
               <Textarea rows={2} value={itemForm.notes} onChange={e => setItemForm(f => ({ ...f, notes: e.target.value }))} placeholder="Item notes (optional)" className="mt-2" />
             </div>
@@ -323,6 +380,68 @@ const CoachClientDetail = () => {
               </div>
               <Input value={calForm.notes} onChange={e => setCalForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" className="mt-2" />
             </div>
+
+            {/* Visual 7-day week grid */}
+            {proto.duration_weeks > 0 && (() => {
+              const wk1Mon = weekStart(toISO(new Date(proto.created_at)));
+              const wkMon = addDays(wk1Mon, (selectedWeek - 1) * 7);
+              const days = Array.from({ length: 7 }, (_, i) => addDays(wkMon, i));
+              const entriesByDate = (proto.calendar || []).reduce((acc, e) => {
+                (acc[e.date] = acc[e.date] || []).push(e); return acc;
+              }, {});
+              const todayISO = toISO(new Date());
+              return (
+                <div className="mb-4" data-testid="week-visual">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs uppercase tracking-widest font-bold text-slate-500">Week view</p>
+                    <select
+                      value={selectedWeek}
+                      onChange={e => setSelectedWeek(Number(e.target.value))}
+                      className="border rounded px-3 py-1 text-sm bg-white font-semibold"
+                      data-testid="week-select"
+                    >
+                      {Array.from({ length: proto.duration_weeks }, (_, i) => (
+                        <option key={i} value={i + 1}>Week {i + 1}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {days.map((d, i) => {
+                      const iso = toISO(d);
+                      const list = entriesByDate[iso] || [];
+                      const isToday = iso === todayISO;
+                      return (
+                        <div
+                          key={iso}
+                          className={`border rounded-lg p-2 min-h-[90px] ${isToday ? 'border-sky-400 bg-sky-50/40 ring-1 ring-sky-300' : 'border-slate-200 bg-white'}`}
+                          data-testid={`week-day-${i}`}
+                        >
+                          <p className="text-[10px] uppercase font-bold text-slate-500 leading-none">{DAY_CODES[i]}</p>
+                          <p className="text-xs font-bold text-slate-700 mt-0.5">{d.getUTCDate()} {d.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' })}</p>
+                          <div className="mt-1.5 space-y-1">
+                            {list.length === 0 ? (
+                              <p className="text-[10px] text-slate-300 italic">—</p>
+                            ) : list.map(e => (
+                              <div
+                                key={e.id}
+                                className={`text-[10px] leading-tight px-1.5 py-1 rounded ${e.done ? 'bg-emerald-100 text-emerald-800 line-through' : 'bg-sky-100 text-sky-900'}`}
+                                title={`${e.item_name}${e.dose ? ' · ' + e.dose : ''}${e.time_of_day ? ' · ' + e.time_of_day : ''}`}
+                              >
+                                <p className="font-bold truncate">{e.item_name}</p>
+                                {(e.dose || e.time_of_day) && (
+                                  <p className="opacity-80 truncate">{[e.dose, e.time_of_day].filter(Boolean).join(' · ')}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-2">Week {selectedWeek} · {shortDate(days[0])} – {shortDate(days[6])} · visual only, edits below</p>
+                </div>
+              );
+            })()}
 
             {proto.calendar?.length > 0 ? (
               <div className="border rounded-lg overflow-x-auto">
