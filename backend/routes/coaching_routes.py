@@ -225,3 +225,183 @@ async def deactivate_client(client_id: str, user: dict = Depends(require_coach))
     if res.matched_count == 0:
         raise HTTPException(404, 'Client not found')
     return {'ok': True}
+
+
+# ============ PROTOCOLS (Stage 3) ============
+async def _hydrate_protocol(proto: dict) -> dict:
+    """Attach items + calendar entries."""
+    items = await db.protocol_items.find({'protocol_id': proto['id']}).sort('created_at', 1).to_list(200)
+    entries = await db.calendar_entries.find({'protocol_id': proto['id']}).sort('date', 1).to_list(1000)
+    return {
+        **doc_to_dict(proto),
+        'items': [doc_to_dict(i) for i in items],
+        'calendar': [doc_to_dict(e) for e in entries],
+    }
+
+
+async def _get_coach_client(client_id: str, coach_id: str) -> dict:
+    doc = await db.coaching_clients.find_one({'id': client_id, 'coach_id': coach_id})
+    if not doc:
+        raise HTTPException(404, 'Client not found')
+    return doc
+
+
+# --- Coach: manage protocols for their clients ---
+@router.get('/coach/clients/{client_id}')
+async def coach_client_detail(client_id: str, user: dict = Depends(require_coach)):
+    client = await _get_coach_client(client_id, user['id'])
+    proto = await db.protocols.find_one({'client_id': client_id, 'active': True})
+    hydrated = await _hydrate_protocol(proto) if proto else None
+    return {'client': doc_to_dict(client), 'protocol': hydrated}
+
+
+from models import ProtocolCreate, ProtocolUpdate, ProtocolItemIn, CalendarEntryIn  # noqa: E402
+
+
+@router.post('/coach/clients/{client_id}/protocol')
+async def create_protocol(client_id: str, payload: ProtocolCreate, user: dict = Depends(require_coach)):
+    client = await _get_coach_client(client_id, user['id'])
+    # Archive any previous active protocol for this client
+    await db.protocols.update_many(
+        {'client_id': client_id, 'active': True},
+        {'$set': {'active': False, 'archived_at': datetime.utcnow()}}
+    )
+    now = datetime.utcnow()
+    doc = {
+        'id': str(uuid.uuid4()),
+        'coach_id': user['id'],
+        'client_id': client_id,
+        'client_name': client.get('customer_name', ''),
+        'client_email': client.get('customer_email', ''),
+        'title': payload.title.strip(),
+        'area': payload.area or client.get('area', ''),
+        'duration_weeks': int(payload.duration_weeks or 8),
+        'notes': payload.notes or '',
+        'active': True,
+        'created_at': now,
+        'updated_at': now,
+    }
+    await db.protocols.insert_one(doc)
+    return await _hydrate_protocol(doc)
+
+
+@router.put('/coach/protocols/{proto_id}')
+async def update_protocol(proto_id: str, payload: ProtocolUpdate, user: dict = Depends(require_coach)):
+    existing = await db.protocols.find_one({'id': proto_id, 'coach_id': user['id']})
+    if not existing:
+        raise HTTPException(404, 'Protocol not found')
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    updates['updated_at'] = datetime.utcnow()
+    await db.protocols.update_one({'id': proto_id}, {'$set': updates})
+    refreshed = await db.protocols.find_one({'id': proto_id})
+    return await _hydrate_protocol(refreshed)
+
+
+@router.delete('/coach/protocols/{proto_id}')
+async def delete_protocol(proto_id: str, user: dict = Depends(require_coach)):
+    existing = await db.protocols.find_one({'id': proto_id, 'coach_id': user['id']})
+    if not existing:
+        raise HTTPException(404, 'Protocol not found')
+    await db.protocols.delete_one({'id': proto_id})
+    await db.protocol_items.delete_many({'protocol_id': proto_id})
+    await db.calendar_entries.delete_many({'protocol_id': proto_id})
+    return {'ok': True}
+
+
+@router.post('/coach/protocols/{proto_id}/items')
+async def add_item(proto_id: str, payload: ProtocolItemIn, user: dict = Depends(require_coach)):
+    proto = await db.protocols.find_one({'id': proto_id, 'coach_id': user['id']})
+    if not proto:
+        raise HTTPException(404, 'Protocol not found')
+    doc = {
+        'id': str(uuid.uuid4()),
+        'protocol_id': proto_id,
+        'product_id': payload.product_id,
+        'name': payload.name.strip(),
+        'dose': payload.dose or '',
+        'frequency': payload.frequency or '',
+        'notes': payload.notes or '',
+        'created_at': datetime.utcnow(),
+    }
+    await db.protocol_items.insert_one(doc)
+    return doc_to_dict(doc)
+
+
+@router.delete('/coach/protocols/{proto_id}/items/{item_id}')
+async def delete_item(proto_id: str, item_id: str, user: dict = Depends(require_coach)):
+    proto = await db.protocols.find_one({'id': proto_id, 'coach_id': user['id']})
+    if not proto:
+        raise HTTPException(404, 'Protocol not found')
+    res = await db.protocol_items.delete_one({'id': item_id, 'protocol_id': proto_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, 'Item not found')
+    return {'ok': True}
+
+
+@router.post('/coach/protocols/{proto_id}/calendar')
+async def add_calendar_entry(proto_id: str, payload: CalendarEntryIn, user: dict = Depends(require_coach)):
+    proto = await db.protocols.find_one({'id': proto_id, 'coach_id': user['id']})
+    if not proto:
+        raise HTTPException(404, 'Protocol not found')
+    doc = {
+        'id': str(uuid.uuid4()),
+        'protocol_id': proto_id,
+        'client_id': proto['client_id'],
+        'date': payload.date,
+        'item_name': payload.item_name,
+        'dose': payload.dose or '',
+        'time_of_day': payload.time_of_day or '',
+        'notes': payload.notes or '',
+        'done': False,
+        'created_at': datetime.utcnow(),
+    }
+    await db.calendar_entries.insert_one(doc)
+    return doc_to_dict(doc)
+
+
+@router.delete('/coach/protocols/{proto_id}/calendar/{entry_id}')
+async def delete_calendar_entry(proto_id: str, entry_id: str, user: dict = Depends(require_coach)):
+    proto = await db.protocols.find_one({'id': proto_id, 'coach_id': user['id']})
+    if not proto:
+        raise HTTPException(404, 'Protocol not found')
+    res = await db.calendar_entries.delete_one({'id': entry_id, 'protocol_id': proto_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, 'Entry not found')
+    return {'ok': True}
+
+
+# --- Customer: view own protocol + tick doses ---
+from auth import get_current_user  # noqa: E402
+
+
+@router.get('/my/protocol')
+async def my_protocol(user: dict = Depends(get_current_user)):
+    """Return the customer's active coaching protocol if any (matches by user email)."""
+    email = (user.get('email') or '').lower()
+    client = await db.coaching_clients.find_one({
+        '$or': [
+            {'customer_user_id': user['id']},
+            {'customer_email': email},
+        ],
+        'active': True,
+    })
+    if not client:
+        return None
+    proto = await db.protocols.find_one({'client_id': client['id'], 'active': True})
+    if not proto:
+        return None
+    return await _hydrate_protocol(proto)
+
+
+@router.patch('/my/calendar/{entry_id}')
+async def toggle_calendar_entry(entry_id: str, done: bool, user: dict = Depends(get_current_user)):
+    entry = await db.calendar_entries.find_one({'id': entry_id})
+    if not entry:
+        raise HTTPException(404, 'Entry not found')
+    # Verify ownership via client match
+    email = (user.get('email') or '').lower()
+    client = await db.coaching_clients.find_one({'id': entry['client_id']})
+    if not client or (client.get('customer_user_id') != user['id'] and client.get('customer_email', '').lower() != email):
+        raise HTTPException(403, 'Not your entry')
+    await db.calendar_entries.update_one({'id': entry_id}, {'$set': {'done': bool(done)}})
+    return {'ok': True, 'done': bool(done)}

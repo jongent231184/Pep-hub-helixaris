@@ -50,7 +50,7 @@ const CoachClients = () => {
               <p className="text-xs text-slate-500 mt-1"><strong>Area:</strong> {AREA_LABEL[c.area] || c.area || '—'}</p>
               <a href={`mailto:${c.customer_email}`} className="inline-flex items-center gap-1 text-sm text-sky-600 hover:underline mt-3"><Mail className="h-3.5 w-3.5" /> {c.customer_email}</a>
               <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-widest text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded">Active</span>
+                <a href={`/coach/clients/${c.id}`} className="text-sm font-bold text-sky-600 hover:underline uppercase tracking-wider">Open protocol →</a>
                 <button onClick={() => deactivate(c)} className="text-xs text-red-600 hover:underline inline-flex items-center gap-1">
                   <UserX className="h-3.5 w-3.5" /> Archive
                 </button>

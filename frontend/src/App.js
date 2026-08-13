@@ -46,6 +46,7 @@ import CoachLayout from './pages/coach/CoachLayout';
 import CoachDashboard from './pages/coach/CoachDashboard';
 import CoachRequests from './pages/coach/CoachRequests';
 import CoachClients from './pages/coach/CoachClients';
+import CoachClientDetail from './pages/coach/CoachClientDetail';
 
 import Coaching from './pages/Coaching';
 
@@ -99,6 +100,7 @@ function App() {
                 <Route index element={<CoachDashboard />} />
                 <Route path="requests" element={<CoachRequests />} />
                 <Route path="clients" element={<CoachClients />} />
+                <Route path="clients/:clientId" element={<CoachClientDetail />} />
               </Route>
 
               {/* Storefront */}

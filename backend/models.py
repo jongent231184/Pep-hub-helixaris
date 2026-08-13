@@ -458,3 +458,44 @@ class CoachingClient(BaseModel):
     area: Optional[str] = None
     active: bool = True
     started_at: datetime
+
+
+# ---------- COACHING PROTOCOLS ----------
+class ProtocolItemIn(BaseModel):
+    product_id: Optional[str] = None  # link to a store product if applicable
+    name: str  # display name (auto-filled from product if provided)
+    dose: str = ''  # free-text e.g. "2.5mg" or "10 clicks"
+    frequency: str = ''  # e.g. "Weekly (Monday)", "Daily"
+    notes: str = ''
+
+
+class ProtocolItemOut(ProtocolItemIn):
+    id: str
+
+
+class CalendarEntryIn(BaseModel):
+    date: str  # ISO date YYYY-MM-DD
+    item_name: str
+    dose: str = ''
+    time_of_day: str = ''  # e.g. "AM", "PM", "20:00"
+    notes: str = ''
+
+
+class CalendarEntryOut(CalendarEntryIn):
+    id: str
+    done: bool = False
+
+
+class ProtocolCreate(BaseModel):
+    title: str
+    area: Optional[str] = None
+    duration_weeks: int = 8
+    notes: str = ''
+
+
+class ProtocolUpdate(BaseModel):
+    title: Optional[str] = None
+    area: Optional[str] = None
+    duration_weeks: Optional[int] = None
+    notes: Optional[str] = None
+    active: Optional[bool] = None

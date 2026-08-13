@@ -105,6 +105,18 @@ export const Coaches = {
   updateRequest: (id, data) => api.patch(`/coaching/coach/requests/${id}`, data).then(r => r.data),
   clients: () => api.get('/coaching/coach/clients').then(r => r.data),
   deactivateClient: (id) => api.delete(`/coaching/coach/clients/${id}`).then(r => r.data),
+  // Protocol builder
+  clientDetail: (id) => api.get(`/coaching/coach/clients/${id}`).then(r => r.data),
+  createProtocol: (clientId, data) => api.post(`/coaching/coach/clients/${clientId}/protocol`, data).then(r => r.data),
+  updateProtocol: (id, data) => api.put(`/coaching/coach/protocols/${id}`, data).then(r => r.data),
+  deleteProtocol: (id) => api.delete(`/coaching/coach/protocols/${id}`).then(r => r.data),
+  addItem: (protoId, data) => api.post(`/coaching/coach/protocols/${protoId}/items`, data).then(r => r.data),
+  removeItem: (protoId, itemId) => api.delete(`/coaching/coach/protocols/${protoId}/items/${itemId}`).then(r => r.data),
+  addCalendar: (protoId, data) => api.post(`/coaching/coach/protocols/${protoId}/calendar`, data).then(r => r.data),
+  removeCalendar: (protoId, entryId) => api.delete(`/coaching/coach/protocols/${protoId}/calendar/${entryId}`).then(r => r.data),
+  // Customer self-view
+  myProtocol: () => api.get('/coaching/my/protocol').then(r => r.data),
+  toggleEntry: (entryId, done) => api.patch(`/coaching/my/calendar/${entryId}?done=${done}`).then(r => r.data),
 };
 
 export const PayPal = {
