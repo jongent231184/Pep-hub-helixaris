@@ -27,7 +27,7 @@ class UserOut(BaseModel):
     email: EmailStr
     first_name: str = ''
     last_name: str = ''
-    role: Literal['customer', 'admin', 'ambassador'] = 'customer'
+    role: Literal['customer', 'admin', 'ambassador', 'coach'] = 'customer'
     ambassador_code: Optional[str] = None
     commission_rate: Optional[float] = None
     ambassador_active: Optional[bool] = None
@@ -429,3 +429,32 @@ class CoachingRequestOut(BaseModel):
     waiver_accepted: bool
     created_at: datetime
     updated_at: datetime
+
+
+class CoachCreate(BaseModel):
+    email: EmailStr
+    password: str
+    first_name: str = ''
+    last_name: str = ''
+    bio: str = ''
+    default_price: float = 9.99
+
+
+class CoachUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    bio: Optional[str] = None
+    default_price: Optional[float] = None
+    coach_active: Optional[bool] = None
+
+
+class CoachingClient(BaseModel):
+    id: str
+    coach_id: str
+    customer_user_id: Optional[str] = None
+    customer_email: EmailStr
+    customer_name: str
+    request_id: Optional[str] = None
+    area: Optional[str] = None
+    active: bool = True
+    started_at: datetime

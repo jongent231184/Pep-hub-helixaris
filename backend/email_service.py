@@ -509,7 +509,7 @@ async def send_coaching_request_email(req: dict) -> None:
         logger.warning('coaching notify skipped: RESEND_API_KEY not set')
         return
 
-    coach_email = os.environ.get('COACH_EMAIL', 'ghp-coaching@outlook.com').strip()
+    coach_email = os.environ.get('COACH_EMAIL', 'coachghp@gmail.com').strip()
     area = AREA_LABELS.get(req.get('area', ''), req.get('area', 'Unknown'))
     name = f"{req.get('first_name', '')} {req.get('last_name', '')}".strip() or req.get('email', '')
     ref = req.get('id', '')[:8]

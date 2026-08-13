@@ -183,7 +183,7 @@ const Coaching_ = () => {
               </Button>
 
               <p className="text-[11px] text-slate-500 mt-3 text-center">
-                We&apos;ll email James at <span className="font-mono">ghp-coaching@outlook.com</span> — you&apos;ll receive a reply within 48 hours.
+                We&apos;ll email James at <span className="font-mono">coachghp@gmail.com</span> — you&apos;ll receive a reply within 48 hours.
               </p>
             </form>
           </div>

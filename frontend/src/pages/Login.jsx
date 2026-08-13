@@ -37,6 +37,8 @@ const Login = () => {
         navigate('/admin');
       } else if (user.role === 'ambassador') {
         navigate('/ambassador');
+      } else if (user.role === 'coach') {
+        navigate('/coach');
       } else {
         navigate(returnTo || '/account');
       }

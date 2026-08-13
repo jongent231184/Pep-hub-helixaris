@@ -93,6 +93,20 @@ export const Coaching = {
   adminRemove: (id) => api.delete(`/coaching/admin/requests/${id}`).then(r => r.data),
 };
 
+export const Coaches = {
+  // Admin
+  adminList: () => api.get('/coaching/admin/coaches').then(r => r.data),
+  adminCreate: (data) => api.post('/coaching/admin/coaches', data).then(r => r.data),
+  adminUpdate: (id, data) => api.put(`/coaching/admin/coaches/${id}`, data).then(r => r.data),
+  adminRemove: (id) => api.delete(`/coaching/admin/coaches/${id}`).then(r => r.data),
+  // Coach self-service
+  me: () => api.get('/coaching/coach/me').then(r => r.data),
+  requests: () => api.get('/coaching/coach/requests').then(r => r.data),
+  updateRequest: (id, data) => api.patch(`/coaching/coach/requests/${id}`, data).then(r => r.data),
+  clients: () => api.get('/coaching/coach/clients').then(r => r.data),
+  deactivateClient: (id) => api.delete(`/coaching/coach/clients/${id}`).then(r => r.data),
+};
+
 export const PayPal = {
   config: () => api.get('/paypal/config').then(r => r.data),
   createOrder: (orderId) => api.post('/paypal/create-order', { order_id: orderId }).then(r => r.data),
