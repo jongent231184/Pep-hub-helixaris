@@ -26,6 +26,7 @@ from routes.wallid_routes import router as wallid_router  # noqa: E402
 from routes.dose_plan_routes import router as dose_plan_router  # noqa: E402
 from routes.ambassador_routes import router as ambassador_router  # noqa: E402
 from routes.coa_routes import router as coa_router  # noqa: E402
+from routes.coaching_routes import router as coaching_router  # noqa: E402
 from routes.wallid_routes import start_wallid_poller  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s - %(message)s')
@@ -84,6 +85,7 @@ api_router.include_router(wallid_router)
 api_router.include_router(dose_plan_router)
 api_router.include_router(ambassador_router)
 api_router.include_router(coa_router)
+api_router.include_router(coaching_router)
 
 app.include_router(api_router)
 

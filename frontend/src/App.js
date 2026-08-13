@@ -39,6 +39,9 @@ import AdminPromos from './pages/admin/AdminPromos';
 import AdminPaylinks from './pages/admin/AdminPaylinks';
 import AdminAmbassadors from './pages/admin/AdminAmbassadors';
 import AdminCoas from './pages/admin/AdminCoas';
+import AdminCoachingRequests from './pages/admin/AdminCoachingRequests';
+
+import Coaching from './pages/Coaching';
 
 import AmbassadorLayout from './pages/ambassador/AmbassadorLayout';
 import AmbassadorDashboard from './pages/ambassador/AmbassadorDashboard';
@@ -71,6 +74,7 @@ function App() {
                 <Route path="paylinks" element={<AdminPaylinks />} />
                 <Route path="ambassadors" element={<AdminAmbassadors />} />
                 <Route path="coas" element={<AdminCoas />} />
+                <Route path="coaching" element={<AdminCoachingRequests />} />
                 <Route path="customers" element={<AdminCustomers />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
@@ -100,6 +104,7 @@ function App() {
               <Route path="/peptide-calculator" element={<PeptideCalculator />} />
               <Route path="/coa" element={<Coa />} />
               <Route path="/coas" element={<Coa />} />
+              <Route path="/coaching" element={<Coaching />} />
               <Route path="/:categorySlug" element={<CategoryPage />} />
               <Route path="/:categorySlug/:productSlug" element={<ProductDetail />} />
               </Routes>

@@ -85,6 +85,14 @@ export const Coas = {
   remove: (id) => api.delete(`/coas/${id}`).then(r => r.data),
 };
 
+export const Coaching = {
+  submit: (data) => api.post('/coaching/requests', data).then(r => r.data),
+  adminList: () => api.get('/coaching/admin/requests').then(r => r.data),
+  adminGet: (id) => api.get(`/coaching/admin/requests/${id}`).then(r => r.data),
+  adminUpdate: (id, data) => api.patch(`/coaching/admin/requests/${id}`, data).then(r => r.data),
+  adminRemove: (id) => api.delete(`/coaching/admin/requests/${id}`).then(r => r.data),
+};
+
 export const PayPal = {
   config: () => api.get('/paypal/config').then(r => r.data),
   createOrder: (orderId) => api.post('/paypal/create-order', { order_id: orderId }).then(r => r.data),

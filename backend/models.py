@@ -392,3 +392,40 @@ class CoaOut(CoaBase):
     id: str
     created_at: datetime
     updated_at: datetime
+
+
+# ---------- COACHING ----------
+CoachingArea = Literal['weightloss', 'peptide_info', 'dosage_guide', 'how_to_guide']
+CoachingStatus = Literal['new', 'accepted', 'declined', 'completed']
+
+
+class CoachingRequestCreate(BaseModel):
+    first_name: str
+    last_name: str = ''
+    email: EmailStr
+    phone: Optional[str] = ''
+    area: CoachingArea
+    message: str = ''
+    waiver_accepted: bool  # must be True
+
+
+class CoachingRequestUpdate(BaseModel):
+    status: Optional[CoachingStatus] = None
+    admin_notes: Optional[str] = None
+    assigned_coach_id: Optional[str] = None
+
+
+class CoachingRequestOut(BaseModel):
+    id: str
+    first_name: str
+    last_name: str = ''
+    email: EmailStr
+    phone: Optional[str] = ''
+    area: CoachingArea
+    message: str = ''
+    status: CoachingStatus = 'new'
+    admin_notes: str = ''
+    assigned_coach_id: Optional[str] = None
+    waiver_accepted: bool
+    created_at: datetime
+    updated_at: datetime

@@ -493,3 +493,57 @@ async def send_order_emails(order: dict) -> None:
             logger.info(f'admin notify sent for {order_number}: {res.get("id")}')
         except Exception as e:
             logger.error(f'admin notify failed for {order_number}: {e}')
+
+
+AREA_LABELS = {
+    'weightloss': 'Weight loss',
+    'peptide_info': 'Peptide information',
+    'dosage_guide': 'Dosage guide',
+    'how_to_guide': 'How-to guide (vials / pens)',
+}
+
+
+async def send_coaching_request_email(req: dict) -> None:
+    """Notify the coach that a new coaching intake was received."""
+    if not _init_resend():
+        logger.warning('coaching notify skipped: RESEND_API_KEY not set')
+        return
+
+    coach_email = os.environ.get('COACH_EMAIL', 'ghp-coaching@outlook.com').strip()
+    area = AREA_LABELS.get(req.get('area', ''), req.get('area', 'Unknown'))
+    name = f"{req.get('first_name', '')} {req.get('last_name', '')}".strip() or req.get('email', '')
+    ref = req.get('id', '')[:8]
+
+    html = f"""
+    <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#0f172a">
+      <div style="border-bottom:3px solid #0284c7;padding-bottom:16px;margin-bottom:20px">
+        <p style="font-size:11px;letter-spacing:2px;color:#0284c7;font-weight:700;text-transform:uppercase;margin:0">GHP-Health · New coaching request</p>
+        <h1 style="font-size:22px;font-weight:900;margin:6px 0 0">You have a new intake from {name}</h1>
+      </div>
+      <table cellpadding="0" cellspacing="0" style="width:100%;font-size:14px">
+        <tr><td style="padding:6px 0;color:#64748b;width:110px">Name</td><td><strong>{name}</strong></td></tr>
+        <tr><td style="padding:6px 0;color:#64748b">Email</td><td><a href="mailto:{req.get('email','')}">{req.get('email','')}</a></td></tr>
+        <tr><td style="padding:6px 0;color:#64748b">Phone</td><td>{req.get('phone') or '—'}</td></tr>
+        <tr><td style="padding:6px 0;color:#64748b">Area</td><td><strong>{area}</strong></td></tr>
+      </table>
+      {f'<div style="margin-top:16px;padding:12px;background:#f8fafc;border-radius:8px;font-size:14px;line-height:1.55"><p style="margin:0 0 6px;color:#64748b;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700">Their message</p>{req.get("message","").replace(chr(10),"<br>")}</div>' if req.get('message') else ''}
+      <div style="margin-top:20px;padding:12px;background:#ecfdf5;border-left:4px solid #10b981;border-radius:4px;font-size:12px">
+        Waiver accepted at submission — peer-education only, not medical advice.
+      </div>
+      <p style="margin-top:24px;font-size:12px;color:#64748b">Log in at <a href="https://www.ghp-health.com/admin/coaching">the admin dashboard</a> to accept, decline, or reply.</p>
+      <p style="font-size:11px;color:#94a3b8;margin-top:12px">Reference: {ref}</p>
+    </div>
+    """
+
+    try:
+        params = {
+            'from': f'{BUSINESS_NAME} coaching <{FROM_EMAIL}>',
+            'to': [coach_email],
+            'reply_to': [req.get('email', FROM_EMAIL)],
+            'subject': f'New coaching request · {area} · {name}',
+            'html': html,
+        }
+        res = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f'coaching notify sent to {coach_email}: {res.get("id")}')
+    except Exception as e:
+        logger.error(f'coaching notify failed: {e}')
