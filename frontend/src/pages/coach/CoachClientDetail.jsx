@@ -165,19 +165,6 @@ const CoachClientDetail = () => {
     return { weekly_mg: +weekly_mg.toFixed(3), total_mg: +total_mg.toFixed(3), vials, vs };
   };
 
-  const [pushingItemId, setPushingItemId] = useState(null);
-  const pushToCart = async (itemId) => {
-    setPushingItemId(itemId);
-    try {
-      const r = await Coaches.pushToCart(proto.id, itemId);
-      toast({ title: `Pushed ${r.qty} × ${r.variant_label || 'vial'} to client's cart` });
-    } catch (e) {
-      toast({ title: 'Push failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
-    } finally {
-      setPushingItemId(null);
-    }
-  };
-
   const removeItem = async (itemId) => {
     if (!window.confirm('Remove this item and its scheduled doses?')) return;
     await Coaches.removeItem(proto.id, itemId);
@@ -463,15 +450,7 @@ const CoachClientDetail = () => {
                         {it.notes && <p className="text-xs text-slate-500 mt-1">{it.notes}</p>}
                       </div>
                       {it.product_id && calc?.vials && (
-                        <Button
-                          onClick={() => pushToCart(it.id)}
-                          disabled={pushingItemId === it.id}
-                          className="bg-emerald-500 hover:bg-emerald-600 text-white gap-1 whitespace-nowrap"
-                          data-testid={`push-cart-${it.id}`}
-                        >
-                          {pushingItemId === it.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
-                          Push {calc.vials} to cart
-                        </Button>
+                        <span className="text-[10px] text-slate-400 whitespace-nowrap italic" title="Customer clicks 'Add to cart' from their view">Client can add</span>
                       )}
                       <Button variant="ghost" size="icon" onClick={() => removeItem(it.id)} className="text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
                     </div>

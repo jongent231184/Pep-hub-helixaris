@@ -231,12 +231,29 @@ async def deactivate_client(client_id: str, user: dict = Depends(require_coach))
 
 # ============ PROTOCOLS (Stage 3) ============
 async def _hydrate_protocol(proto: dict) -> dict:
-    """Attach items + calendar entries."""
+    """Attach items + calendar entries. For items linked to a store product,
+    include the product's slug/price/image so the customer can add-to-cart."""
     items = await db.protocol_items.find({'protocol_id': proto['id']}).sort('created_at', 1).to_list(200)
     entries = await db.calendar_entries.find({'protocol_id': proto['id']}).sort('date', 1).to_list(1000)
+    # Batch fetch products used by the items
+    product_ids = [i['product_id'] for i in items if i.get('product_id')]
+    products_by_id = {}
+    if product_ids:
+        prods = await db.products.find({'id': {'$in': product_ids}}).to_list(len(product_ids))
+        products_by_id = {p['id']: p for p in prods}
+    hydrated_items = []
+    for it in items:
+        d = doc_to_dict(it)
+        prod = products_by_id.get(it.get('product_id'))
+        if prod:
+            d['product_slug'] = prod.get('slug')
+            d['product_name'] = prod.get('name')
+            d['product_price'] = prod.get('price')
+            d['product_image'] = prod.get('image') or (prod.get('images') or [None])[0]
+        hydrated_items.append(d)
     return {
         **doc_to_dict(proto),
-        'items': [doc_to_dict(i) for i in items],
+        'items': hydrated_items,
         'calendar': [doc_to_dict(e) for e in entries],
     }
 

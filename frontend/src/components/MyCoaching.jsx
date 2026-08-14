@@ -1,9 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Coaches } from '../lib/api';
-import { HeartPulse, Package, ShoppingBag, Loader2, Info, CheckCircle2, Circle } from 'lucide-react';
+import { HeartPulse, Package, ShoppingCart, Loader2, Info, CheckCircle2, Circle } from 'lucide-react';
+import { toast } from 'sonner';
+import { useCart } from '../context/CartContext';
 
 const AREA_LABEL = { weightloss: 'Weight loss', peptide_info: 'Peptide Information', dosage_guide: 'Dosage Guide', how_to_guide: 'How-to Guide' };
+
+// Vial calculator — mirrors backend logic
+const UNIT_TO_MG = { mg: 1, mcg: 0.001, IU: null, clicks: null };
+const computeVials = (it, weeks) => {
+  const days = (it.freq_days || []).length;
+  const dose = it.dose_amount;
+  const unit = it.dose_unit;
+  const dosesPerDay = it.freq_time === 'AM+PM' ? 2 : 1;
+  const factor = UNIT_TO_MG[unit];
+  if (!dose || factor == null || !days || !weeks) return null;
+  const weekly_mg = dose * factor * days * dosesPerDay;
+  const total_mg = weekly_mg * weeks;
+  const vs = it.vial_strength_mg;
+  const vials = vs && vs > 0 ? Math.ceil(total_mg / vs) : null;
+  return { weekly_mg: +weekly_mg.toFixed(3), total_mg: +total_mg.toFixed(3), vials, vs };
+};
 
 const MyCoaching = () => {
   const [proto, setProto] = useState(null);
@@ -105,22 +123,7 @@ const MyCoaching = () => {
           <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold mb-3 flex items-center gap-2"><Package className="h-3.5 w-3.5" /> Your items</h4>
           <div className="grid md:grid-cols-2 gap-3">
             {proto.items.map(it => (
-              <div key={it.id} className="border rounded-lg p-3">
-                <div className="flex items-center gap-2">
-                  <p className="font-bold text-slate-900">{it.name}</p>
-                  {it.product_id && (
-                    <Link to={`/product/${it.product_id}`} className="text-[10px] uppercase tracking-wider bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded inline-flex items-center gap-1 hover:bg-sky-200">
-                      <ShoppingBag className="h-3 w-3" /> Buy
-                    </Link>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {it.dose && <span><strong>{it.dose}</strong></span>}
-                  {it.dose && it.frequency && ' · '}
-                  {it.frequency && <span>{it.frequency}</span>}
-                </p>
-                {it.notes && <p className="text-xs text-slate-600 mt-1">{it.notes}</p>}
-              </div>
+              <ItemCard key={it.id} it={it} weeks={proto.duration_weeks} />
             ))}
           </div>
         </div>
@@ -194,3 +197,62 @@ const MyCoaching = () => {
 };
 
 export default MyCoaching;
+
+const ItemCard = ({ it, weeks }) => {
+  const { addItem } = useCart();
+  const calc = computeVials(it, weeks);
+  const canAdd = it.product_id && calc?.vials;
+
+  const add = () => {
+    if (!canAdd) return;
+    addItem(
+      { id: it.product_id, slug: it.product_slug, name: it.product_name || it.name, price: it.product_price, image: it.product_image, category: 'peptides' },
+      calc.vials,
+      it.variant_label,
+    );
+    toast(`Added ${calc.vials} × ${it.product_name || it.name}${it.variant_label ? ' · ' + it.variant_label : ''} to cart`);
+  };
+
+  return (
+    <div className="border rounded-lg p-3 flex flex-col gap-2" data-testid={`my-item-${it.id}`}>
+      <div className="flex items-start gap-2 flex-wrap">
+        <p className="font-bold text-slate-900">{it.product_name || it.name}</p>
+        {it.variant_label && <span className="text-[10px] uppercase tracking-wider bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">{it.variant_label}</span>}
+      </div>
+      <p className="text-xs text-slate-500">
+        {it.dose && <span><strong>{it.dose}</strong></span>}
+        {it.dose && it.frequency && ' · '}
+        {it.frequency && <span>{it.frequency}</span>}
+      </p>
+      {calc?.weekly_mg != null && (
+        <p className="text-xs font-semibold">
+          <span className="text-sky-700">{calc.weekly_mg} mg / week</span>
+          {calc.vials != null && (
+            <>
+              <span className="text-slate-400"> · </span>
+              <span className="text-emerald-700">{calc.vials} × {calc.vs}mg vial{calc.vials === 1 ? '' : 's'} for {weeks} weeks</span>
+            </>
+          )}
+        </p>
+      )}
+      {it.notes && <p className="text-xs text-slate-600">{it.notes}</p>}
+      {canAdd ? (
+        <button
+          onClick={add}
+          className="mt-1 self-start inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold px-3 py-2 rounded"
+          data-testid={`add-to-cart-${it.id}`}
+        >
+          <ShoppingCart className="h-4 w-4" /> Add {calc.vials} to cart
+        </button>
+      ) : it.product_id ? (
+        <Link
+          to={`/product/${it.product_slug || it.product_id}`}
+          className="mt-1 self-start inline-flex items-center gap-1.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-bold px-3 py-2 rounded"
+          data-testid={`view-product-${it.id}`}
+        >
+          <ShoppingCart className="h-4 w-4" /> Buy on the shop
+        </Link>
+      ) : null}
+    </div>
+  );
+};

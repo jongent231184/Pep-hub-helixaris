@@ -1,0 +1,43 @@
+{
+  "summary": "Verified the pivot: 'Push to cart' moved from coach to customer. BACKEND: added test_my_protocol_hydration.py — /api/coaching/my/protocol returns items with product_slug, product_name, product_price, product_image plus raw dose_amount/dose_unit/vial_strength_mg/variant_label/freq_days/freq_time (13/13 pass including all 11 prior prescribed-cart tests; full backend suite 31/31). FRONTEND: as the seeded customer storefront1786720928@example.com (2-item paid protocol), /account renders both ItemCard components with correct math — T1RZ3P4T1D3 5mg shows '4 mg / week · 7 × 5mg vials for 8 weeks' + green 'Add 7 to cart' button (data-testid=add-to-cart-{itemId}); Tesamorelin 10mg shows '7 mg / week · 6 × 10mg vials for 8 weeks' + 'Add 6 to cart'. Clicking both buttons adds 7-unit + 6-unit lines to localStorage.ghp_cart with variant_label as option (5mg / 10mg) and correct £37.50 price; total qty=13, 2 line items, header 'My Bag' badge shows 13, URL stays at /account, and qty=13 persists across reload. ZERO network calls to /coaching/my/prescribed-cart on mount or reload confirming CartContext auto-sync is fully removed. COACH: /coach/clients/{id} shows NO 'Push … to cart' button anywhere; item-calc-{id} pill still renders correct math; 'Client can add' hint replaces the old push button; trash icon still visible.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/coach/clients/{id}", "issues": ["Pre-existing (unrelated to this task): React hydration warning about <span> being rendered as a direct child of <option> in CoachClientDetail.jsx line ~492 (week-select). Non-blocking but should be cleaned up — the inner span for the option label should be removed or the map should produce a plain string child."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_my_protocol_hydration.py",
+    "/app/backend/tests/test_prescribed_cart.py",
+    "/app/test_reports/pytest/my_protocol_hydration.xml",
+    "/app/test_reports/pytest/prescribed_cart.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: strip the redundant inner <span> from the week <option> in /app/frontend/src/pages/coach/CoachClientDetail.jsx (~line 492) to silence the hydration warning."
+  ],
+  "critical_code_review_comments": [
+    "CartContext.jsx is back to pure localStorage — clean, no Coaches import, no useEffect side-fetches. Good.",
+    "MyCoaching.jsx ItemCard: computeVials mirrors backend logic but does NOT handle 'IU' / 'clicks' units (factor null). Card falls back to hiding the vials line, which is acceptable, but the 'Add N to cart' button also disappears (canAdd=false) — customer with such items just sees 'Buy on the shop' link. Consider a subtle helper text when factor is null so customers understand why.",
+    "MyCoaching.jsx uses toast(...) without an emoji/status; sonner defaults to plain toast. All good, but for consistency with the rest of the app you may want to switch to toast.success().",
+    "coaching_routes._hydrate_protocol hydrates product info per protocol view but doesn't strip visible=false products — if a product is hidden after being prescribed, the customer will still see the card. Minor. Consider marking those items with 'product_unavailable':true and disabling the add button.",
+    "test_prescribed_cart.py still tests the legacy /prescribed-cart endpoints — good regression coverage; keep them until backend endpoints are actually removed (they remain callable, just unused by the UI)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_my_protocol_hydration.py"
+  ],
+  "success_rate": {
+    "backend": "100% (31/31 across backend/tests; 13 directly relevant to this pivot: 11 prescribed_cart + 2 new hydration)",
+    "frontend": "100% for the customer add-to-cart + persistence flow AND coach no-push regression (all 6 review-request items verified)"
+  },
+  "test_credentials": "Admin admin@ghp-health.com / GHP-Health26 · Coach coachghp@gmail.com / CoachGHP26 · Existing customer storefront1786720928@example.com / Passw0rd! (2-item paid protocol reused). Login form in the storefront preview does NOT redirect on submit reliably in headless — worked around by POSTing /api/auth/login and injecting the access_token into localStorage.ghp_token before navigating to /account. Both flows (customer + coach) verified this way.",
+  "seed_data_creation": "Backend hydration test creates+deletes its own TEST_ product ('TEST Hydra Peptide'); registers a fresh customer 'test_hydra+<ts>@example.com' (coaching artefacts remain in DB after test — harmless, TEST_-prefixed). No new frontend seed data — reused the existing storefront1786720928 customer as instructed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Pivot from auto-sync CartContext to customer-driven Add-to-cart is COMPLETE and verified end-to-end. If you need to reproduce the FE flow: POST /api/auth/login for storefront1786720928@example.com/Passw0rd! → set localStorage.ghp_token → GOTO /account → look for [data-testid^='add-to-cart-']. Both prescribed-cart endpoints on the backend still work but are unused by the UI (kept for backward compat + regression tests). If you plan to also remove them, delete test_prescribed_cart.py's TestCustomerViewAndConsume + TestCascadeDeleteUnconsumed at the same time.",
+  "rca_of_the_issue": "Not a bug fix this iteration — this is a UX pivot. Old design (iterations 5–6): coach clicked 'Push N to cart' → server-side prescribed_carts collection → CartContext useEffect on mount fetched the pushes, called consume, and added locally. Race conditions and StrictMode double-add were mitigated with three overlapping guards. New design (iteration 7, verified): coach protocol is only exposed via GET /coaching/my/protocol with product hydration; MyCoaching.jsx's ItemCard computes vials locally (client-side mirror of backend calculator) and calls CartContext.addItem directly on button click. CartContext no longer touches any coaching endpoints. Zero /prescribed-cart network calls observed on mount, click, or reload. The 'first-any-variant' vial fallback edge case flagged in iteration 5 is now less relevant because the customer explicitly clicks a per-item button (they see the same 'variant_label' the coach set)."
+}

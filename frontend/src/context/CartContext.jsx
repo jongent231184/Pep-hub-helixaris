@@ -1,6 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import { Coaches } from '../lib/api';
-import { toast } from 'sonner';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
 const CartContext = createContext(null);
 
@@ -49,44 +47,6 @@ export const CartProvider = ({ children }) => {
   };
 
   const clearCart = () => setItems([]);
-
-  // Poll for prescribed-cart pushes from the client's coach; auto-merge into local cart.
-  // Guards against duplicates: in-flight ref + per-push id de-dupe set + consume-before-add ordering.
-  const syncInFlight = useRef(false);
-  const consumedIds = useRef(new Set());
-  useEffect(() => {
-    const syncPrescribed = async () => {
-      if (syncInFlight.current) return;
-      if (!localStorage.getItem('ghp_token')) return;
-      syncInFlight.current = true;
-      try {
-        const pushes = await Coaches.myPrescribedCart();
-        const fresh = (pushes || []).filter(p => !consumedIds.current.has(p.id));
-        if (fresh.length === 0) return;
-        // Mark ids as claimed BEFORE any await so a second effect run won't re-process them.
-        fresh.forEach(p => consumedIds.current.add(p.id));
-        // Consume first so a race can't double-fetch, then add locally.
-        await Coaches.consumePrescribedCart(fresh.map(p => p.id));
-        fresh.forEach(p => {
-          addItem(
-            { id: p.product_id, slug: p.product_slug, name: p.product_name, price: p.product_price, image: p.product_image, category: 'peptides' },
-            p.qty,
-            p.variant_label,
-          );
-        });
-        toast(`Your coach added ${fresh.length} item${fresh.length === 1 ? '' : 's'} to your cart`, {
-          description: fresh.map(p => `${p.qty} × ${p.product_name}${p.variant_label ? ' · ' + p.variant_label : ''}`).join(' · '),
-        });
-      } catch { /* ignore silently */ }
-      finally {
-        syncInFlight.current = false;
-      }
-    };
-    syncPrescribed();
-    const onFocus = () => syncPrescribed();
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
-  }, [addItem]);
 
   const totalItems = items.reduce((s, i) => s + i.qty, 0);
   const subtotal = items.reduce((s, i) => s + (i.price || 0) * i.qty, 0);
