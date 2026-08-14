@@ -120,7 +120,10 @@ const MyCoaching = () => {
       {/* Items */}
       {proto.items?.length > 0 && (
         <div className="bg-white border rounded-xl p-5">
-          <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold mb-3 flex items-center gap-2"><Package className="h-3.5 w-3.5" /> Your items</h4>
+          <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+            <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Package className="h-3.5 w-3.5" /> Your items</h4>
+            <AddAllButton items={proto.items} weeks={proto.duration_weeks} />
+          </div>
           <div className="grid md:grid-cols-2 gap-3">
             {proto.items.map(it => (
               <ItemCard key={it.id} it={it} weeks={proto.duration_weeks} />
@@ -197,6 +200,34 @@ const MyCoaching = () => {
 };
 
 export default MyCoaching;
+
+const AddAllButton = ({ items, weeks }) => {
+  const { addItem } = useCart();
+  const addable = items
+    .map(it => ({ it, calc: computeVials(it, weeks) }))
+    .filter(({ it, calc }) => it.product_id && calc?.vials);
+  const totalVials = addable.reduce((s, { calc }) => s + calc.vials, 0);
+  if (addable.length < 2) return null;
+  const addAll = () => {
+    addable.forEach(({ it, calc }) => {
+      addItem(
+        { id: it.product_id, slug: it.product_slug, name: it.product_name || it.name, price: it.product_price, image: it.product_image, category: 'peptides' },
+        calc.vials,
+        it.variant_label,
+      );
+    });
+    toast(`Added ${totalVials} vials across ${addable.length} items to cart`);
+  };
+  return (
+    <button
+      onClick={addAll}
+      className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded"
+      data-testid="add-all-to-cart"
+    >
+      <ShoppingCart className="h-3.5 w-3.5" /> Add all {totalVials} vials to cart
+    </button>
+  );
+};
 
 const ItemCard = ({ it, weeks }) => {
   const { addItem } = useCart();
