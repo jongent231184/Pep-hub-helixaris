@@ -1,0 +1,24 @@
+{
+  "summary": "UI-only verification of MyCoaching.jsx calendar redesign (rows as bigger clickable buttons w/ emerald 'Done' state). Logged in as storefront1786720928@example.com via /api/auth/login + localStorage.ghp_token injection (login form workaround from iteration 7). /account rendered MyCoaching section with 72 calendar entries, each exposing data-testid=cal-entry-{id}. Verified: (1) clicking a NOT-DONE row fires PATCH /api/coaching/my/calendar/{id}?done=true, transitions row to bg-emerald-50 border-emerald-200, checkbox square becomes bg-emerald-500 border-emerald-500 with white check, small 'Done' pill appears, NO line-through class. (2) Clicking the DONE row fires PATCH ?done=false and reverts to bg-white border-slate-200 with empty square. (3) Re-toggled ON and page reload — row remained emerald (server-persisted). (4) Regression: 2 per-item add-to-cart buttons + 1 add-all-to-cart button + message input + protocol header + compliance banner all rendered.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "MyCoaching.jsx toggle() silently swallows errors in catch block — a failing PATCH will leave optimistic UI unchanged but user sees success visual. Consider toast.error on failure and reverting local state.",
+    "The clickable row uses <button> containing nested block-like layout (flex + <p>) which is valid but note that <p> inside <button> is fine, however <strong> is used — all good. Semantic OK.",
+    "Checkbox square uses <span> with border+bg — for accessibility, consider role='checkbox' aria-checked={e.done} on the outer button so screen readers announce state changes."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "100% (all 4 review items verified)"},
+  "test_credentials": "storefront1786720928@example.com / Passw0rd! — login form doesn't reliably submit in headless; workaround: POST /api/auth/login, set localStorage.ghp_token, then GOTO /account.",
+  "seed_data_creation": "None — reused existing seeded customer/protocol.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Calendar redesign fully verified. If you need to re-test: same login workaround as iteration 7/8. Entries live at /account under 'Your dose calendar'; each is a <button data-testid=cal-entry-{id}>. Toggling calls PATCH /api/coaching/my/calendar/{id}?done=true|false. Persistence confirmed via reload.",
+  "rca_of_the_issue": "n/a — UI-only enhancement, no bug."
+}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Coaches } from '../lib/api';
-import { HeartPulse, Package, ShoppingCart, Loader2, Info, CheckCircle2, Circle } from 'lucide-react';
+import { HeartPulse, Package, ShoppingCart, Loader2, Info, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCart } from '../context/CartContext';
 
@@ -142,30 +142,35 @@ const MyCoaching = () => {
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-600 mb-2">
                   {new Date(date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
                 </p>
-                <div className="divide-y">
+                <div className="space-y-1.5">
                   {grouped[date].map(e => (
-                    <div key={e.id} className={`flex items-center gap-3 py-2 ${e.done ? 'text-slate-400 line-through' : ''}`} data-testid={`cal-entry-${e.id}`}>
-                      <button
-                        onClick={() => toggle(e, !e.done)}
-                        disabled={saving === e.id}
-                        className="shrink-0"
-                        title={e.done ? 'Mark not done' : 'Mark done'}
-                      >
+                    <button
+                      key={e.id}
+                      onClick={() => toggle(e, !e.done)}
+                      disabled={saving === e.id}
+                      title={e.done ? 'Click to mark as not done' : 'Click to mark as done'}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg border transition text-left disabled:opacity-60 ${e.done ? 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100/60' : 'bg-white border-slate-200 hover:border-sky-300 hover:bg-sky-50/40'}`}
+                      data-testid={`cal-entry-${e.id}`}
+                    >
+                      <span className={`shrink-0 h-6 w-6 rounded flex items-center justify-center border-2 transition ${e.done ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300'}`}>
                         {saving === e.id
-                          ? <Loader2 className="h-5 w-5 animate-spin text-sky-500" />
+                          ? <Loader2 className="h-4 w-4 animate-spin text-sky-500" />
                           : e.done
-                            ? <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                            : <Circle className="h-5 w-5 text-slate-300" />}
-                      </button>
+                            ? <CheckCircle2 className="h-4 w-4 text-white" />
+                            : null}
+                      </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm">
-                          <strong className="text-slate-900">{e.item_name}</strong>
-                          {e.dose && <span> · {e.dose}</span>}
-                          {e.time_of_day && <span className="text-slate-500"> · {e.time_of_day}</span>}
+                        <p className={`text-sm ${e.done ? 'text-emerald-800' : 'text-slate-900'}`}>
+                          <strong>{e.item_name}</strong>
+                          {e.dose && <span className={e.done ? '' : 'text-slate-700'}> · {e.dose}</span>}
+                          {e.time_of_day && <span className={e.done ? 'text-emerald-700' : 'text-slate-500'}> · {e.time_of_day}</span>}
                         </p>
-                        {e.notes && <p className="text-xs text-slate-500">{e.notes}</p>}
+                        {e.notes && <p className={`text-xs ${e.done ? 'text-emerald-700' : 'text-slate-500'}`}>{e.notes}</p>}
                       </div>
-                    </div>
+                      {e.done && (
+                        <span className="text-[10px] uppercase tracking-widest font-bold text-emerald-600 shrink-0">Done</span>
+                      )}
+                    </button>
                   ))}
                 </div>
               </div>
