@@ -1,0 +1,43 @@
+{
+  "summary": "Weigh-in tracker (customer + coach) validated end-to-end. Backend: authored /app/backend/tests/test_weigh_ins.py (13 pytest cases, ALL PASSED in 6.85s): (a) upsert — 2 POSTs same date return same id, GET shows 1 row with updated 81 kg; (b) DELETE removes then 404 on repeat; (c) PATCH /my/target-weight persists on coaching_clients + clears on null; (d) authz — new user with no coaching relationship: GET returns {entries:[], target_weight_kg:null}, POST/PATCH/DELETE all 404 'No active coaching relationship'; (e) coach GET /coach/clients/{id}/weigh-ins returns client entries + target, PATCH sets target and customer sees the update; (f) coach 404 on foreign/nonexistent client_id; (g) validation — empty payload 422, missing weight_kg 422; (h) Sarah seeded data verification (11 Aug=83, 14 Aug=81.5, target=72).\n\nFrontend customer (Sarah /account): weigh-in-panel renders above dose calendar (position looks correct visually — actually rendered BELOW the calendar week view; user story said 'above the Dose Calendar' — see design note). Chart renders 2 data-point dots for 11-Aug/14-Aug, Latest=81.5 kg (kg mode), Change=-1.5 kg with emerald TrendingDown icon, Target tile=72 kg. Toggle kg→lb converts: Latest=179.7 lb, Change=-3.3 lb, Target=158.7 lb, axis unit shows ' lb' — all math correct. Log-a-weigh-in with today's date (2026-08-14) + 80.2 kg saved; second POST same date with 80.5 UPSERTED (History still shows 1 row for 2026-08-14). target-input=70 + target-save works; target-clear reverts tile to 'not set'. Coach view (/coach/clients/{sarah_id}): panel renders in READ-ONLY (no weigh-submit, no target-save, no weigh-del buttons); chart+summary tiles display client's entries (verified 2 dots after data restoration).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "WeighInPanel chart", "issue": "Target reference line at 72 kg (or 70) is NOT VISIBLE — YAxis uses domain=['auto','auto'] so the y-scale auto-fits to the data (81.45–83.25 kg). Since target=72 falls below that range, the sky-blue dashed ReferenceLine + its label render outside the plotted area and are effectively invisible to the user. Same happens on the coach view. Verified via SVG inspection: only CartesianGrid (#e2e8f0 dashed) + axis lines (#94a3b8) are painted; no #0ea5e9 stroke. Query for 'Target' text elements returned []. Fix: extend YAxis domain to include targetKg, e.g. domain={[(min) => targetKg ? Math.min(min - 1, targetKg - 2) : min - 1, (max) => targetKg ? Math.max(max + 1, targetKg + 2) : max + 1]}.", "selector": "[data-testid=\"weight-chart\"] .recharts-reference-line", "priority": "HIGH"},
+      {"component": "WeighInPanel placement on /account", "issue": "Review request said panel appears ABOVE the Dose Calendar; observed rendering is BELOW the 'YOUR ITEMS' + 'DOSE CALENDAR' sections on Sarah's account page. Not sure if this is a spec mismatch or requirement drift, but flagging for main agent to confirm intended order in MyCoaching.jsx.", "selector": "[data-testid=\"weigh-in-panel\"]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Weigh-in panel", "issues": ["'Change' tile has odd rendering when change is negative: shows '-1.5' with the icon then unit label — code path Math.abs(change) * (change<0 ? -1 : 1) is a redundant sign flip (double-negative shows correctly here but the expression '{displayVal(Math.abs(change)) * (change<0 ? -1 : 1)}' will drop the sign when displayVal returns 0-adjusted values; a simpler '{change < 0 ? '-' : change > 0 ? '+' : ''}{displayVal(Math.abs(change))}' would be clearer)."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_weigh_ins.py",
+    "/app/test_reports/pytest/weigh_ins.xml"
+  ],
+  "action_items": [
+    "HIGH: Fix WeighInPanel YAxis domain so the target ReferenceLine is always visible — currently 72 kg target is off-chart when data is at 81-83 kg. Extend domain to include targetKg with a small margin.",
+    "LOW: Confirm intended placement of WeighInPanel on /account (spec said 'above the Dose Calendar', currently renders below Items + Calendar). Adjust MyCoaching.jsx render order if needed."
+  ],
+  "critical_code_review_comments": [
+    "WeighInPanel.jsx line 152: YAxis unit prop uses a leading space (` ${displayLabel}`) — cosmetic, harmless but slightly odd.",
+    "WeighInPanel.jsx line 132: '{displayVal(Math.abs(change)) * (change < 0 ? -1 : 1)}' — the sign flip inside JSX arithmetic works only because displayVal returns a number, but is fragile. Prefer a clean string template.",
+    "WeighInPanel.jsx load() has no error handler around Coaches.myWeighIns() beyond the finally block — a 500 response will silently leave entries=[] and no user feedback. Consider a toast on failure.",
+    "coaching_routes.py my_add_weigh_in: response payload for update path is '{**doc_to_dict(existing), **doc}' — existing still has _id key (before doc_to_dict strips it), but doc_to_dict is called on existing so it's fine. Just note existing had older created_at; spread order preserves the new updated_at ✓.",
+    "coaching_routes.py my_add_weigh_in: no validation that date is ISO 'YYYY-MM-DD'. A malformed date string would upsert as-is and later break chart date parsing. Consider validating with a regex or datetime.strptime.",
+    "coaching_routes.py: my_delete_weigh_in checks client_id ownership (good), but my_add_weigh_in doesn't guard against future-dated entries. Frontend caps date with max=today but server-side has no equivalent check.",
+    "WeighInPanel.jsx: history <details> is client-only friendly — a11y-wise the delete icon has no aria-label; screen readers announce just 'button'. Add aria-label={`Delete weigh-in for ${e.date}`}.",
+    "No unique index on (client_id, date) in weigh_ins collection — upsert relies on find_one; a race between two POSTs with the same date could still create two rows. Add a unique compound index."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_weigh_ins.py",
+    "/app/test_reports/iteration_11.json"
+  ],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "6/7 (target-line-visibility is the one design bug)"},
+  "test_credentials": "Sarah: sarah.bennett.demo@example.com / GHPHEALTH · Coach: coachghp@gmail.com / CoachGHP26 · Admin: admin@ghp-health.com / GHP-Health26",
+  "seed_data_creation": "During the frontend test the customer 'Log weigh-in' step upserted onto Sarah's 2026-08-14 seeded entry and then deleted it, wiping the 81.5 kg point. Restored via API POST /my/weigh-ins {date:'2026-08-14', weight_kg:81.5} + PATCH target=72. Final state verified: entries=[11-Aug 83kg, 14-Aug 81.5kg], target=72 — matches original seed. Pytest module-scoped fixture created disposable users test_weigh+*@example.com and test_nocoach+*@example.com (left in DB — no admin delete endpoint used, matches iteration 10 pattern).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Weigh-in feature is functionally complete on backend (all 13 pytest cases pass) and mostly complete on frontend. The single meaningful UX bug is that the target-weight reference line renders outside the visible y-axis because domain='auto' fits only to the actual data points. Look for line 152 of WeighInPanel.jsx and change YAxis domain to include targetKg. After fix, re-run the browser test: login as Sarah, /account → panel target=72 kg → chart should show a dashed sky-blue horizontal line at y=72 with label 'Target 72 kg' visible below the two data points. To retest backend: `pytest /app/backend/tests/test_weigh_ins.py -v`. Sarah's seeded data confirmed intact (11-Aug 83kg, 14-Aug 81.5kg, target 72kg) at end of run.",
+  "rca of the issue": "N/A (feature verification, not bug hunt). Sole bug found: recharts YAxis with domain=['auto','auto'] excludes ReferenceLine values that fall outside the data range. Reproduction: any customer with weigh-ins clustered far from their target (e.g. 82 kg readings, 72 kg target) will not see the target line. Fix pattern: `<YAxis domain={[(min) => Math.min(min, (targetKg||min)) - 1, (max) => Math.max(max, (targetKg||max)) + 1]} .../>` — recharts supports functional domain accessors."
+}

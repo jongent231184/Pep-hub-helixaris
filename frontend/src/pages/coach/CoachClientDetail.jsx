@@ -7,6 +7,7 @@ import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
+import WeighInPanel from '../../components/WeighInPanel';
 
 const AREA_LABEL = { weightloss: 'Weight loss', peptide_info: 'Peptide Information', dosage_guide: 'Dosage Guide', how_to_guide: 'How-to Guide' };
 const DAY_CODES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -572,6 +573,9 @@ const CoachClientDetail = () => {
               <p className="text-sm text-slate-500 italic mt-3">Add an item with a day + time above and doses will auto-populate here.</p>
             )}
           </div>
+
+          {/* Weigh-in tracker (read-only for coach) */}
+          <WeighInPanel readOnly coachFetch={() => Coaches.coachWeighIns(client.id)} />
 
           {/* Messages */}
           <div className="bg-white border rounded-xl p-6">

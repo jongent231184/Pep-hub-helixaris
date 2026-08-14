@@ -128,6 +128,13 @@ export const Coaches = {
   sendMyMessage: (body) => api.post('/coaching/my/messages', { body }).then(r => r.data),
   myPrescribedCart: () => api.get('/coaching/my/prescribed-cart').then(r => r.data),
   consumePrescribedCart: (ids) => api.post('/coaching/my/prescribed-cart/consume', { ids: ids || null }).then(r => r.data),
+  // Weigh-ins
+  myWeighIns: () => api.get('/coaching/my/weigh-ins').then(r => r.data),
+  addMyWeighIn: (date, weight_kg) => api.post('/coaching/my/weigh-ins', { date, weight_kg }).then(r => r.data),
+  deleteMyWeighIn: (id) => api.delete(`/coaching/my/weigh-ins/${id}`).then(r => r.data),
+  setMyTarget: (target_weight_kg) => api.patch('/coaching/my/target-weight', { target_weight_kg }).then(r => r.data),
+  coachWeighIns: (clientId) => api.get(`/coaching/coach/clients/${clientId}/weigh-ins`).then(r => r.data),
+  coachSetTarget: (clientId, target_weight_kg) => api.patch(`/coaching/coach/clients/${clientId}/target-weight`, { target_weight_kg }).then(r => r.data),
 };
 
 export const PayPal = {

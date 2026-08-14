@@ -821,3 +821,93 @@ async def coach_at_risk(user: dict = Depends(require_coach)):
         {'id': {'$in': list(missed_by_client.keys())}}
     ).to_list(100)
     return [{**doc_to_dict(c), 'missed_count': missed_by_client.get(c['id'], 0)} for c in clients]
+
+
+# ---------------- Weigh-ins ----------------
+
+from models import WeighInIn, TargetWeightIn  # noqa: E402
+
+
+async def _my_client(user: dict) -> Optional[dict]:
+    email = (user.get('email') or '').lower()
+    return await db.coaching_clients.find_one({
+        '$or': [{'customer_user_id': user['id']}, {'customer_email': email}], 'active': True,
+    })
+
+
+@router.get('/my/weigh-ins')
+async def my_weigh_ins(user: dict = Depends(get_current_user)):
+    client = await _my_client(user)
+    if not client:
+        return {'entries': [], 'target_weight_kg': None}
+    entries = await db.weigh_ins.find({'client_id': client['id']}).sort('date', 1).to_list(500)
+    return {
+        'entries': [doc_to_dict(e) for e in entries],
+        'target_weight_kg': client.get('target_weight_kg'),
+    }
+
+
+@router.post('/my/weigh-ins')
+async def my_add_weigh_in(payload: WeighInIn, user: dict = Depends(get_current_user)):
+    client = await _my_client(user)
+    if not client:
+        raise HTTPException(404, 'No active coaching relationship')
+    now = datetime.utcnow()
+    # Upsert by (client_id, date) — one entry per day
+    doc = {
+        'client_id': client['id'],
+        'date': payload.date,
+        'weight_kg': float(payload.weight_kg),
+        'updated_at': now,
+    }
+    existing = await db.weigh_ins.find_one({'client_id': client['id'], 'date': payload.date})
+    if existing:
+        await db.weigh_ins.update_one({'_id': existing['_id']}, {'$set': doc})
+        return {**doc_to_dict(existing), **doc}
+    doc.update({'id': str(uuid.uuid4()), 'created_at': now})
+    await db.weigh_ins.insert_one(doc)
+    return doc_to_dict(doc)
+
+
+@router.delete('/my/weigh-ins/{entry_id}')
+async def my_delete_weigh_in(entry_id: str, user: dict = Depends(get_current_user)):
+    client = await _my_client(user)
+    if not client:
+        raise HTTPException(404, 'No active coaching relationship')
+    res = await db.weigh_ins.delete_one({'id': entry_id, 'client_id': client['id']})
+    if res.deleted_count == 0:
+        raise HTTPException(404, 'Weigh-in not found')
+    return {'ok': True}
+
+
+@router.patch('/my/target-weight')
+async def my_set_target_weight(payload: TargetWeightIn, user: dict = Depends(get_current_user)):
+    client = await _my_client(user)
+    if not client:
+        raise HTTPException(404, 'No active coaching relationship')
+    await db.coaching_clients.update_one(
+        {'id': client['id']},
+        {'$set': {'target_weight_kg': payload.target_weight_kg}},
+    )
+    return {'ok': True, 'target_weight_kg': payload.target_weight_kg}
+
+
+@router.get('/coach/clients/{client_id}/weigh-ins')
+async def coach_weigh_ins(client_id: str, user: dict = Depends(require_coach)):
+    await _get_coach_client(client_id, user['id'])
+    entries = await db.weigh_ins.find({'client_id': client_id}).sort('date', 1).to_list(500)
+    client = await db.coaching_clients.find_one({'id': client_id})
+    return {
+        'entries': [doc_to_dict(e) for e in entries],
+        'target_weight_kg': (client or {}).get('target_weight_kg'),
+    }
+
+
+@router.patch('/coach/clients/{client_id}/target-weight')
+async def coach_set_target_weight(client_id: str, payload: TargetWeightIn, user: dict = Depends(require_coach)):
+    await _get_coach_client(client_id, user['id'])
+    await db.coaching_clients.update_one(
+        {'id': client_id},
+        {'$set': {'target_weight_kg': payload.target_weight_kg}},
+    )
+    return {'ok': True, 'target_weight_kg': payload.target_weight_kg}

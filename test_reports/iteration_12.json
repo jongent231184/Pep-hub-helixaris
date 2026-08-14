@@ -1,0 +1,25 @@
+{
+  "summary": "Retest of iteration_11 HIGH bug (WeighInPanel target reference line invisible). All primary + regression checks pass.\n\nSarah /account (kg): weight-chart SVG contains a .recharts-reference-line with stroke=#0ea5e9 and label text 'Target 72 kg'. Y-axis ticks are now 71/75/79/84 kg — extended to include the 72 kg target (previously auto-fit gave 81–83 range that excluded 72). Latest=81.5 kg, Change=−1.5 kg (emerald, TrendingDown icon), Target=72 kg.\n\nToggle to lb: reference line still count=1 with stroke=#0ea5e9, label='Target 158.7 lb' — visible.\n\nCoach view of Sarah (/coach/clients/82e79ad5-...): panel renders in READ-ONLY (no weigh-submit, no target-save, no delete buttons). Reference line stroke=#0ea5e9, label 'Target 72 kg' present. Chart data identical to customer view.\n\nRegression: (a) same-day upsert — POST 81.5 for 2026-08-14 while a 2026-08-14 entry already existed → history rows before=2, after=2 (upsert working, no dupe). (b) Target set flow — filled '72' + click target-save → input clears (empty afterwards). (c) Change tile shows '−1.5 kg' with correct minus glyph + emerald color + TrendingDown icon — arithmetic fix confirmed. (d) delete buttons have aria-label='Delete weigh-in for 2026-08-14' / 'Delete weigh-in for 2026-08-11' — a11y fix confirmed.\n\nBackend not re-tested (per request) — no backend changes.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_weigh_ins.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "YAxis domain functional accessors in WeighInPanel.jsx (line 152-167) correctly use displayVal(targetKg) so the domain unit matches the axis unit (both switch between kg/lb). Nice.",
+    "One small remaining polish (already noted iter_11, LOW): the 'above the Dose Calendar' placement spec — panel still renders below YOUR ITEMS + DOSE CALENDAR on /account. If spec requires above, adjust MyCoaching.jsx render order. Not a blocker."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not re-run (100% from iter_11)", "frontend": "100% (all 4 primary + 4 regression checks passed)"},
+  "test_credentials": "Sarah: sarah.bennett.demo@example.com / GHPHEALTH · Coach: coachghp@gmail.com / CoachGHP26",
+  "seed_data_creation": "None. Sarah's seeded data intact: 11-Aug 83 kg, 14-Aug 81.5 kg, target 72 kg. Same-day upsert test rewrote 14-Aug entry to 81.5 kg (no-op).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "WeighInPanel target-line-visibility bug is FIXED. YAxis uses functional domain accessors that expand min/max to include displayVal(targetKg) ± margin. Verified both customer (Sarah /account) and coach view (/coach/clients/{sarah_id}) in both kg and lb modes. All prior weigh-in flows still work (upsert, target save/clear, delete aria-labels, change tile sign). No regressions.",
+  "rca of the issue": "N/A — fix verified. Root cause was YAxis domain='auto' auto-fitting to data range, excluding ReferenceLine y-values outside that range. Fix uses recharts' functional domain accessors: domain={[(min) => Math.floor(Math.min(min, displayVal(targetKg)) - 1), (max) => Math.ceil(Math.max(max, displayVal(targetKg)) + 1)]}."
+}

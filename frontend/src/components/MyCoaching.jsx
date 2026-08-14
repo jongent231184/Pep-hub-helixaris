@@ -4,6 +4,7 @@ import { Coaches } from '../lib/api';
 import { HeartPulse, Package, ShoppingCart, Loader2, Info, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCart } from '../context/CartContext';
+import WeighInPanel from './WeighInPanel';
 
 const AREA_LABEL = { weightloss: 'Weight loss', peptide_info: 'Peptide Information', dosage_guide: 'Dosage Guide', how_to_guide: 'How-to Guide' };
 
@@ -131,6 +132,9 @@ const MyCoaching = () => {
           </div>
         </div>
       )}
+
+      {/* Weigh-in tracker */}
+      <WeighInPanel />
 
       {/* Calendar */}
       {sortedDates.length > 0 && (

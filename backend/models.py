@@ -506,3 +506,12 @@ class ProtocolUpdate(BaseModel):
     duration_weeks: Optional[int] = None
     notes: Optional[str] = None
     active: Optional[bool] = None
+
+
+class WeighInIn(BaseModel):
+    date: str  # ISO YYYY-MM-DD — one entry per date is enforced upsert-style
+    weight_kg: float  # canonical unit; frontend converts from lb if needed
+
+
+class TargetWeightIn(BaseModel):
+    target_weight_kg: Optional[float] = None
