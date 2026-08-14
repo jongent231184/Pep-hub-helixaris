@@ -1,0 +1,48 @@
+{
+  "summary": "Verified the new coach 'prescription -> auto-cart' flow end-to-end. Backend pytest (10/10) covers vial-calc math (mg/mcg unit conversion + AM+PM doubling), push-to-cart create/replace, error cases (missing product, missing dose), customer GET + consume, cascade delete of unconsumed pushes, and admin PUT persisting ProductVariant.vial_strength_mg. Frontend Playwright: (A) admin product form now has 'Vial (mg)' column with data-testid=variant-vial-{i} and values persist after save+reload; (B) coach client detail: product-search + variant dropdown work, 1mg/day × 7d × 8w × 5mg-vial produces green 'Push 12 to cart' button and sky '7 mg/week · 12 × 5mg vials for 8 weeks' pill, push click fires toast. (C) Customer login CartContext auto-fetch works but DOUBLES the qty (24 instead of 12) because syncPrescribed runs twice under React.StrictMode — this is a real idempotency bug in CartContext.jsx.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Customer prescribed-cart auto-sync",
+        "issue": "CartContext.syncPrescribed effect is not idempotent: React.StrictMode fires the mount effect twice (index.js wraps in <React.StrictMode>), and BOTH runs GET /coaching/my/prescribed-cart before either fires POST /consume. Result: for a single push of 12 vials the client's localStorage cart ends up with qty=24 (double). This will also occur in production if window 'focus' fires while a mount-time sync is still in-flight (no in-flight guard). Fix suggestion: gate syncPrescribed with a useRef 'in-flight' flag, or move the addItem calls to occur AFTER the /consume POST resolves, or de-dupe by push.id in a session Set so the same push id can never be added twice.",
+        "affected_selectors": ["localStorage.ghp_cart", "toast 'Your coach added N items'"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_prescribed_cart.py",
+    "/app/test_reports/pytest/prescribed_cart.xml"
+  ],
+  "action_items": [
+    "Fix CartContext.jsx syncPrescribed idempotency — currently doubles cart qty under StrictMode / re-focus. Guard with useRef in-flight flag AND/OR order operations so consume happens before addItem (or de-dupe by push id).",
+    "Consider excluding the admin GET /products/id/{id} auth requirement — makes cross-admin flows (e.g. testing) harder, though not a bug. (Slug-based GET is public.)",
+    "Optional: TypeScript-strict variant.stock=null coercion — vial_strength_mg=null is returned as-is by API when null and works fine."
+  ],
+  "critical_code_review_comments": [
+    "CartContext.jsx: effect useEffect(()=>{...},[addItem]) runs at least twice in dev/StrictMode and adds pushes twice before consume completes. This is the biggest correctness risk in this feature — a customer refreshing quickly could still have duplicated line items even in production.",
+    "CartContext.jsx addItem falls back to price=null/image=null when the /my/prescribed-cart response omits fields. The backend does return product_price+product_image so OK, but consider a defensive default to £0 to avoid NaN totals if a product is later hidden.",
+    "coaching_routes.push_to_cart: when item.vial_strength_mg is missing AND variant_label doesn't match, backend silently falls back to the FIRST variant with a vial_strength_mg. Given the review request says 'Item without vial_strength_mg MUST 400', consider only using item.vial_strength_mg OR the exact matching variant — not the first-any-variant fallback (currently passes 200 in that case).",
+    "coaching_routes.push_to_cart: no upper cap on qty (math.ceil of user-input dose/weeks/strength). A coach typo could easily push qty=10000. Consider capping at say 60 vials or requiring confirmation past 20.",
+    "CoachClientDetail.jsx is now 585 lines — still merits splitting into ItemsSection / CalendarSection / PaylinkSection / MessagesSection sub-components.",
+    "Admin product-form does not sanity-check that vial_strength_mg is <= variant label's implied mg (e.g. label '5mg' but vial=10). Consider a warning, not blocking."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_prescribed_cart.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 pytest)",
+    "frontend": "67% (2 of 3 flows fully pass; customer auto-cart-sync has qty-doubling bug)"
+  },
+  "test_credentials": "Admin admin@ghp-health.com / GHP-Health26 · Coach coachghp@gmail.com / CoachGHP26. New disposable customers created per test run (test_prescribe+<ts>@example.com / Passw0rd!).",
+  "seed_data_creation": "pytest creates TEST_Tesamorelin product with variants [5mg/vial=5, 10mg/vial=10] and deletes it in teardown. Multiple test_prescribe+<ts>@example.com users + coaching requests/clients/protocols/items left in DB (test data prefixed 'TEST_' / 'test_prescribe' — safe to purge). Playwright frontend test additionally created 'UI Tesa <ts>' product then deleted it, and one coaching_client + protocol + push (still in DB, may be cleaned manually).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend regression: run `pytest backend/tests/test_prescribed_cart.py -v` — should stay 10/10. Frontend selectors confirmed working: data-testid=product-search, item-variant, item-dose-amount, item-dose-unit, item-vial-strength, freq-day-{Mon..Sun}, item-freq-time, add-item-btn, push-cart-{itemId}, item-calc-{itemId}. Admin product edit URL is /admin/products/{id} (NOT /admin/products/{id}/edit — that route doesn't exist). Admin variant vial column selector: data-testid=variant-vial-{i}. The prescribed-cart double-add bug reproduces reliably by logging in as any customer with a pending push and observing localStorage.ghp_cart entries.qty — becomes 2× expected. Backend push+consume+GET curl was fine on its own, so bug is purely in CartContext.jsx.",
+  "rca_of_the_issue": "React.StrictMode (index.js line 18) intentionally invokes effects twice in development to catch non-idempotent effects. CartContext.jsx line 54's syncPrescribed effect is exactly such an effect: two invocations both call myPrescribedCart(), both find 1 unconsumed push, both addItem(12), then both consume — resulting in qty=24. Reproduction: register customer -> submit coaching request -> coach accepts -> create protocol -> add item with dose_amount=1 mg, days=7, vial=5mg -> push-to-cart -> log in as customer in browser -> visit any page under CartProvider -> localStorage.ghp_cart shows qty=24 (should be 12). Mitigation: wrap syncPrescribed with a useRef in-flight guard (early-return if inFlight.current) OR execute await consume BEFORE addItem calls to make it safe against re-entry."
+}

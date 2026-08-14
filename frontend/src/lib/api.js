@@ -115,6 +115,8 @@ export const Coaches = {
   addCalendar: (protoId, data) => api.post(`/coaching/coach/protocols/${protoId}/calendar`, data).then(r => r.data),
   removeCalendar: (protoId, entryId) => api.delete(`/coaching/coach/protocols/${protoId}/calendar/${entryId}`).then(r => r.data),
   createPaylink: (protoId) => api.post(`/coaching/coach/protocols/${protoId}/paylink`).then(r => r.data),
+  vialCalc: (protoId, itemId) => api.get(`/coaching/coach/protocols/${protoId}/items/${itemId}/vial-calc`).then(r => r.data),
+  pushToCart: (protoId, itemId) => api.post(`/coaching/coach/protocols/${protoId}/items/${itemId}/push-to-cart`).then(r => r.data),
   atRisk: () => api.get('/coaching/coach/at-risk').then(r => r.data),
   clientMessages: (clientId) => api.get(`/coaching/coach/clients/${clientId}/messages`).then(r => r.data),
   sendMessage: (clientId, body) => api.post(`/coaching/coach/clients/${clientId}/messages`, { body }).then(r => r.data),
@@ -123,6 +125,8 @@ export const Coaches = {
   toggleEntry: (entryId, done) => api.patch(`/coaching/my/calendar/${entryId}?done=${done}`).then(r => r.data),
   myMessages: () => api.get('/coaching/my/messages').then(r => r.data),
   sendMyMessage: (body) => api.post('/coaching/my/messages', { body }).then(r => r.data),
+  myPrescribedCart: () => api.get('/coaching/my/prescribed-cart').then(r => r.data),
+  consumePrescribedCart: (ids) => api.post('/coaching/my/prescribed-cart/consume', { ids: ids || null }).then(r => r.data),
 };
 
 export const PayPal = {

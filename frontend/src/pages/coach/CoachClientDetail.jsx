@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Coaches, Products, resolveImage } from '../../lib/api';
-import { Loader2, ArrowLeft, Plus, Trash2, Package, Search, Calendar as CalendarIcon, X } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Trash2, Package, Search, Calendar as CalendarIcon, X, ShoppingCart } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
@@ -34,7 +34,12 @@ const CoachClientDetail = () => {
   // Forms
   const [protoForm, setProtoForm] = useState({ title: '', duration_weeks: 8, notes: '' });
   const [creatingProto, setCreatingProto] = useState(false);
-  const [itemForm, setItemForm] = useState({ product_id: null, name: '', dose: '', freqDays: [], freqTime: '', notes: '' });
+  const [itemForm, setItemForm] = useState({
+    product_id: null, variant_label: '', name: '', dose_amount: '', dose_unit: 'mg',
+    vial_strength_mg: '', freqDays: [], freqTime: '', notes: '',
+  });
+  // Selected product cached to render its variants dropdown
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [productSearch, setProductSearch] = useState('');
   const [addingItem, setAddingItem] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
@@ -80,29 +85,53 @@ const CoachClientDetail = () => {
   };
 
   const pickProduct = (p) => {
-    setItemForm(f => ({ ...f, product_id: p.id, name: p.name }));
+    // Auto-pick first variant with a vial_strength (or first variant)
+    const variants = p.variants || [];
+    const withStrength = variants.find(v => v.vial_strength_mg) || variants[0];
+    setSelectedProduct(p);
+    setItemForm(f => ({
+      ...f,
+      product_id: p.id,
+      name: p.name,
+      variant_label: withStrength?.label || '',
+      vial_strength_mg: withStrength?.vial_strength_mg || '',
+    }));
     setProductSearch('');
   };
-  const clearProduct = () => setItemForm(f => ({ ...f, product_id: null, name: '' }));
+  const clearProduct = () => {
+    setSelectedProduct(null);
+    setItemForm(f => ({ ...f, product_id: null, name: '', variant_label: '', vial_strength_mg: '' }));
+  };
+  const pickVariant = (label) => {
+    const v = (selectedProduct?.variants || []).find(x => x.label === label);
+    setItemForm(f => ({ ...f, variant_label: label, vial_strength_mg: v?.vial_strength_mg || '' }));
+  };
 
   const addItem = async () => {
     if (!itemForm.name) return toast({ title: 'Item name required', variant: 'destructive' });
     setAddingItem(true);
     try {
-      const frequency = [
-        itemForm.freqDays.length ? itemForm.freqDays.join('+') : '',
-        itemForm.freqTime,
-      ].filter(Boolean).join(' · ');
+      const dayStr = itemForm.freqDays.length ? itemForm.freqDays.join('+') : '';
+      const doseDisplay = itemForm.dose_amount ? `${itemForm.dose_amount} ${itemForm.dose_unit}` : '';
+      const frequency = [dayStr, itemForm.freqTime].filter(Boolean).join(' · ');
       await Coaches.addItem(proto.id, {
         product_id: itemForm.product_id,
+        variant_label: itemForm.variant_label || null,
         name: itemForm.name,
-        dose: itemForm.dose,
+        dose: doseDisplay,
+        dose_amount: itemForm.dose_amount ? Number(itemForm.dose_amount) : null,
+        dose_unit: itemForm.dose_unit,
+        vial_strength_mg: itemForm.vial_strength_mg ? Number(itemForm.vial_strength_mg) : null,
         notes: itemForm.notes,
         frequency,
         freq_days: itemForm.freqDays,
         freq_time: itemForm.freqTime,
       });
-      setItemForm({ product_id: null, name: '', dose: '', freqDays: [], freqTime: '', notes: '' });
+      setItemForm({
+        product_id: null, variant_label: '', name: '', dose_amount: '', dose_unit: 'mg',
+        vial_strength_mg: '', freqDays: [], freqTime: '', notes: '',
+      });
+      setSelectedProduct(null);
       toast({ title: 'Item added · calendar auto-scheduled' });
       load();
     } catch (e) {
@@ -117,6 +146,36 @@ const CoachClientDetail = () => {
       ...f,
       freqDays: f.freqDays.includes(day) ? f.freqDays.filter(d => d !== day) : [...f.freqDays, day],
     }));
+  };
+
+  // Client-side vial calc mirroring backend logic (so coach sees numbers instantly)
+  const UNIT_TO_MG = { mg: 1, mcg: 0.001, IU: null, clicks: null };
+  const computeVials = (it) => {
+    const days = (it.freq_days || []).length;
+    const weeks = proto?.duration_weeks || 0;
+    const dose = it.dose_amount;
+    const unit = it.dose_unit;
+    const doses_per_day = it.freq_time === 'AM+PM' ? 2 : 1;
+    const factor = UNIT_TO_MG[unit];
+    if (!dose || factor == null || !days || !weeks) return null;
+    const weekly_mg = dose * factor * days * doses_per_day;
+    const total_mg = weekly_mg * weeks;
+    const vs = it.vial_strength_mg;
+    const vials = vs && vs > 0 ? Math.ceil(total_mg / vs) : null;
+    return { weekly_mg: +weekly_mg.toFixed(3), total_mg: +total_mg.toFixed(3), vials, vs };
+  };
+
+  const [pushingItemId, setPushingItemId] = useState(null);
+  const pushToCart = async (itemId) => {
+    setPushingItemId(itemId);
+    try {
+      const r = await Coaches.pushToCart(proto.id, itemId);
+      toast({ title: `Pushed ${r.qty} × ${r.variant_label || 'vial'} to client's cart` });
+    } catch (e) {
+      toast({ title: 'Push failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally {
+      setPushingItemId(null);
+    }
   };
 
   const removeItem = async (itemId) => {
@@ -272,13 +331,67 @@ const CoachClientDetail = () => {
                 )}
               </div>
 
-              <div className="grid md:grid-cols-4 gap-2">
+              {/* Variant picker (when product has variants) */}
+              {itemForm.product_id && selectedProduct?.variants?.length > 0 && (
+                <div className="mb-3 flex items-center gap-2">
+                  <Label className="text-xs uppercase tracking-widest font-bold text-slate-500">Variant</Label>
+                  <select
+                    value={itemForm.variant_label}
+                    onChange={e => pickVariant(e.target.value)}
+                    className="border rounded px-2 py-1 text-sm bg-white font-semibold"
+                    data-testid="item-variant"
+                  >
+                    {selectedProduct.variants.map(v => (
+                      <option key={v.label} value={v.label}>
+                        {v.label} {v.vial_strength_mg ? `(${v.vial_strength_mg}mg/vial)` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="grid md:grid-cols-6 gap-2 items-end">
                 {!itemForm.product_id && (
                   <div className="md:col-span-2">
                     <Input value={itemForm.name} onChange={e => setItemForm(f => ({ ...f, name: e.target.value }))} placeholder="Custom item name" />
                   </div>
                 )}
-                <Input value={itemForm.dose} onChange={e => setItemForm(f => ({ ...f, dose: e.target.value }))} placeholder="Dose (e.g. 2.5mg)" data-testid="item-dose" />
+                <div className="md:col-span-2">
+                  <Label className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Dose per admin.</Label>
+                  <div className="flex gap-1">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={itemForm.dose_amount}
+                      onChange={e => setItemForm(f => ({ ...f, dose_amount: e.target.value }))}
+                      placeholder="2.5"
+                      data-testid="item-dose-amount"
+                      className="flex-1"
+                    />
+                    <select
+                      value={itemForm.dose_unit}
+                      onChange={e => setItemForm(f => ({ ...f, dose_unit: e.target.value }))}
+                      className="border rounded px-2 py-2 text-sm bg-white font-semibold"
+                      data-testid="item-dose-unit"
+                    >
+                      <option value="mg">mg</option>
+                      <option value="mcg">mcg</option>
+                      <option value="IU">IU</option>
+                      <option value="clicks">clicks</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Vial (mg)</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={itemForm.vial_strength_mg}
+                    onChange={e => setItemForm(f => ({ ...f, vial_strength_mg: e.target.value }))}
+                    placeholder="5"
+                    data-testid="item-vial-strength"
+                  />
+                </div>
                 <Button onClick={addItem} disabled={addingItem || (!itemForm.name && !itemForm.product_id)} className="bg-sky-500 hover:bg-sky-600 text-white gap-1" data-testid="add-item-btn">
                   {addingItem ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Add
                 </Button>
@@ -321,23 +434,49 @@ const CoachClientDetail = () => {
             {/* Item list */}
             {proto.items?.length > 0 ? (
               <div className="space-y-2">
-                {proto.items.map(it => (
-                  <div key={it.id} className="flex items-center gap-3 p-3 border rounded-lg" data-testid={`item-row-${it.id}`}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-slate-900">{it.name}</p>
-                        {it.product_id && <span className="text-[10px] uppercase tracking-wider bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded">Store product</span>}
+                {proto.items.map(it => {
+                  const calc = computeVials(it);
+                  return (
+                    <div key={it.id} className="flex items-center gap-3 p-3 border rounded-lg" data-testid={`item-row-${it.id}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold text-slate-900">{it.name}</p>
+                          {it.variant_label && <span className="text-[10px] uppercase tracking-wider bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">{it.variant_label}</span>}
+                          {it.product_id && <span className="text-[10px] uppercase tracking-wider bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded">Store product</span>}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {it.dose && <span><strong>{it.dose}</strong></span>}
+                          {it.dose && it.frequency && ' · '}
+                          {it.frequency && <span>{it.frequency}</span>}
+                        </p>
+                        {calc && calc.weekly_mg != null && (
+                          <p className="text-xs mt-1 font-semibold text-slate-700" data-testid={`item-calc-${it.id}`}>
+                            <span className="text-sky-700">{calc.weekly_mg} mg/week</span>
+                            {calc.vials != null && (
+                              <>
+                                <span className="text-slate-400"> · </span>
+                                <span className="text-emerald-700">{calc.vials} × {calc.vs}mg vial{calc.vials === 1 ? '' : 's'} for {proto.duration_weeks} weeks</span>
+                              </>
+                            )}
+                          </p>
+                        )}
+                        {it.notes && <p className="text-xs text-slate-500 mt-1">{it.notes}</p>}
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {it.dose && <span><strong>{it.dose}</strong></span>}
-                        {it.dose && it.frequency && ' · '}
-                        {it.frequency && <span>{it.frequency}</span>}
-                      </p>
-                      {it.notes && <p className="text-xs text-slate-500 mt-1">{it.notes}</p>}
+                      {it.product_id && calc?.vials && (
+                        <Button
+                          onClick={() => pushToCart(it.id)}
+                          disabled={pushingItemId === it.id}
+                          className="bg-emerald-500 hover:bg-emerald-600 text-white gap-1 whitespace-nowrap"
+                          data-testid={`push-cart-${it.id}`}
+                        >
+                          {pushingItemId === it.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
+                          Push {calc.vials} to cart
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => removeItem(it.id)} className="text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => removeItem(it.id)} className="text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p className="text-sm text-slate-500 italic">No items yet — add compounds, products or notes above.</p>

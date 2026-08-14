@@ -70,6 +70,7 @@ class ProductVariant(BaseModel):
     label: str
     price: float = 0.0
     stock: Optional[int] = None  # per-variant stock; falls back to product.stock if None
+    vial_strength_mg: Optional[float] = None  # for peptides — mg per vial (drives coach vial calculator)
 
 
 class ProductBase(BaseModel):
@@ -463,8 +464,12 @@ class CoachingClient(BaseModel):
 # ---------- COACHING PROTOCOLS ----------
 class ProtocolItemIn(BaseModel):
     product_id: Optional[str] = None  # link to a store product if applicable
+    variant_label: Optional[str] = None  # e.g. "5mg" — matches ProductVariant.label
     name: str  # display name (auto-filled from product if provided)
-    dose: str = ''  # free-text e.g. "2.5mg" or "10 clicks"
+    dose: str = ''  # legacy display, kept for backwards-compat (e.g. "2.5 mg")
+    dose_amount: Optional[float] = None  # numeric dose per administration
+    dose_unit: Optional[str] = None  # "mg" | "mcg" | "IU" | "clicks"
+    vial_strength_mg: Optional[float] = None  # mg per vial (override for this item)
     frequency: str = ''  # composed display string e.g. "Mon+Wed+Fri · AM"
     freq_days: Optional[list[str]] = None  # e.g. ["Mon","Wed","Fri"] — used to auto-generate calendar
     freq_time: Optional[str] = None  # "AM" | "PM" | "AM+PM"

@@ -15,13 +15,15 @@ import asyncio
 import logging
 import uuid
 from datetime import datetime
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
 from db import db
 from models import (
     CoachingRequestCreate, CoachingRequestUpdate, CoachingRequestOut,
     CoachCreate, CoachUpdate,
 )
-from auth import require_admin, require_coach, hash_password
+from auth import require_admin, require_coach, hash_password, get_current_user
 from utils import doc_to_dict
 
 logger = logging.getLogger('ghp.coaching')
@@ -317,8 +319,12 @@ async def add_item(proto_id: str, payload: ProtocolItemIn, user: dict = Depends(
         'id': str(uuid.uuid4()),
         'protocol_id': proto_id,
         'product_id': payload.product_id,
+        'variant_label': payload.variant_label,
         'name': payload.name.strip(),
         'dose': payload.dose or '',
+        'dose_amount': payload.dose_amount,
+        'dose_unit': payload.dose_unit or '',
+        'vial_strength_mg': payload.vial_strength_mg,
         'frequency': payload.frequency or '',
         'freq_days': payload.freq_days or [],
         'freq_time': payload.freq_time or '',
@@ -370,7 +376,150 @@ async def delete_item(proto_id: str, item_id: str, user: dict = Depends(require_
         raise HTTPException(404, 'Item not found')
     # Cascade: remove auto-generated calendar entries linked to this item
     await db.calendar_entries.delete_many({'protocol_id': proto_id, 'item_id': item_id})
+    # Cascade: revoke any unconsumed cart pushes for this item
+    await db.prescribed_cart_pushes.delete_many({'item_id': item_id, 'consumed_at': None})
     return {'ok': True}
+
+
+# ---------------- vial calculator + push-to-cart ----------------
+
+_UNIT_TO_MG = {'mg': 1.0, 'mcg': 0.001, 'iu': None, 'clicks': None}
+
+
+def _compute_vials(item: dict, proto: dict, product: Optional[dict]) -> dict:
+    """Return {weekly_mg, total_mg, vial_strength_mg, vials, days_per_week, weeks} — None if uncomputable."""
+    import math
+    days = len(item.get('freq_days') or [])
+    weeks = int(proto.get('duration_weeks') or 0)
+    dose_amount = item.get('dose_amount')
+    dose_unit = (item.get('dose_unit') or '').lower()
+    if item.get('freq_time') == 'AM+PM':
+        doses_per_day = 2
+    else:
+        doses_per_day = 1
+    mg_factor = _UNIT_TO_MG.get(dose_unit)
+    if not dose_amount or mg_factor is None or days == 0 or weeks == 0:
+        return {'weekly_mg': None, 'total_mg': None, 'vial_strength_mg': None, 'vials': None,
+                'days_per_week': days, 'weeks': weeks, 'doses_per_day': doses_per_day}
+    per_dose_mg = float(dose_amount) * mg_factor
+    weekly_mg = per_dose_mg * days * doses_per_day
+    total_mg = weekly_mg * weeks
+    # Vial strength: item override → product variant → product-level
+    vs = item.get('vial_strength_mg')
+    if not vs and product:
+        vlabel = item.get('variant_label')
+        for v in (product.get('variants') or []):
+            if vlabel and v.get('label') == vlabel and v.get('vial_strength_mg'):
+                vs = v['vial_strength_mg']
+                break
+        if not vs:
+            for v in (product.get('variants') or []):
+                if v.get('vial_strength_mg'):
+                    vs = v['vial_strength_mg']
+                    break
+    vials = math.ceil(total_mg / vs) if vs and vs > 0 else None
+    return {'weekly_mg': round(weekly_mg, 3), 'total_mg': round(total_mg, 3),
+            'vial_strength_mg': vs, 'vials': vials, 'days_per_week': days,
+            'weeks': weeks, 'doses_per_day': doses_per_day}
+
+
+@router.get('/coach/protocols/{proto_id}/items/{item_id}/vial-calc')
+async def vial_calc(proto_id: str, item_id: str, user: dict = Depends(require_coach)):
+    proto = await db.protocols.find_one({'id': proto_id, 'coach_id': user['id']})
+    if not proto:
+        raise HTTPException(404, 'Protocol not found')
+    item = await db.protocol_items.find_one({'id': item_id, 'protocol_id': proto_id})
+    if not item:
+        raise HTTPException(404, 'Item not found')
+    product = await db.products.find_one({'id': item.get('product_id')}) if item.get('product_id') else None
+    return _compute_vials(item, proto, product)
+
+
+@router.post('/coach/protocols/{proto_id}/items/{item_id}/push-to-cart')
+async def push_to_cart(proto_id: str, item_id: str, user: dict = Depends(require_coach)):
+    proto = await db.protocols.find_one({'id': proto_id, 'coach_id': user['id']})
+    if not proto:
+        raise HTTPException(404, 'Protocol not found')
+    item = await db.protocol_items.find_one({'id': item_id, 'protocol_id': proto_id})
+    if not item:
+        raise HTTPException(404, 'Item not found')
+    if not item.get('product_id'):
+        raise HTTPException(400, 'Item is not linked to a store product')
+    product = await db.products.find_one({'id': item['product_id']})
+    if not product:
+        raise HTTPException(400, 'Linked product no longer exists')
+    calc = _compute_vials(item, proto, product)
+    if not calc.get('vials'):
+        raise HTTPException(400, 'Cannot compute vials — set numeric dose, unit, days, and a vial strength.')
+    if calc['vials'] > 100:
+        raise HTTPException(400, f'Computed {calc["vials"]} vials — please double-check dose/duration; the max per push is 100.')
+    # Fetch matching variant (fallback to first available with a vial_strength)
+    variant_label = item.get('variant_label')
+    if not variant_label:
+        for v in (product.get('variants') or []):
+            if v.get('vial_strength_mg'):
+                variant_label = v['label']
+                break
+    # Replace any prior unconsumed push for this item
+    await db.prescribed_cart_pushes.delete_many({'item_id': item_id, 'consumed_at': None})
+    push_doc = {
+        'id': str(uuid.uuid4()),
+        'client_id': proto['client_id'],
+        'protocol_id': proto_id,
+        'item_id': item_id,
+        'product_id': product['id'],
+        'variant_label': variant_label,
+        'qty': int(calc['vials']),
+        'weekly_mg': calc['weekly_mg'],
+        'total_mg': calc['total_mg'],
+        'vial_strength_mg': calc['vial_strength_mg'],
+        'created_at': datetime.utcnow(),
+        'consumed_at': None,
+    }
+    await db.prescribed_cart_pushes.insert_one(push_doc)
+    return {'ok': True, 'qty': push_doc['qty'], 'variant_label': variant_label, 'calc': calc}
+
+
+@router.get('/my/prescribed-cart')
+async def my_prescribed_cart(user: dict = Depends(get_current_user)):
+    client = await db.coaching_clients.find_one({'customer_user_id': user['id'], 'active': True})
+    if not client:
+        return []
+    pushes = await db.prescribed_cart_pushes.find({'client_id': client['id'], 'consumed_at': None}).to_list(50)
+    out = []
+    for p in pushes:
+        product = await db.products.find_one({'id': p['product_id']})
+        if not product:
+            continue
+        out.append({
+            'id': p['id'],
+            'product_id': p['product_id'],
+            'product_slug': product.get('slug'),
+            'product_name': product.get('name'),
+            'product_image': product.get('image') or (product.get('images') or [None])[0],
+            'product_price': product.get('price'),
+            'variant_label': p.get('variant_label'),
+            'qty': p['qty'],
+            'weekly_mg': p.get('weekly_mg'),
+            'total_mg': p.get('total_mg'),
+        })
+    return out
+
+
+class ConsumeIn(BaseModel):
+    ids: Optional[list[str]] = None  # if omitted, consume all unconsumed
+
+
+@router.post('/my/prescribed-cart/consume')
+async def consume_prescribed_cart(payload: ConsumeIn, user: dict = Depends(get_current_user)):
+    client = await db.coaching_clients.find_one({'customer_user_id': user['id'], 'active': True})
+    if not client:
+        return {'consumed': 0}
+    query = {'client_id': client['id'], 'consumed_at': None}
+    if payload.ids:
+        query['id'] = {'$in': payload.ids}
+    res = await db.prescribed_cart_pushes.update_many(query, {'$set': {'consumed_at': datetime.utcnow()}})
+    return {'consumed': res.modified_count}
 
 
 @router.post('/coach/protocols/{proto_id}/calendar')

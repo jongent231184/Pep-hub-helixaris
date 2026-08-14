@@ -47,9 +47,10 @@ const AdminProductForm = () => {
           label: v.label,
           price: Number(v.price ?? 0),
           stock: v.stock === null || v.stock === undefined ? '' : String(v.stock),
+          vial_strength_mg: v.vial_strength_mg == null ? '' : String(v.vial_strength_mg),
         })));
       } else if (p.options && p.options.length > 0) {
-        setVariants(p.options.map(o => ({ label: o, price: Number(p.price || 0), stock: '' })));
+        setVariants(p.options.map(o => ({ label: o, price: Number(p.price || 0), stock: '', vial_strength_mg: '' })));
       } else {
         setVariants([]);
       }
@@ -59,7 +60,7 @@ const AdminProductForm = () => {
     }).finally(() => setLoading(false));
   }, [productId, isEdit, navigate, toast]);
 
-  const addVariant = () => setVariants(v => [...v, { label: '', price: Number(form.price) || 0, stock: '' }]);
+  const addVariant = () => setVariants(v => [...v, { label: '', price: Number(form.price) || 0, stock: '', vial_strength_mg: '' }]);
   const updateVariant = (idx, patch) => setVariants(v => v.map((row, i) => i === idx ? { ...row, ...patch } : row));
   const removeVariant = (idx) => setVariants(v => v.filter((_, i) => i !== idx));
 
@@ -99,6 +100,7 @@ const AdminProductForm = () => {
         label: (v.label || '').trim(),
         price: Number(v.price) || 0,
         stock: v.stock === '' || v.stock === null || v.stock === undefined ? null : Math.max(0, parseInt(v.stock, 10) || 0),
+        vial_strength_mg: v.vial_strength_mg === '' || v.vial_strength_mg == null ? null : Number(v.vial_strength_mg),
       }))
       .filter(v => v.label);
     const payload = {
@@ -206,7 +208,7 @@ const AdminProductForm = () => {
             </Button>
           </div>
           <p className="text-xs text-slate-500 mb-3">
-            Each variant has its own price. Stock is optional per variant — leave blank to use the product base stock ({form.stock ?? 0}).
+            Each variant has its own price. Stock is optional per variant — leave blank to use the product base stock ({form.stock ?? 0}). Vial (mg) is used by the coach vial-calculator for peptides.
           </p>
           {variants.length === 0 ? (
             <div className="text-xs text-slate-400 italic border border-dashed rounded p-4 text-center">
@@ -214,14 +216,15 @@ const AdminProductForm = () => {
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="grid grid-cols-[1fr,110px,90px,40px] gap-2 text-xs uppercase tracking-wide text-slate-500 px-1">
+              <div className="grid grid-cols-[1fr,110px,90px,110px,40px] gap-2 text-xs uppercase tracking-wide text-slate-500 px-1">
                 <div>Label</div>
                 <div>Price (£)</div>
                 <div>Stock</div>
+                <div>Vial (mg)</div>
                 <div></div>
               </div>
               {variants.map((v, i) => (
-                <div key={i} className="grid grid-cols-[1fr,110px,90px,40px] gap-2 items-center">
+                <div key={i} className="grid grid-cols-[1fr,110px,90px,110px,40px] gap-2 items-center">
                   <Input
                     value={v.label}
                     onChange={e => updateVariant(i, { label: e.target.value })}
@@ -246,6 +249,16 @@ const AdminProductForm = () => {
                     onChange={e => updateVariant(i, { stock: e.target.value })}
                     placeholder="—"
                     data-testid={`variant-stock-${i}`}
+                  />
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={v.vial_strength_mg ?? ''}
+                    onChange={e => updateVariant(i, { vial_strength_mg: e.target.value })}
+                    placeholder="5"
+                    title="mg per vial — used by coach vial calculator"
+                    data-testid={`variant-vial-${i}`}
                   />
                   <Button
                     type="button"

@@ -1,0 +1,36 @@
+{
+  "summary": "Retested the CartContext.jsx StrictMode double-add fix + the new 100-vial backend cap. Both PASS. Backend pytest suite is 11/11 for test_prescribed_cart.py (added TestPushCap::test_over_100_vials_returns_400) and 29/29 across all backend test files. Frontend Playwright reproduction: seeded a fresh coach->customer push of 12 vials, logged the customer in via the site (T&C disclaimer + LOG IN form), waited for auto-sync, reloaded, then dispatched window blur+focus. localStorage.ghp_cart line qty stayed at 12 across all three checkpoints (reload + focus), My Bag header shows 12, and GET /coaching/my/prescribed-cart returned [] (consumed). No double-add observed. The three overlapping guards (syncInFlight useRef, consumedIds Set, consume-before-add ordering) all behave correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_prescribed_cart.py",
+    "/app/test_reports/pytest/prescribed_cart.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "CartContext.jsx: consumedIds Set is module-scoped to the component instance and lives forever in memory; safe for a browser session but if a page navigation unmounts CartProvider the guard is lost. In this app CartProvider is at app root so it's fine — just worth noting for future refactors.",
+    "CartContext.jsx: consumePrescribedCart is fire-and-forget wrapped in a try/catch that silently swallows errors. If the consume POST fails (e.g. network glitch after ids are marked in consumedIds.current), the items are added locally AND the server-side pushes remain unconsumed — next refresh will re-add them because a fresh page load starts with an empty consumedIds Set. Consider only adding to consumedIds AFTER the consume POST resolves 200, and letting a failed consume simply not-add on that run.",
+    "coaching_routes.push_to_cart: cap of 100 is hardcoded — consider making it a config constant (e.g. MAX_VIALS_PER_PUSH = 100 at module top) so admins can tune without code hunt.",
+    "Previously flagged items from iteration_5 still stand: CoachClientDetail.jsx > 500 lines (split recommended), and push_to_cart's silent 'first-any-variant' vial fallback."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_prescribed_cart.py"
+  ],
+  "success_rate": {
+    "backend": "100% (29/29 pytest across all backend/tests; 11/11 for test_prescribed_cart.py including new cap test)",
+    "frontend": "100% for the retested flow (qty=12 stable across reload+focus, server consumed)"
+  },
+  "test_credentials": "Admin admin@ghp-health.com / GHP-Health26 · Coach coachghp@gmail.com / CoachGHP26. Frontend seeded a disposable customer (test_fe_prescribe+1786718100@example.com / Passw0rd!) — cleaned up product, customer/coaching-client left in DB but harmless (prefixed TEST/test_fe).",
+  "seed_data_creation": "Backend pytest creates+deletes its own TEST_ products. Frontend test seeded 'TEST FE Tesa 1786718100' peptide product + one coaching-request/client/protocol/item/push under test_fe_prescribe+<ts>@example.com. Product deleted post-test; customer + coaching artefacts remain (safe to purge).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The prescribed-cart double-add regression is FIXED and covered. If reworking CartContext.jsx, keep the ordering: (1) mark id in consumedIds ref BEFORE any await, (2) await consumePrescribedCart, (3) then addItem locally. To reproduce a push for FE testing: run /tmp/seed_push.py (or the equivalent flow: admin creates peptide product with variant vial_strength_mg=5; register customer; POST /coaching/requests; coach PATCH accept; POST /coaching/coach/clients/{id}/protocol; POST protocol item with dose=1mg, 7 days, vial=5; POST /push-to-cart). Backend 100-vial cap now enforced in coaching_routes.py line ~454.",
+  "rca_of_the_issue": "Previous bug (iteration_5): React.StrictMode fired CartContext's syncPrescribed effect twice on mount; both calls raced through GET /prescribed-cart before either issued POST /consume, so addItem(12) ran twice → qty=24. Fix (iteration_6, verified): (a) syncInFlight useRef early-returns the second concurrent invocation; (b) consumedIds useRef Set is populated with fresh.map(p=>p.id) BEFORE any await, so even if the guard were bypassed, the second run would filter the ids out; (c) consumePrescribedCart is awaited BEFORE addItem, so a leaked re-entrant call would get [] from the server anyway. Backend cap: push_to_cart now HTTP 400s with message 'Computed N vials — please double-check dose/duration; the max per push is 100.' when computed vials > 100 (verified via TestPushCap: dose_amount=100mg × 7d × 8w / 5mg-vial = 1120 vials → 400)."
+}
