@@ -465,7 +465,9 @@ class ProtocolItemIn(BaseModel):
     product_id: Optional[str] = None  # link to a store product if applicable
     name: str  # display name (auto-filled from product if provided)
     dose: str = ''  # free-text e.g. "2.5mg" or "10 clicks"
-    frequency: str = ''  # e.g. "Weekly (Monday)", "Daily"
+    frequency: str = ''  # composed display string e.g. "Mon+Wed+Fri · AM"
+    freq_days: Optional[list[str]] = None  # e.g. ["Mon","Wed","Fri"] — used to auto-generate calendar
+    freq_time: Optional[str] = None  # "AM" | "PM" | "AM+PM"
     notes: str = ''
 
 

@@ -37,8 +37,6 @@ const CoachClientDetail = () => {
   const [itemForm, setItemForm] = useState({ product_id: null, name: '', dose: '', freqDays: [], freqTime: '', notes: '' });
   const [productSearch, setProductSearch] = useState('');
   const [addingItem, setAddingItem] = useState(false);
-  const [calForm, setCalForm] = useState({ date: '', item_name: '', dose: '', time_of_day: '', notes: '' });
-  const [addingCal, setAddingCal] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
 
   const load = () => {
@@ -95,9 +93,17 @@ const CoachClientDetail = () => {
         itemForm.freqDays.length ? itemForm.freqDays.join('+') : '',
         itemForm.freqTime,
       ].filter(Boolean).join(' · ');
-      await Coaches.addItem(proto.id, { ...itemForm, frequency });
+      await Coaches.addItem(proto.id, {
+        product_id: itemForm.product_id,
+        name: itemForm.name,
+        dose: itemForm.dose,
+        notes: itemForm.notes,
+        frequency,
+        freq_days: itemForm.freqDays,
+        freq_time: itemForm.freqTime,
+      });
       setItemForm({ product_id: null, name: '', dose: '', freqDays: [], freqTime: '', notes: '' });
-      toast({ title: 'Item added' });
+      toast({ title: 'Item added · calendar auto-scheduled' });
       load();
     } catch (e) {
       toast({ title: 'Add failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
@@ -114,28 +120,8 @@ const CoachClientDetail = () => {
   };
 
   const removeItem = async (itemId) => {
-    if (!window.confirm('Remove this item from the protocol?')) return;
+    if (!window.confirm('Remove this item and its scheduled doses?')) return;
     await Coaches.removeItem(proto.id, itemId);
-    load();
-  };
-
-  const addCalendar = async () => {
-    if (!calForm.date || !calForm.item_name) return toast({ title: 'Date and item required', variant: 'destructive' });
-    setAddingCal(true);
-    try {
-      await Coaches.addCalendar(proto.id, calForm);
-      setCalForm({ date: '', item_name: '', dose: '', time_of_day: '', notes: '' });
-      toast({ title: 'Added to calendar' });
-      load();
-    } catch (e) {
-      toast({ title: 'Add failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
-    } finally {
-      setAddingCal(false);
-    }
-  };
-
-  const removeCalendar = async (entryId) => {
-    await Coaches.removeCalendar(proto.id, entryId);
     load();
   };
 
@@ -364,25 +350,9 @@ const CoachClientDetail = () => {
               <CalendarIcon className="h-4 w-4" /> Dose calendar ({proto.calendar?.length || 0})
             </h3>
 
-            <div className="border rounded-lg p-4 bg-slate-50 mb-4">
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-2">Schedule a dose</p>
-              <div className="grid md:grid-cols-5 gap-2">
-                <Input type="date" value={calForm.date} onChange={e => setCalForm(f => ({ ...f, date: e.target.value }))} data-testid="cal-date" />
-                <select value={calForm.item_name} onChange={e => setCalForm(f => ({ ...f, item_name: e.target.value }))} className="border rounded px-3 py-2 text-sm bg-white" data-testid="cal-item">
-                  <option value="">Item…</option>
-                  {(proto.items || []).map(it => <option key={it.id} value={it.name}>{it.name}</option>)}
-                </select>
-                <Input value={calForm.dose} onChange={e => setCalForm(f => ({ ...f, dose: e.target.value }))} placeholder="Dose" />
-                <Input value={calForm.time_of_day} onChange={e => setCalForm(f => ({ ...f, time_of_day: e.target.value }))} placeholder="Time (e.g. AM)" />
-                <Button onClick={addCalendar} disabled={addingCal} className="bg-sky-500 hover:bg-sky-600 text-white gap-1" data-testid="add-cal-btn">
-                  {addingCal ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Add
-                </Button>
-              </div>
-              <Input value={calForm.notes} onChange={e => setCalForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" className="mt-2" />
-            </div>
-
-            {/* Visual 7-day week grid */}
+            {/* Visual 7-day week grid — populated automatically from item frequency */}
             {proto.duration_weeks > 0 && (() => {
+              // Week 1 = Monday of the week the protocol was created
               const wk1Mon = weekStart(toISO(new Date(proto.created_at)));
               const wkMon = addDays(wk1Mon, (selectedWeek - 1) * 7);
               const days = Array.from({ length: 7 }, (_, i) => addDays(wkMon, i));
@@ -391,9 +361,9 @@ const CoachClientDetail = () => {
               }, {});
               const todayISO = toISO(new Date());
               return (
-                <div className="mb-4" data-testid="week-visual">
+                <div data-testid="week-visual">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs uppercase tracking-widest font-bold text-slate-500">Week view</p>
+                    <p className="text-xs uppercase tracking-widest font-bold text-slate-500">Week view · auto-scheduled from item frequency</p>
                     <select
                       value={selectedWeek}
                       onChange={e => setSelectedWeek(Number(e.target.value))}
@@ -413,7 +383,7 @@ const CoachClientDetail = () => {
                       return (
                         <div
                           key={iso}
-                          className={`border rounded-lg p-2 min-h-[90px] ${isToday ? 'border-sky-400 bg-sky-50/40 ring-1 ring-sky-300' : 'border-slate-200 bg-white'}`}
+                          className={`border rounded-lg p-2 min-h-[110px] ${isToday ? 'border-sky-400 bg-sky-50/40 ring-1 ring-sky-300' : 'border-slate-200 bg-white'}`}
                           data-testid={`week-day-${i}`}
                         >
                           <p className="text-[10px] uppercase font-bold text-slate-500 leading-none">{DAY_CODES[i]}</p>
@@ -438,44 +408,13 @@ const CoachClientDetail = () => {
                       );
                     })}
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-2">Week {selectedWeek} · {shortDate(days[0])} – {shortDate(days[6])} · visual only, edits below</p>
+                  <p className="text-[10px] text-slate-400 mt-2">Week {selectedWeek} · {shortDate(days[0])} – {shortDate(days[6])}</p>
                 </div>
               );
             })()}
 
-            {proto.calendar?.length > 0 ? (
-              <div className="border rounded-lg overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-xs text-slate-600 uppercase">
-                    <tr>
-                      <th className="p-2 text-left">Date</th>
-                      <th className="p-2 text-left">Time</th>
-                      <th className="p-2 text-left">Item</th>
-                      <th className="p-2 text-left">Dose</th>
-                      <th className="p-2 text-left">Notes</th>
-                      <th className="p-2 text-center">Done</th>
-                      <th className="p-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {proto.calendar.map(e => (
-                      <tr key={e.id} className={e.done ? 'bg-emerald-50/50 text-slate-500' : ''}>
-                        <td className="p-2 font-mono text-xs">{e.date}</td>
-                        <td className="p-2 text-xs">{e.time_of_day || '—'}</td>
-                        <td className="p-2 font-semibold">{e.item_name}</td>
-                        <td className="p-2">{e.dose || '—'}</td>
-                        <td className="p-2 text-xs text-slate-500">{e.notes || '—'}</td>
-                        <td className="p-2 text-center">{e.done ? '✅' : '⏳'}</td>
-                        <td className="p-2 text-right">
-                          <Button variant="ghost" size="icon" onClick={() => removeCalendar(e.id)} className="h-7 w-7 text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /></Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500 italic">No scheduled doses yet — add entries above.</p>
+            {(proto.items?.length || 0) === 0 && (
+              <p className="text-sm text-slate-500 italic mt-3">Add an item with a day + time above and doses will auto-populate here.</p>
             )}
           </div>
 

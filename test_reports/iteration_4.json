@@ -1,0 +1,33 @@
+{
+  "summary": "Verified auto-schedule + cascade-delete for coach protocol items on both backend and frontend. Backend pytest (3/3) confirms 12 calendar entries for a 4-week Mon+Wed+Fri item, cascade removes all entries+item on DELETE, and empty/omitted freq_days creates no calendar entries. Frontend Playwright confirms: old testids (add-cal-btn, cal-date, cal-item) are absent, week-visual is present, adding TestItem with Tue+Thu+AM chips immediately populates 2 sky pills per week across all 6 weeks, and the trash button cascade-deletes both the item row and every pill in the grid.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_auto_schedule.py",
+    "/app/test_reports/pytest/auto_schedule.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "coaching_routes.add_item auto-schedule uses `datetime.utcnow().date()` for Week 1 Monday — for UK coaches near midnight local time this may produce an off-by-one-day Week 1 anchor. Consider using the protocol's `created_at` date consistently on backend and frontend (frontend already uses proto.created_at).",
+    "The confirm() dialog for item delete is a native browser confirm — consider a shadcn AlertDialog for consistency with the rest of the app.",
+    "Protocol item does not persist an ordering field; day chips are unordered so display frequency (e.g. 'Mon+Wed+Fri · AM') is derived from insertion order client-side only. Consider storing freq_days as a sorted array.",
+    "CoachClientDetail.jsx is 446 lines and mixes items, calendar, paylink, and messaging — still a candidate for splitting into sub-components."
+  ],
+  "updated_files": ["/app/backend/tests/test_auto_schedule.py"],
+  "success_rate": {"backend": "100% (3/3)", "frontend": "100% (all 6 verifications pass)"},
+  "test_credentials": "Coach: coachghp@gmail.com / CoachGHP26",
+  "seed_data_creation": "Backend test creates one throwaway coaching request/client (TEST_autosched+<ts>@example.com) and a 4-week protocol. Frontend test reused existing coach client 8aa9305f-... (Test Client, 8-week Reta Test protocol); a 'TestItem' with Tue+Thu+AM was added and then deleted, leaving the client in its original state.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Auto-schedule + cascade delete are fully verified. Backend test file: /app/backend/tests/test_auto_schedule.py (uses fixture that registers a fresh customer, accepts as coach, creates a 4-week protocol). Frontend selectors used: item-dose, freq-day-{Mon..Sun}, item-freq-time (select AM/PM), add-item-btn, item-row-{id} (trash is last button in row), week-visual, week-select (option values '1'..N). Note: item name input has no data-testid — use placeholder 'Custom item name'. A native confirm() dialog fires on delete — register page.on('dialog', ...) accept handler before clicking trash. The preview-overlay hydration warning about <span> inside <option> is dev instrumentation, not app code.",
+  "frontend_verification_details": {
+    "removed_testids_absent": {"add-cal-btn": 0, "cal-date": 0, "cal-item": 0},
+    "week_visual_present": true,
+    "test_item_pills_per_week_after_add": {"1": 2, "2": 2, "3": 2, "4": 2, "5": 2, "6": 2},
+    "after_cascade_delete": {"item_rows": 0, "grid_testitem_count": 0}
+  }
+}

@@ -115,6 +115,7 @@ Build an e-commerce website cloning www.ghpresearch.co.uk. Scrape product data, 
 - Compliance guardrails: uses "peer education", "protocol", "client" (never "prescribe", "patient", "medical").
 - **Routing fix**: added `<Route path="/paylink/:orderId">` alongside `/pay/:orderId` so both aliases resolve to `PayLinkPage`. Backend `/api/coaching/coach/protocols/{id}/paylink` emits `payment_link=/paylink/{orderId}`.
 - **Coach portal tweaks (Feb 2026)**: (a) product search now uses public `Products.list()` (was calling admin-only endpoint → dropdown was empty); (b) Frequency input replaced with multi-select day chips (Mon…Sun) + AM/PM/AM+PM dropdown — stored as e.g. `"Mon+Wed+Fri · AM"`; (c) new 7-day visual week grid above the calendar table with a `Week 1..N` selector (N = protocol.duration_weeks) — calendar entries render as colored pills inside their day cell (sky = pending, emerald + strike-through = done), today's cell gets a sky ring.
+- **Auto-schedule (Feb 2026)**: adding an item now auto-generates calendar entries for the full protocol duration based on `freq_days` + `freq_time`. Week 1 Monday = Monday of the week the protocol was created (backend and frontend both use `protocol.created_at`). Removed the separate "Schedule a dose" form and the calendar table — the visual 7-day grid is now the single view. Deleting an item cascade-deletes its calendar entries via `item_id` link.
 
 ### P2
 - "For research use only" checkbox on age-gate modal

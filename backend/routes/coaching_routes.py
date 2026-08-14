@@ -320,10 +320,43 @@ async def add_item(proto_id: str, payload: ProtocolItemIn, user: dict = Depends(
         'name': payload.name.strip(),
         'dose': payload.dose or '',
         'frequency': payload.frequency or '',
+        'freq_days': payload.freq_days or [],
+        'freq_time': payload.freq_time or '',
         'notes': payload.notes or '',
         'created_at': datetime.utcnow(),
     }
     await db.protocol_items.insert_one(doc)
+
+    # Auto-generate calendar entries from freq_days across the whole protocol duration
+    if payload.freq_days:
+        from datetime import timedelta
+        day_idx = {'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6}
+        weeks = int(proto.get('duration_weeks') or 8)
+        # Week 1 Monday = Monday of the week the protocol was created (aligns with frontend grid)
+        ref_dt = proto.get('created_at') or datetime.utcnow()
+        ref_date = ref_dt.date() if hasattr(ref_dt, 'date') else datetime.fromisoformat(str(ref_dt)).date()
+        week1_mon = ref_date - timedelta(days=ref_date.weekday())  # Mon=0..Sun=6
+        entries: list[dict] = []
+        for w in range(weeks):
+            for d in payload.freq_days:
+                if d not in day_idx:
+                    continue
+                date = week1_mon + timedelta(days=w * 7 + day_idx[d])
+                entries.append({
+                    'id': str(uuid.uuid4()),
+                    'protocol_id': proto_id,
+                    'client_id': proto['client_id'],
+                    'item_id': doc['id'],
+                    'date': date.isoformat(),
+                    'item_name': doc['name'],
+                    'dose': doc['dose'],
+                    'time_of_day': payload.freq_time or '',
+                    'notes': '',
+                    'done': False,
+                    'created_at': datetime.utcnow(),
+                })
+        if entries:
+            await db.calendar_entries.insert_many(entries)
     return doc_to_dict(doc)
 
 
@@ -335,6 +368,8 @@ async def delete_item(proto_id: str, item_id: str, user: dict = Depends(require_
     res = await db.protocol_items.delete_one({'id': item_id, 'protocol_id': proto_id})
     if res.deleted_count == 0:
         raise HTTPException(404, 'Item not found')
+    # Cascade: remove auto-generated calendar entries linked to this item
+    await db.calendar_entries.delete_many({'protocol_id': proto_id, 'item_id': item_id})
     return {'ok': True}
 
 
