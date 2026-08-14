@@ -171,6 +171,31 @@ const CoachClientDetail = () => {
     load();
   };
 
+  const toggleEntry = async (entry) => {
+    const next = !entry.done;
+    // Optimistic UI — update within data.protocol.calendar
+    setData(d => ({
+      ...d,
+      protocol: {
+        ...d.protocol,
+        calendar: (d.protocol.calendar || []).map(x => x.id === entry.id ? { ...x, done: next } : x),
+      },
+    }));
+    try {
+      await Coaches.toggleEntryCoach(proto.id, entry.id, next);
+    } catch {
+      // Rollback on failure
+      setData(d => ({
+        ...d,
+        protocol: {
+          ...d.protocol,
+          calendar: (d.protocol.calendar || []).map(x => x.id === entry.id ? { ...x, done: !next } : x),
+        },
+      }));
+      toast({ title: 'Could not update dose', variant: 'destructive' });
+    }
+  };
+
   const [paylinkBusy, setPaylinkBusy] = useState(false);
   const createPaylink = async () => {
     setPaylinkBusy(true);
@@ -510,16 +535,22 @@ const CoachClientDetail = () => {
                             {list.length === 0 ? (
                               <p className="text-[10px] text-slate-300 italic">—</p>
                             ) : list.map(e => (
-                              <div
+                              <button
                                 key={e.id}
-                                className={`text-[10px] leading-tight px-1.5 py-1 rounded ${e.done ? 'bg-emerald-100 text-emerald-800 line-through' : 'bg-sky-100 text-sky-900'}`}
-                                title={`${e.item_name}${e.dose ? ' · ' + e.dose : ''}${e.time_of_day ? ' · ' + e.time_of_day : ''}`}
+                                type="button"
+                                onClick={() => toggleEntry(e)}
+                                className={`w-full text-[10px] leading-tight px-1.5 py-1 rounded text-left transition ${e.done ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300' : 'bg-sky-100 text-sky-900 hover:bg-sky-200'}`}
+                                title={`${e.item_name}${e.dose ? ' · ' + e.dose : ''}${e.time_of_day ? ' · ' + e.time_of_day : ''}${e.done ? ' — click to un-mark' : ' — click to mark done'}`}
+                                data-testid={`week-entry-${e.id}`}
                               >
-                                <p className="font-bold truncate">{e.item_name}</p>
+                                <p className="font-bold truncate flex items-center gap-1">
+                                  {e.done && <span className="text-emerald-600 leading-none">✓</span>}
+                                  <span className="truncate">{e.item_name}</span>
+                                </p>
                                 {(e.dose || e.time_of_day) && (
                                   <p className="opacity-80 truncate">{[e.dose, e.time_of_day].filter(Boolean).join(' · ')}</p>
                                 )}
-                              </div>
+                              </button>
                             ))}
                           </div>
                         </div>

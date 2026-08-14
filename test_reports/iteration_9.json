@@ -1,0 +1,28 @@
+{
+  "summary": "Verified coach-side calendar dose toggling end-to-end. Backend: authored /app/backend/tests/test_coach_toggle_entry.py with 9 pytest cases — ALL PASSED (4.92s). Cases cover (a) coach toggle done=true persists done+done_at, (b) GET /coaching/coach/clients/{cid} hydrated protocol reflects the new done state, (c) customer /my/protocol sees same doc (cross-role sync), (d) done=false reverts, (e) unauth → 401, (f) customer token → 403 (require_coach gate), (g) foreign proto_id → 404, (h) bogus entry_id → 404, (i) iteration-8 regression: customer PATCH /my/calendar still works and coach view reflects it. Frontend: logged in as coachghp@gmail.com via /api/auth/login → localStorage.ghp_token → GOTO /coach/clients/{id} (form-submit workaround). Located client with calendar entries (TEST Toggle client, week 1, 6 entries). Verified optimistic UI: click on sky pill transitions class from 'bg-sky-100 text-sky-900' → 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300' with green ✓ prefix in the item name span, NO line-through. Backend PATCH persisted (done_at=2026-08-14T16:15:40). Full page reload preserved emerald+✓ state (server-sourced). Second click reverted cleanly back to sky-100 with no ✓. No full-page navigation observed on click (optimistic). data-testid=week-entry-{id} and data-testid=week-select present as spec'd.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_coach_toggle_entry.py",
+    "/app/test_reports/pytest/coach_toggle_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "coaching_routes.py toggle_calendar_entry_coach uses `done: bool` as a bare query param — FastAPI will 422 if omitted rather than defaulting; consider `done: bool = True` or explicit Query(...) for clearer contract. Currently the frontend always sends it so this is fine, but a nice-to-have.",
+    "The customer-side PATCH /my/calendar/{entry_id} in coaching_routes.py does NOT set done_at (only done). The new coach PATCH sets done_at. If done_at is meant to be the canonical 'when marked done' timestamp for reporting/analytics, the customer endpoint should also set it for parity. Minor consistency issue.",
+    "Both PATCH endpoints allow done_at to be cleared to null when done=false. If historical tracking of 'was ever done' is desirable, consider preserving done_at on false→true→false cycles or storing a separate log. Nice-to-have.",
+    "Minor React warning observed in console: `<span>` cannot be a child of `<option>` — originates from an editor-instrumentation wrapper (data-ve-dynamic attribute on <option>) around the week-select options, not from CoachClientDetail's own JSX. Cosmetic; ignore unless the wrapper is under project control."
+  ],
+  "updated_files": ["/app/backend/tests/test_coach_toggle_entry.py"],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100% (all review items verified)"},
+  "test_credentials": "Coach: coachghp@gmail.com / CoachGHP26. Admin: admin@ghp-health.com / GHP-Health26. Login form doesn't reliably submit headless — use POST /api/auth/login → localStorage.ghp_token → GOTO.",
+  "seed_data_creation": "Test data auto-created by fixture: product 'TEST Toggle Peptide' (slug test-toggle-{ts}, cleaned up on teardown), customer test_toggle+{ts}@example.com, protocol 'TEST Toggle Protocol' (2 weeks, 6 doses). Persistent test client remains in coach's client list for future runs (fixture leaves protocol/client — only deletes product).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Coach dose-tick fully verified. New backend endpoint: PATCH /api/coaching/coach/protocols/{proto_id}/calendar/{entry_id}?done=true|false (gated require_coach, 404 on foreign proto). Frontend: <button data-testid=week-entry-{id}> in /coach/clients/{cid} — sky→emerald+✓ on click, optimistic w/ rollback on failure. Same collection as customer's PATCH /my/calendar. If retesting: use test_coach_toggle_entry.py pytest — self-contained fixture creates its own product+client. See iteration_8.json for customer-side context.",
+  "rca_of_the_issue": "n/a — new feature, no bug reproduction needed."
+}

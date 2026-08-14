@@ -571,6 +571,20 @@ async def delete_calendar_entry(proto_id: str, entry_id: str, user: dict = Depen
     return {'ok': True}
 
 
+@router.patch('/coach/protocols/{proto_id}/calendar/{entry_id}')
+async def toggle_calendar_entry_coach(proto_id: str, entry_id: str, done: bool, user: dict = Depends(require_coach)):
+    proto = await db.protocols.find_one({'id': proto_id, 'coach_id': user['id']})
+    if not proto:
+        raise HTTPException(404, 'Protocol not found')
+    res = await db.calendar_entries.update_one(
+        {'id': entry_id, 'protocol_id': proto_id},
+        {'$set': {'done': bool(done), 'done_at': datetime.utcnow() if done else None}},
+    )
+    if res.matched_count == 0:
+        raise HTTPException(404, 'Entry not found')
+    return {'ok': True, 'done': bool(done)}
+
+
 # --- Customer: view own protocol + tick doses ---
 from auth import get_current_user  # noqa: E402
 
