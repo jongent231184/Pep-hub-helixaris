@@ -1,0 +1,28 @@
+{
+  "summary": "Verified vial_strength_mg inference fix end-to-end. Backend: authored /app/backend/tests/test_vial_strength_inference.py (10 pytest cases, ALL PASSED in 4s): 6 unit tests on _infer_vial_strength_mg helper covering variant→any-variant→variant-label-regex→product-name-regex precedence + None fallthrough; 2 integration tests confirm add_item persists inferred vial_strength_mg at write time (name-regex for zero-variant products AND variant-vial wins over red-herring name '999mg'); 1 integration test insert a legacy vial_strength_mg=None doc directly into DB, hits GET /coaching/my/protocol, asserts hydrator returns 10.0 while DB record itself stays null (matches spec); 1 real-data test logs in as Sarah and asserts her TB-500 line comes back hydrated to 10.0 (also verifies BPC still has vial_strength). Also added conftest.py to load backend/.env so tests can `from routes.coaching_routes import _infer_vial_strength_mg` (previously KeyError'd on MONGO_URL).\n\nFrontend (Sarah /account): TB-500 shows '3 mg / week · 4 × 10mg vials for 12 weeks' + green 'Add 4 to cart' button, click adds 4 × TB-500 10mg @ £37.50 with option=null to localStorage.ghp_cart. BPC 157 shows '6 mg / week · 8 × 10mg vials for 12 weeks' + 'Add 8 to cart'. 'Add all 12 vials to cart' button present at top-right of YOUR ITEMS; click adds both lines (4 TB-500 + 8 BPC = 12 total) — cart badge shows '12'.\n\nCoach frontend (/coach/clients/{sarah_id}): typed 'TB-500' in product search, clicked TB-500 10mg result — item-vial-strength input auto-populated with '10' (previously stayed empty; regex fallback in pickProduct works).\n\nAll 8 features listed in the review request are verified.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_vial_strength_inference.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/vial_inference.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "_infer_vial_strength_mg puts `import re` inside the function body — small perf/style nit; move to module top-level.",
+    "The helper's precedence rule 'any variant's vial_strength_mg (step 2)' can silently pick a wrong variant when the coach didn't select one but multiple variants exist. Currently harmless because pickProduct auto-selects the withStrength variant, but if the coach clears the variant label the item could persist with a mismatched strength. Consider requiring variant_label to be set whenever variants exist.",
+    "The regex '(\\d+(?:\\.\\d+)?)\\s*mg\\b' is applied to product name; if a product is named e.g. 'GHK-Cu 50mg + BPC 10mg combo' the first match (50) wins even if the intent was 10. Edge case, but worth documenting. Product names with a single 'Xmg' work fine.",
+    "_hydrate_protocol only backfills on read — a stale item written under the buggy code path will keep vial_strength_mg=null in Mongo forever unless someone POSTs a new item for that product. A one-off migration script would be cleaner; not strictly needed since read-time patching works."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_vial_strength_inference.py",
+    "/app/backend/tests/conftest.py"
+  ],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100% (all 8 review items verified)"},
+  "test_credentials": "Sarah: sarah.bennett.demo@example.com / GHPHEALTH. Coach: coachghp@gmail.com / CoachGHP26. Admin: admin@ghp-health.com / GHP-Health26.",
+  "seed_data_creation": "Test products (TEST TB-500 10mg, TEST BPC 999mg), TEST_Vial customer + protocol — cleaned by fixture teardown (products deleted; client/protocol left because coach API has no delete). Did NOT modify Sarah's real TB-500/BPC items.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Vial-strength inference fully verified: (a) helper _infer_vial_strength_mg at coaching_routes.py:266 with 4-level precedence, (b) add_item at line ~373 pre-fills on write, (c) _hydrate_protocol at line ~254 backfills on read for legacy docs, (d) frontend pickProduct at CoachClientDetail.jsx:87 regex-infers when variants don't carry vial. Sarah's TB-500 (DB vial=null) now returns 10.0 via /api/coaching/my/protocol. If retesting: run `pytest /app/backend/tests/test_vial_strength_inference.py`. If sonner toast needs verification, note that the toast library uses a portal that renders/removes very quickly — DOM query for '[data-sonner-toast]' can be empty by the time the test runs; not a bug, just a timing issue for tests.",
+  "rca_of_the_issue": "RCA: Bug — coach adds TB-500 to Sarah's protocol; TB-500 product has no variants that carry vial_strength_mg, so the coach's item form left the 'Vial (mg)' field empty. Backend accepted vial_strength_mg=null and persisted null. Client-side computeVials (MyCoaching.jsx) then returned null → canAdd=false → the green 'Add K to cart' button was suppressed for TB-500 while BPC (which had a variant with vial_strength_mg=10) still worked. Fix: 3-level defense — (1) frontend pickProduct regex-infers X from 'Xmg' in product name and pre-fills the input, (2) backend add_item does the same server-side so a form bypass still persists the correct value, (3) _hydrate_protocol reads legacy null items and patches them at serve time. Reproduction: create a peptide product with no variants (or variants without vial_strength_mg), name = 'Foo 10mg'; coach adds it to a protocol without filling the vial field; before fix, customer /account had no add-to-cart button. Mitigation verified above."
+}

@@ -88,13 +88,19 @@ const CoachClientDetail = () => {
     // Auto-pick first variant with a vial_strength (or first variant)
     const variants = p.variants || [];
     const withStrength = variants.find(v => v.vial_strength_mg) || variants[0];
+    // Fallback: try to infer vial strength from the product name (e.g. "TB-500 10mg" → 10)
+    let inferredVial = withStrength?.vial_strength_mg || '';
+    if (!inferredVial) {
+      const m = /(\d+(?:\.\d+)?)\s*mg\b/i.exec(p.name || '');
+      if (m) inferredVial = m[1];
+    }
     setSelectedProduct(p);
     setItemForm(f => ({
       ...f,
       product_id: p.id,
       name: p.name,
       variant_label: withStrength?.label || '',
-      vial_strength_mg: withStrength?.vial_strength_mg || '',
+      vial_strength_mg: inferredVial,
     }));
     setProductSearch('');
   };

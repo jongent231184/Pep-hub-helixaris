@@ -13,6 +13,7 @@ Admin:
 """
 import asyncio
 import logging
+import re
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -250,12 +251,48 @@ async def _hydrate_protocol(proto: dict) -> dict:
             d['product_name'] = prod.get('name')
             d['product_price'] = prod.get('price')
             d['product_image'] = prod.get('image') or (prod.get('images') or [None])[0]
+            # If vial_strength_mg was not set at add time, try to infer from the product name
+            if not d.get('vial_strength_mg'):
+                inferred = _infer_vial_strength_mg(prod, it.get('variant_label'))
+                if inferred:
+                    d['vial_strength_mg'] = inferred
         hydrated_items.append(d)
     return {
         **doc_to_dict(proto),
         'items': hydrated_items,
         'calendar': [doc_to_dict(e) for e in entries],
     }
+
+
+def _infer_vial_strength_mg(product: Optional[dict], variant_label: Optional[str] = None) -> Optional[float]:
+    """Best-effort infer 'mg per vial' from a store product.
+
+    Precedence:
+      1. Matching variant's `vial_strength_mg`
+      2. Any variant's `vial_strength_mg`
+      3. Matching variant label (e.g. '5mg') → 5.0
+      4. Regex on `product.name` matching '(\\d+(?:\\.\\d+)?)\\s*mg' (e.g. 'TB-500 10mg' → 10.0)
+    Returns None if nothing found.
+    """
+    if not product:
+        return None
+    variants = product.get('variants') or []
+    if variant_label:
+        for v in variants:
+            if v.get('label') == variant_label and v.get('vial_strength_mg'):
+                return float(v['vial_strength_mg'])
+    for v in variants:
+        if v.get('vial_strength_mg'):
+            return float(v['vial_strength_mg'])
+    if variant_label:
+        m = re.search(r'(\d+(?:\.\d+)?)\s*mg', variant_label, re.IGNORECASE)
+        if m:
+            return float(m.group(1))
+    name = product.get('name') or ''
+    m = re.search(r'(\d+(?:\.\d+)?)\s*mg\b', name, re.IGNORECASE)
+    if m:
+        return float(m.group(1))
+    return None
 
 
 async def _get_coach_client(client_id: str, coach_id: str) -> dict:
@@ -332,6 +369,11 @@ async def add_item(proto_id: str, payload: ProtocolItemIn, user: dict = Depends(
     proto = await db.protocols.find_one({'id': proto_id, 'coach_id': user['id']})
     if not proto:
         raise HTTPException(404, 'Protocol not found')
+    # Fallback: if coach didn't fill vial_strength_mg, try to infer from the product name (e.g. "TB-500 10mg" → 10)
+    vial_strength = payload.vial_strength_mg
+    if vial_strength is None and payload.product_id:
+        product = await db.products.find_one({'id': payload.product_id})
+        vial_strength = _infer_vial_strength_mg(product, payload.variant_label)
     doc = {
         'id': str(uuid.uuid4()),
         'protocol_id': proto_id,
@@ -341,7 +383,7 @@ async def add_item(proto_id: str, payload: ProtocolItemIn, user: dict = Depends(
         'dose': payload.dose or '',
         'dose_amount': payload.dose_amount,
         'dose_unit': payload.dose_unit or '',
-        'vial_strength_mg': payload.vial_strength_mg,
+        'vial_strength_mg': vial_strength,
         'frequency': payload.frequency or '',
         'freq_days': payload.freq_days or [],
         'freq_time': payload.freq_time or '',
