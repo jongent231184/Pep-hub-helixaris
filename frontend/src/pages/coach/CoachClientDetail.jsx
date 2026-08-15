@@ -203,6 +203,30 @@ const CoachClientDetail = () => {
     }
   };
 
+  const [editingProto, setEditingProto] = useState(false);
+  const [editForm, setEditForm] = useState({ title: '', duration_weeks: 8, notes: '' });
+  const openEdit = () => {
+    setEditForm({ title: proto.title || '', duration_weeks: proto.duration_weeks || 8, notes: proto.notes || '' });
+    setEditingProto(true);
+  };
+  const saveEdit = async () => {
+    const weeks = Number(editForm.duration_weeks) || 1;
+    if (weeks < 1) return toast({ title: 'Weeks must be at least 1', variant: 'destructive' });
+    const oldWeeks = Number(proto.duration_weeks) || 0;
+    if (weeks < oldWeeks) {
+      const proceed = window.confirm(`Shortening from ${oldWeeks} to ${weeks} weeks will delete calendar entries beyond week ${weeks}. Continue?`);
+      if (!proceed) return;
+    }
+    try {
+      await Coaches.updateProtocol(proto.id, { title: editForm.title.trim(), duration_weeks: weeks, notes: editForm.notes });
+      toast({ title: 'Protocol updated' });
+      setEditingProto(false);
+      load();
+    } catch (e) {
+      toast({ title: 'Update failed', description: String(e?.response?.data?.detail || e.message), variant: 'destructive' });
+    }
+  };
+
   const [paylinkBusy, setPaylinkBusy] = useState(false);
   const createPaylink = async () => {
     setPaylinkBusy(true);
@@ -295,10 +319,52 @@ const CoachClientDetail = () => {
                     {proto.paid ? 'Paid · Unlocked' : 'Payment pending'}
                   </span>
                 </div>
-                <h2 className="text-2xl font-black text-slate-900">{proto.title}</h2>
-                <p className="text-sm text-slate-600 mt-1">{proto.duration_weeks} weeks · {proto.items?.length || 0} item{proto.items?.length === 1 ? '' : 's'} · {proto.calendar?.length || 0} scheduled dose{proto.calendar?.length === 1 ? '' : 's'} · £{Number(proto.price || 9.99).toFixed(2)}</p>
-                {proto.notes && <p className="text-xs text-slate-600 mt-2 whitespace-pre-wrap">{proto.notes}</p>}
-                {!proto.paid && (
+                {editingProto ? (
+                  <div className="space-y-2 mt-1" data-testid="proto-edit-form">
+                    <Input
+                      value={editForm.title}
+                      onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+                      placeholder="Protocol title"
+                      className="text-lg font-bold"
+                      data-testid="proto-edit-title"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-slate-600 whitespace-nowrap">Duration (weeks):</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="52"
+                        value={editForm.duration_weeks}
+                        onChange={e => setEditForm(f => ({ ...f, duration_weeks: e.target.value }))}
+                        className="w-24"
+                        data-testid="proto-edit-weeks"
+                      />
+                    </div>
+                    <Textarea
+                      rows={2}
+                      value={editForm.notes}
+                      onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                      placeholder="Notes"
+                      data-testid="proto-edit-notes"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Button onClick={saveEdit} className="bg-sky-500 hover:bg-sky-600 text-white gap-1" data-testid="proto-edit-save">Save</Button>
+                      <Button onClick={() => setEditingProto(false)} variant="outline" data-testid="proto-edit-cancel">Cancel</Button>
+                    </div>
+                    {Number(editForm.duration_weeks) !== Number(proto.duration_weeks) && (
+                      <p className="text-[11px] text-amber-700">
+                        Duration change: calendar entries will be re-synced (extending adds new doses per item, shortening removes future entries beyond week {editForm.duration_weeks}).
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="text-2xl font-black text-slate-900">{proto.title}</h2>
+                    <p className="text-sm text-slate-600 mt-1">{proto.duration_weeks} weeks · {proto.items?.length || 0} item{proto.items?.length === 1 ? '' : 's'} · {proto.calendar?.length || 0} scheduled dose{proto.calendar?.length === 1 ? '' : 's'} · £{Number(proto.price || 9.99).toFixed(2)}</p>
+                    {proto.notes && <p className="text-xs text-slate-600 mt-2 whitespace-pre-wrap">{proto.notes}</p>}
+                  </>
+                )}
+                {!editingProto && !proto.paid && (
                   <div className="mt-3">
                     <Button onClick={createPaylink} disabled={paylinkBusy} className="bg-sky-500 hover:bg-sky-600 text-white gap-2" data-testid="send-paylink-btn">
                       {paylinkBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : '💳'} {proto.payment_order_id ? 'Copy payment link' : 'Send payment link'}
@@ -309,7 +375,14 @@ const CoachClientDetail = () => {
                   </div>
                 )}
               </div>
-              <Button onClick={endProtocol} variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 gap-1"><X className="h-4 w-4" />End</Button>
+              {!editingProto && (
+                <div className="flex flex-col gap-2 items-end">
+                  <Button onClick={openEdit} variant="outline" className="gap-1" data-testid="proto-edit-btn">
+                    ✏️ Edit
+                  </Button>
+                  <Button onClick={endProtocol} variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 gap-1"><X className="h-4 w-4" />End</Button>
+                </div>
+              )}
             </div>
           </div>
 

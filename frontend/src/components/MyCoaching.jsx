@@ -216,6 +216,7 @@ const AddAllButton = ({ items, weeks }) => {
     .map(it => ({ it, calc: computeVials(it, weeks) }))
     .filter(({ it, calc }) => it.product_id && calc?.vials);
   const totalVials = addable.reduce((s, { calc }) => s + calc.vials, 0);
+  const totalCost = addable.reduce((s, { it, calc }) => s + (Number(it.product_price) || 0) * calc.vials, 0);
   if (addable.length < 2) return null;
   const addAll = () => {
     addable.forEach(({ it, calc }) => {
@@ -225,16 +226,23 @@ const AddAllButton = ({ items, weeks }) => {
         it.variant_label,
       );
     });
-    toast(`Added ${totalVials} vials across ${addable.length} items to cart`);
+    toast(`Added ${totalVials} vials across ${addable.length} items to cart · £${totalCost.toFixed(2)}`);
   };
   return (
-    <button
-      onClick={addAll}
-      className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded"
-      data-testid="add-all-to-cart"
-    >
-      <ShoppingCart className="h-3.5 w-3.5" /> Add all {totalVials} vials to cart
-    </button>
+    <div className="flex items-center gap-2 flex-wrap" data-testid="add-all-wrap">
+      {totalCost > 0 && (
+        <span className="text-xs font-semibold text-slate-600" data-testid="course-cost">
+          Full {weeks}-week course ≈ <strong className="text-slate-900">£{totalCost.toFixed(2)}</strong>
+        </span>
+      )}
+      <button
+        onClick={addAll}
+        className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded"
+        data-testid="add-all-to-cart"
+      >
+        <ShoppingCart className="h-3.5 w-3.5" /> Add all {totalVials} vials to cart
+      </button>
+    </div>
   );
 };
 
@@ -283,6 +291,7 @@ const ItemCard = ({ it, weeks }) => {
           data-testid={`add-to-cart-${it.id}`}
         >
           <ShoppingCart className="h-4 w-4" /> Add {calc.vials} to cart
+          {it.product_price ? <span className="opacity-90 font-semibold"> · £{(calc.vials * Number(it.product_price)).toFixed(2)}</span> : null}
         </button>
       ) : it.product_id ? (
         <Link

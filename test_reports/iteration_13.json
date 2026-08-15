@@ -1,0 +1,34 @@
+{
+  "summary": "Tested both features end-to-end (backend + frontend) — all pass.\n\nBACKEND (5/5) via /app/backend/tests/test_duration_cascade.py:\n1. Extend 4→8 with Mon+Wed item: entries went 8→16, all 8 original ids preserved.\n2. Shorten 8→3 with Mon item: entries went 8→3, all remaining dates < Monday of week 4.\n3. Same-duration PUT (only title+notes): calendar entry ids identical before/after (no cascade).\n4. Preserve done: dur=2 Mon+Wed → 4 entries, marked first 2 done. Extend 2→4 → 8 entries; the 2 originally-done entries retain done=true, the 4 new week-3/4 entries are done=false.\n5. Foreign-coach authz: created a second coach via /admin/coaches, tried PUT on coach1's protocol → 404. Random UUID → 404.\n\nFRONTEND (all pass) via disposable customer (uidur+…@example.com) — Jon Gent's data untouched:\n- Coach loads /coach/clients/{id}, clicks proto-edit-btn → proto-edit-form appears with title/weeks/notes inputs.\n- SHORTEN 8→6: window.confirm dialog fired, accepted. Backend reflects duration=6 and 12 entries (was 16). Week selector now has exactly 6 options. Header re-rendered.\n- EXTEND 6→10: NO confirm dialog fired. Backend duration=10, entries=20. Toast 'Protocol updated' visible.\n- CANCEL: opened form, changed title to 'SHOULD_NOT_PERSIST', clicked proto-edit-cancel → form disappears, backend title still 'UI Duration Test'.\n- COST PREVIEW: added 2 product-linked items, marked protocol paid via admin. /account YOUR ITEMS section shows data-testid='course-cost' with text 'Full 10-week course ≈ £9.00' next to the 'Add all 2 vials to cart' button. Each per-item green 'Add 1 to cart' button includes the '· £4.50' suffix (K × product_price).\n\nRegression not re-tested (weigh-ins, messaging, product search, vial inference, dose ticking) — no touched code paths in this iteration and prior iteration_12 already covered them.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "MyCoaching per-item Add button", "issues": ["Missing space between 'cart' and the '·' bullet — renders as 'Add 1 to cart· £4.50'. Cosmetic. Add a leading space inside the span, e.g. ' · £X.XX'."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_duration_cascade.py",
+    "/app/test_reports/pytest/duration_cascade.xml"
+  ],
+  "action_items": [
+    "(Nit) In /app/frontend/src/components/MyCoaching.jsx line ~294, add a space before the £ bullet on the per-item Add-to-cart button so text reads 'Add K to cart · £X.XX'."
+  ],
+  "critical_code_review_comments": [
+    "coaching_routes.py _resync_duration_weeks correctly no-ops when new_weeks==old_weeks and preserves entry ids/done state on the still-in-window rows (delete-only for shorten; insert-only for extend). ISO date string comparison is safe here because dates are canonical YYYY-MM-DD.",
+    "coaching_routes.py update_protocol: `new_weeks = int(updates.get('duration_weeks', old_weeks))` — safe because ProtocolUpdate uses Optional[int]=None and we filter None values before this line.",
+    "CoachClientDetail.jsx saveEdit: window.confirm gate only triggers when weeks<oldWeeks — correct. Toast 'Protocol updated' + load() refresh works.",
+    "MyCoaching.jsx AddAllButton totalCost/totalVials computed from same `addable` array — consistent."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_duration_cascade.py (new — 5 pytest cases, all pass in 7.71s)"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% (7/7 checks: edit-open, shorten-confirm, shorten-cascade, week-select-count, extend-no-confirm, extend-cascade, cancel-no-persist, cost-preview-text, per-item-£-suffix)"},
+  "test_credentials": "Coach: coachghp@gmail.com / CoachGHP26 · Admin: admin@ghp-health.com / GHP-Health26 · Disposable customer created per run.",
+  "seed_data_creation": "Disposable test customer(s) created via /api/auth/register with prefix 'testdur+' or 'uidur+'. All protocols were DELETEd and clients deactivated at end of runs. Jon Gent's protocol untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Both new features (course cost preview, editable protocol banner with duration cascade) are fully working. Backend cascade behavior — extend appends without touching existing rows, shorten deletes rows on/after Monday of week (new_weeks+1), same-duration is a no-op — is verified by test_duration_cascade.py which can be re-run as a regression suite. Only outstanding cosmetic issue: missing space before '·' in the per-item Add-to-cart button label.",
+  "rca of the issue": "N/A — features work as specified."
+}

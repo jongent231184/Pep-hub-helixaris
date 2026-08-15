@@ -348,9 +348,66 @@ async def update_protocol(proto_id: str, payload: ProtocolUpdate, user: dict = D
         raise HTTPException(404, 'Protocol not found')
     updates = {k: v for k, v in payload.model_dump().items() if v is not None}
     updates['updated_at'] = datetime.utcnow()
+    # If duration changed, re-sync calendar entries so extending / shortening cascades correctly
+    old_weeks = int(existing.get('duration_weeks') or 0)
+    new_weeks = int(updates.get('duration_weeks', old_weeks))
     await db.protocols.update_one({'id': proto_id}, {'$set': updates})
+    if new_weeks != old_weeks:
+        await _resync_duration_weeks(existing, new_weeks)
     refreshed = await db.protocols.find_one({'id': proto_id})
     return await _hydrate_protocol(refreshed)
+
+
+async def _resync_duration_weeks(proto: dict, new_weeks: int) -> None:
+    """Adjust calendar entries when a protocol's duration changes.
+
+    * Shortening: delete entries whose date falls beyond the new final week.
+    * Extending: for each item that has freq_days, add entries for the new weeks.
+
+    Preserves 'done' state on entries that remain inside the new window.
+    """
+    from datetime import timedelta
+    old_weeks = int(proto.get('duration_weeks') or 0)
+    ref_dt = proto.get('created_at') or datetime.utcnow()
+    ref_date = ref_dt.date() if hasattr(ref_dt, 'date') else datetime.fromisoformat(str(ref_dt)).date()
+    week1_mon = ref_date - timedelta(days=ref_date.weekday())
+    # Shorten: cutoff = start of week (new_weeks). Anything on/after cutoff is out of range.
+    if new_weeks < old_weeks:
+        cutoff = week1_mon + timedelta(days=new_weeks * 7)
+        await db.calendar_entries.delete_many({
+            'protocol_id': proto['id'],
+            'date': {'$gte': cutoff.isoformat()},
+        })
+        return
+    # Extend: add entries for weeks in [old_weeks, new_weeks) for each item with freq_days
+    if new_weeks > old_weeks:
+        day_idx = {'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6}
+        items = await db.protocol_items.find({'protocol_id': proto['id']}).to_list(200)
+        entries: list[dict] = []
+        for it in items:
+            days = it.get('freq_days') or []
+            if not days:
+                continue
+            for w in range(old_weeks, new_weeks):
+                for d in days:
+                    if d not in day_idx:
+                        continue
+                    date = week1_mon + timedelta(days=w * 7 + day_idx[d])
+                    entries.append({
+                        'id': str(uuid.uuid4()),
+                        'protocol_id': proto['id'],
+                        'client_id': proto['client_id'],
+                        'item_id': it['id'],
+                        'date': date.isoformat(),
+                        'item_name': it.get('name'),
+                        'dose': it.get('dose', ''),
+                        'time_of_day': it.get('freq_time', ''),
+                        'notes': '',
+                        'done': False,
+                        'created_at': datetime.utcnow(),
+                    })
+        if entries:
+            await db.calendar_entries.insert_many(entries)
 
 
 @router.delete('/coach/protocols/{proto_id}')
