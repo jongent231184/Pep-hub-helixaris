@@ -102,16 +102,22 @@ const AdminLayout = () => {
         <button onClick={() => { logout(); navigate('/login'); }} className="text-xs flex items-center gap-1"><LogOut className="h-4 w-4" /> Out</button>
       </div>
 
-      {/* Mobile bottom nav */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t flex justify-around">
-        {NAV.map(item => (
-          <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) =>
-            `flex flex-col items-center py-2 px-2 text-[10px] flex-1 ${isActive ? 'text-sky-600' : 'text-slate-600'}`
-          }>
-            <item.icon className="h-5 w-5" />
-            {item.label}
-          </NavLink>
-        ))}
+      {/* Mobile bottom nav — horizontally scrollable (12 items don't fit on iPhone) */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t">
+        <div className="overflow-x-auto no-scrollbar relative">
+          <div className="flex min-w-max">
+            {NAV.map(item => (
+              <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) =>
+                `flex flex-col items-center py-2 px-3 text-[10px] shrink-0 min-w-[64px] ${isActive ? 'text-sky-600' : 'text-slate-600'}`
+              }>
+                <item.icon className="h-5 w-5" />
+                <span className="whitespace-nowrap mt-0.5">{item.label}</span>
+              </NavLink>
+            ))}
+          </div>
+          {/* Right-edge fade hint so users see more items are off-screen */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent" />
+        </div>
       </div>
 
       {/* Main content */}
