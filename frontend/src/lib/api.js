@@ -114,7 +114,7 @@ export const Coaches = {
   removeItem: (protoId, itemId) => api.delete(`/coaching/coach/protocols/${protoId}/items/${itemId}`).then(r => r.data),
   addCalendar: (protoId, data) => api.post(`/coaching/coach/protocols/${protoId}/calendar`, data).then(r => r.data),
   removeCalendar: (protoId, entryId) => api.delete(`/coaching/coach/protocols/${protoId}/calendar/${entryId}`).then(r => r.data),
-  createPaylink: (protoId) => api.post(`/coaching/coach/protocols/${protoId}/paylink`).then(r => r.data),
+  createPaylink: (protoId, price) => api.post(`/coaching/coach/protocols/${protoId}/paylink`, price != null ? { price } : {}).then(r => r.data),
   vialCalc: (protoId, itemId) => api.get(`/coaching/coach/protocols/${protoId}/items/${itemId}/vial-calc`).then(r => r.data),
   toggleEntryCoach: (protoId, entryId, done) => api.patch(`/coaching/coach/protocols/${protoId}/calendar/${entryId}?done=${done}`).then(r => r.data),
   pushToCart: (protoId, itemId) => api.post(`/coaching/coach/protocols/${protoId}/items/${itemId}/push-to-cart`).then(r => r.data),

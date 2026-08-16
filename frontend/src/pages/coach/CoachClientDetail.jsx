@@ -228,13 +228,25 @@ const CoachClientDetail = () => {
   };
 
   const [paylinkBusy, setPaylinkBusy] = useState(false);
+  const [paylinkPrice, setPaylinkPrice] = useState('');
+  useEffect(() => {
+    if (proto && paylinkPrice === '') {
+      setPaylinkPrice(String(Number(proto.price ?? 9.99).toFixed(2)));
+    }
+  }, [proto]);
   const createPaylink = async () => {
+    const priceNum = parseFloat(paylinkPrice);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      return toast({ title: 'Enter a valid price', variant: 'destructive' });
+    }
     setPaylinkBusy(true);
     try {
-      const res = await Coaches.createPaylink(proto.id);
+      // If a paylink already exists at a different price, backend will regenerate. Copy-only when price matches.
+      const shouldRegen = !proto.payment_order_id || Math.abs(Number(proto.price || 0) - priceNum) > 0.001;
+      const res = await Coaches.createPaylink(proto.id, shouldRegen ? priceNum : null);
       const url = `${window.location.origin}${res.payment_link}`;
       try { await navigator.clipboard.writeText(url); } catch (_) { /* ignore */ }
-      toast({ title: 'Paylink ready · copied to clipboard', description: `${res.order_number} · £${Number(res.amount).toFixed(2)}` });
+      toast({ title: shouldRegen && proto.payment_order_id ? 'Paylink regenerated · copied' : 'Paylink ready · copied to clipboard', description: `${res.order_number} · £${Number(res.amount).toFixed(2)}` });
       load();
     } catch (e) {
       toast({ title: 'Paylink failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
@@ -366,11 +378,29 @@ const CoachClientDetail = () => {
                 )}
                 {!editingProto && !proto.paid && (
                   <div className="mt-3">
-                    <Button onClick={createPaylink} disabled={paylinkBusy} className="bg-sky-500 hover:bg-sky-600 text-white gap-2" data-testid="send-paylink-btn">
-                      {paylinkBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : '💳'} {proto.payment_order_id ? 'Copy payment link' : 'Send payment link'}
-                    </Button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center border rounded overflow-hidden">
+                        <span className="px-2 py-2 text-sm font-bold bg-slate-100 text-slate-600">£</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.50"
+                          value={paylinkPrice}
+                          onChange={e => setPaylinkPrice(e.target.value)}
+                          className="border-0 focus-visible:ring-0 w-24 font-semibold"
+                          data-testid="paylink-price"
+                        />
+                      </div>
+                      <Button onClick={createPaylink} disabled={paylinkBusy} className="bg-sky-500 hover:bg-sky-600 text-white gap-2" data-testid="send-paylink-btn">
+                        {paylinkBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : '💳'} {proto.payment_order_id ? (Math.abs(Number(proto.price || 0) - parseFloat(paylinkPrice || 0)) > 0.001 ? 'Regenerate link' : 'Copy payment link') : 'Send payment link'}
+                      </Button>
+                    </div>
                     {proto.payment_order_id && (
-                      <p className="text-xs text-slate-600 mt-2">Client sees the protocol only once paid.</p>
+                      <p className="text-xs text-slate-600 mt-2">
+                        {Math.abs(Number(proto.price || 0) - parseFloat(paylinkPrice || 0)) > 0.001
+                          ? `Current link is for £${Number(proto.price).toFixed(2)} — saving a new price will regenerate it.`
+                          : 'Client sees the protocol only once paid.'}
+                      </p>
                     )}
                   </div>
                 )}

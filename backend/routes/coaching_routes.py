@@ -735,20 +735,35 @@ async def _sync_protocol_payment(proto: dict) -> dict:
     return proto
 
 
+class PaylinkIn(BaseModel):
+    price: Optional[float] = None  # coach can override; falls back to protocol.price → coach default → 9.99
+
+
 @router.post('/coach/protocols/{proto_id}/paylink')
-async def create_protocol_paylink(proto_id: str, user: dict = Depends(require_coach)):
+async def create_protocol_paylink(proto_id: str, payload: Optional[PaylinkIn] = None, user: dict = Depends(require_coach)):
     """Coach: generate a Wallid pay link for this protocol. Creates a paylink
     order tied to the protocol; when paid, the protocol unlocks for the client."""
     proto = await db.protocols.find_one({'id': proto_id, 'coach_id': user['id']})
     if not proto:
         raise HTTPException(404, 'Protocol not found')
-    if proto.get('payment_order_id'):
+    # If the coach passed a new price and an unpaid link already exists, regenerate.
+    override_price = payload.price if payload else None
+    if proto.get('payment_order_id') and (override_price is None):
         existing_order = await db.orders.find_one({'id': proto['payment_order_id']})
         if existing_order:
             return {'order_id': existing_order['id'], 'order_number': existing_order.get('order_number'),
-                    'payment_link': f"/paylink/{existing_order['id']}"}
+                    'payment_link': f"/paylink/{existing_order['id']}",
+                    'amount': float(existing_order.get('total') or 0)}
+    if proto.get('payment_order_id') and override_price is not None:
+        existing_order = await db.orders.find_one({'id': proto['payment_order_id']})
+        if existing_order and existing_order.get('payment_status') == 'paid':
+            raise HTTPException(400, 'Protocol already paid — cannot regenerate paylink')
+        if existing_order:
+            await db.orders.delete_one({'id': existing_order['id']})
 
-    price = float(proto.get('price') or user.get('default_price') or 9.99)
+    price = override_price if override_price is not None else float(proto.get('price') or user.get('default_price') or 9.99)
+    if price <= 0:
+        raise HTTPException(400, 'Price must be greater than zero')
     client = await db.coaching_clients.find_one({'id': proto['client_id']})
     if not client:
         raise HTTPException(400, 'Client not found for protocol')

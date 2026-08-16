@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 14 — Coach-set paylink price. Both backend (7/7 pytest) and frontend UI (all interactions) verified end-to-end.\n\nBACKEND via /app/backend/tests/test_paylink_price.py (7 passed in 77.66s):\n  1. Happy path: POST /paylink {price:25} → amount=25; GET /orders/pay/{id} → subtotal=25, total=25, items[0].price=25; proto.price=25 persisted.\n  2. Fallback: POST {} on fresh protocol → amount=9.99 (coach default_price).\n  3. Regenerate: first POST {price:15}, then POST {price:40} → new order_id, amount=40, old order 404s (deleted), proto.payment_order_id updated to new, proto.price=40.\n  4. Paid guard: after admin PATCH order to payment_status=paid, POST {price:50} → 400 'Protocol already paid — cannot regenerate paylink'.\n  5. Validation: price=0 and price=-5 both → 400 'Price must be greater than zero'.\n  6. Authz: unauth → 403; foreign coach (freshly created via /admin/coaches then demoted) → 404.\n\nFRONTEND via disposable client (testpayui+…@example.com, client 73016ab5…):\n  - paylink-price input pre-fills to '9.99' when no prior price.\n  - Button label initially '💳 Send payment link' (no payment_order_id).\n  - After first send at 25, toast: 'Paylink ready · copied to clipboard · GHP-039 · £25.00'.\n  - Reload → pre-fill = '25.00'; button label = '💳 Copy payment link'.\n  - Change to 30 → button label switches to '💳 Regenerate link'.\n  - Change back to 25 → reverts to '💳 Copy payment link'. Copy-only click does NOT regenerate the order (verified — regeneration only triggered on non-matching price).\n  - Type 0 → button not disabled but click triggers destructive toast 'Enter a valid price' (spec allows either).\n  - Change to 40, click → toast 'Paylink regenerated · copied · GHP-040 · £40.00' and header re-renders £40.00.\n  - Jon Gent's protocol (jongent@hotmail.co.uk) NOT touched.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_paylink_price.py",
+    "/app/test_reports/pytest/paylink_price.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "coaching_routes.py create_protocol_paylink (~L742-814): logic is correct — override_price=None on protocol with existing unpaid order short-circuits to a copy-return; override_price set triggers delete-old + create-new; paid+override raises 400; price<=0 raises 400 after fallback resolution so fallback path (default 9.99) can't reach the guard. Good.",
+    "CoachClientDetail.jsx L245: shouldRegen computed as `!proto.payment_order_id || Math.abs(Number(proto.price||0)-priceNum)>0.001` — matches backend expectation and avoids needless regeneration when price unchanged.",
+    "api.js L117 Coaches.createPaylink sends `{price}` only when non-null — correct so that server-side fallback (using proto.price / coach default) works.",
+    "Nit — pre-existing (unrelated to this iteration): React hydration warning 'span cannot be a child of option' from CoachClientDetail week selector (~L627). Console noise only; does not affect the paylink feature. Consider replacing decorative <span> inside <option> children with plain text.",
+    "Nit — send-paylink-btn is not disabled when price<=0; only a toast is shown on click. Spec explicitly allowed either, but disabling would prevent unnecessary API round-trips."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_paylink_price.py (new — 7 pytest cases, all pass)"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (all 9 UI checks: initial pre-fill, initial label, first-send toast, reload pre-fill, reload label, regenerate label on change, revert label on match, zero-validation toast, regenerate toast)"},
+  "test_credentials": "Coach: coachghp@gmail.com / CoachGHP26 · Admin: admin@ghp-health.com / GHP-Health26. Disposable customer created per test.",
+  "seed_data_creation": "Disposable customers with prefix testpay+ / testpayui+ created via /auth/register + coaching-request-accept flow. One disposable second coach (testpay+coach2…) created via /admin/coaches for authz test and demoted afterwards. Jon Gent's protocol untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Paylink price override feature is fully working. test_paylink_price.py is a self-contained regression suite that creates its own disposable clients and cleans up the extra coach. Two pre-existing observations flagged for main-agent awareness (not blocking): (a) React hydration warning from week-selector option>span in CoachClientDetail.jsx L627; (b) send-paylink-btn could be disabled when price<=0 as a UX polish. Neither should block merge.",
+  "rca of the issue": "N/A — feature works as specified."
+}
