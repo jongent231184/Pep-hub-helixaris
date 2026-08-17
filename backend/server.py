@@ -44,6 +44,14 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
+
+# Discourage AI training scrapers from consuming our API responses
+@app.middleware('http')
+async def _add_noai_header(request, call_next):
+    response = await call_next(request)
+    response.headers['X-Robots-Tag'] = 'noindex, nofollow, noai, noimageai'
+    return response
+
 # Static uploads (served at /api/uploads/<filename>) — mounted AFTER the API
 # router below, so specific POST endpoints like /api/uploads and
 # /api/uploads/document take precedence over the static file catch-all.
