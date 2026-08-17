@@ -1,0 +1,24 @@
+{
+  "summary": "Verified the Oral Peptides production fix on preview. New admin-gated endpoint POST /api/admin/seed/orals works and is idempotent (2nd call: 0 created, 8 updated). Unauthenticated calls return 401. GET /api/categories includes 'oral-peptides' at sort_order=4, visible=true, image='/orals/slupp-332-50mg.png'. GET /api/products?category=oral-peptides returns exactly 8 products, all with image paths starting with /orals/ and ending in .png. All 4 sampled static tub PNGs (slupp-332-50mg, methylene-blue-20mg, bam15-50mg, tirzepatide-500mcg) served 200 image/png from the frontend static server. Frontend /oral-peptides renders 'ORAL PEPTIDES' heading with all 8 product cards, all 8 /orals/*.png images load with zero broken. Header nav shows ORAL PEPTIDES between VIALS and SYRINGES & WIPES (confirmed in screenshot). Regression: /vials, /nasals, /pens, /syringes-and-wipes, /bundles all render without 'Category not found'.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_orals_seed.py",
+    "/app/test_reports/pytest/orals_seed.xml"
+  ],
+  "action_items": [
+    "After production deploy, user should call: curl -X POST https://www.ghp-health.com/api/admin/seed/orals -H 'Authorization: Bearer <admin_token>' — this will idempotently create the category + 8 products with /orals/*.png paths."
+  ],
+  "critical_code_review_comments": [
+    "admin_seed_routes.py is clean, idempotent, admin-gated via require_admin, and correctly bumps sort_order for existing sibling categories on first-time insert. Safe to call repeatedly.",
+    "Static /orals/ images ship via frontend build (public/orals/*.png) — 8 files present, all 8 renderable. This is the correct fix for the preview↔production DB/disk gap.",
+    "Old /app/backend/seed_orals.py is superseded but still present — consider deleting to avoid confusion. Non-blocking."
+  ],
+  "updated_files": ["/app/backend/tests/test_orals_seed.py"],
+  "success_rate": {"backend": "100% (13/13 pytest)", "frontend": "100%"},
+  "test_credentials": "Admin: admin@ghp-health.com / GHP-Health26 (used)",
+  "seed_data_creation": "Called the admin seed endpoint twice during tests — data already existed on preview so both calls resulted in updates only (idempotency verified).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Oral Peptides feature is fully production-ready. All 8 branded tub PNGs are baked into /app/frontend/public/orals/ and ship with the frontend build. The admin seed endpoint at POST /api/admin/seed/orals is idempotent and covered by /app/backend/tests/test_orals_seed.py (13 tests). Preview DB is already seeded with /orals/*.png paths. Production deploy path: (1) merge, (2) deploy, (3) run curl POST to /api/admin/seed/orals with admin bearer token — one-time."
+}
