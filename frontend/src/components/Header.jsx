@@ -12,6 +12,7 @@ const NAV = [
   { to: '/nasals', label: 'Nasals' },
   { to: '/pens', label: 'Pens' },
   { to: '/vials', label: 'Vials' },
+  { to: '/oral-peptides', label: 'Oral Peptides' },
   { to: '/syringes-and-wipes', label: 'Syringes & Wipes' },
   { to: '/bundles', label: 'Bundles' },
   { to: '/peptide-calculator', label: 'Calculator' },

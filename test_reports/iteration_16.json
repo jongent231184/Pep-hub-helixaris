@@ -1,0 +1,42 @@
+{
+  "summary": "Tested new Oral Peptides category end-to-end. Backend: 10/10 pytest tests passed — /api/categories includes oral-peptides at sort_order=4 with tub image serving 200 image/png; /api/products?category=oral-peptides returns exactly 8 products with valid prices (£29.99–£89.99); SLUPP combo slug 'slupp-332-250mcg-bma-15-50mcg-300mcg' resolves; existing categories (pens, vials, nasals, syringes-and-wipes, bundles) still return; admin can bump stock via PUT /api/products/{id} and revert. Frontend: header nav shows 'Oral Peptides' between Vials and Syringes & Wipes; /oral-peptides renders all 8 products alphabetised correctly (5 Amino-1MQ → BAM15 → Methylene Blue → Minoxidil → SLUPP-332 250mcg / BMA-15 → SLUPP-332 50mg → Tesofensine → Tirzepatide); SLUPP combo detail page loads, shows £74.99 and 'SOLD OUT' correctly (stock=0); all existing category pages still render.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/products?category=oral-peptides", "issue": "5-Amino-1MQ 50mg does NOT use the branded oral-peptides-tub.png image — it still has its old '/api/uploads/gen_d93463b2-....png'. Spec claims 'All 8 use a branded GHP-Health capsule tub image'."},
+      {"endpoint": "/api/products (5-amino-1mq-50mg)", "issue": "stock=5 for 5-Amino-1MQ (all other 7 products correctly have stock=0). Spec says 'Stock = 0 by default'. May be leftover from previous unassigned state."},
+      {"endpoint": "spec vs impl", "issue": "Review request references PATCH /admin/products/{id} for stock bumps, but actual endpoint is PUT /api/products/{id} (product_routes.py). Not a bug, just a spec/doc mismatch."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/oral-peptides", "issues": ["Page-level H1/H2 shows generic 'Premium-grade research peptides' hero rather than an 'ORAL PEPTIDES' category heading. Breadcrumb shows 'oral-peptides'. Spec required 'ORAL PEPTIDES' heading. Consistent with other category pages though — those show 'Pens', 'Vials' etc., so this is a category-page heading design gap."}]
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_oral_peptides.py",
+    "/app/test_reports/pytest/oral_peptides.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: Update 5-Amino-1MQ 50mg product image to /api/uploads/oral-peptides-tub.png to match the other 7 orals for visual consistency.",
+    "OPTIONAL: Set 5-Amino-1MQ stock=0 to match seed policy (stock=0 by default). Currently 5.",
+    "OPTIONAL: Add a proper category heading (e.g., 'ORAL PEPTIDES') on the /oral-peptides page instead of the generic marketing hero.",
+    "DOC: Note in spec that stock updates go via PUT /api/products/{id} (require_admin), not /admin/products/{id}."
+  ],
+  "critical_code_review_comments": [
+    "product_routes.PUT /products/{id} uses find_one_and_update but does not distinguish 'stock=0 set explicitly' from 'not provided' cleanly — pydantic ProductUpdate all-optional filter (v is not None) works correctly, verified.",
+    "Category & product endpoints correctly strip _id (doc_to_dict pattern). No ObjectId leakage observed."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_oral_peptides.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "Admin: admin@ghp-health.com / GHP-Health26 (login worked)",
+  "seed_data_creation": "None. Test bumps stock on one oral product to 10 via PUT and restores to original within same test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Oral Peptides category feature is production-ready. All 8 products live at /oral-peptides sorted alphabetically. Stock=0 → 'Sold Out' badge renders. Admin stock updates go through PUT /api/products/{id}. Only cosmetic gaps: 5-Amino-1MQ still uses old gen image (not tub) and has stock=5; /oral-peptides page shows generic marketing hero instead of category-name heading (same pattern as other categories though).",
+  "rca of the issue": "N/A — no blocking issues. Two cosmetic deviations from spec on 5-Amino-1MQ (pre-existing product moved from unassigned; its image + stock weren't rewritten by seed_orals.py). Mitigation: run a small db.products.update_one for slug '5-amino-1mq-50mg' setting image to '/api/uploads/oral-peptides-tub.png' and stock to 0."
+}
