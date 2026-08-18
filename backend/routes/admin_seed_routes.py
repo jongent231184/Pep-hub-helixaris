@@ -89,3 +89,38 @@ async def seed_orals(_admin: dict = Depends(require_admin)):
         'created': created_products,
         'updated': updated_products,
     }
+
+
+@router.post('/eloralintide')
+async def seed_eloralintide(_admin: dict = Depends(require_admin)):
+    """Idempotently seed the Eloralintide 10mg vial into the Vials category."""
+    now = datetime.now(timezone.utc)
+    cat = await db.categories.find_one({'slug': 'vials'})
+    if not cat:
+        return {'ok': False, 'error': 'Vials category not found'}
+    slug = 'eloralintide-10mg'
+    image_url = '/vials/eloralintide-10mg.png'
+    payload = {
+        'name': 'Eloralintide 10mg',
+        'category_id': cat['id'],
+        'category_slug': 'vials',
+        'category': 'vials',
+        'price': 95.0,
+        'description': 'Eloralintide is a research amylin-analogue peptide investigated for weight-management and metabolic pathways. Supplied as a lyophilised 10mg vial. For laboratory research use only — not for human consumption.',
+        'short_description': 'Amylin analogue · 10mg per vial',
+        'image': image_url,
+        'images': [image_url],
+        'options': [],
+        'variants': [{'label': '10mg', 'price': 95.0, 'stock': 6, 'vial_strength_mg': 10}],
+        'stock': 6,
+        'visible': True,
+        'featured': False,
+        'updated_at': now,
+    }
+    existing = await db.products.find_one({'slug': slug})
+    if existing:
+        await db.products.update_one({'id': existing['id']}, {'$set': payload})
+        return {'ok': True, 'action': 'updated', 'slug': slug}
+    payload.update({'id': str(uuid.uuid4()), 'slug': slug, 'created_at': now})
+    await db.products.insert_one(payload)
+    return {'ok': True, 'action': 'created', 'slug': slug}
