@@ -59,9 +59,100 @@ const COMPOUNDS = {
     placeholderDose: '500',
     placeholderPeriodDose: '500',
   },
+  motsc: {
+    key: 'motsc',
+    label: 'MOTS-C',
+    subtitle: 'MOTS-C · 40 mg pen · 2 ml',
+    unit: 'mg',
+    frequency: 'week',
+    // 40 mg / 200 clicks → 0.2 mg per click, 5 clicks per mg
+    pens: [
+      { mg: 40, ml: 2, mgPerClick: 0.2, clicksPerMg: 5 },
+    ],
+    referenceDoses: [2, 5, 7.5, 10, 15, 20],
+    defaultPenIndex: 0,
+    placeholderDose: '10',
+    placeholderPeriodDose: '10',
+  },
+  nad: {
+    key: 'nad',
+    label: 'NAD+',
+    subtitle: 'NAD+ · 500 mg or 1000 mg pen · 2.5 ml',
+    unit: 'mg',
+    frequency: 'day',
+    // 2.5 ml → 250 clicks. 500 mg → 2 mg/click. 1000 mg → 4 mg/click.
+    pens: [
+      { mg: 500, ml: 2.5, mgPerClick: 2, clicksPerMg: 0.5 },
+      { mg: 1000, ml: 2.5, mgPerClick: 4, clicksPerMg: 0.25 },
+    ],
+    referenceDoses: [25, 50, 100, 150, 200, 250, 500],
+    defaultPenIndex: 0,
+    placeholderDose: '50',
+    placeholderPeriodDose: '50',
+  },
+  glow: {
+    key: 'glow',
+    label: 'GLOW 70mg',
+    subtitle: 'GLOW blend · 70 mg pen · 3 ml',
+    unit: 'mg',
+    frequency: 'day',
+    // 70 mg / 300 clicks → 0.2333 mg/click, 4.286 clicks/mg
+    pens: [
+      { mg: 70, ml: 3, mgPerClick: 70 / 300, clicksPerMg: 300 / 70 },
+    ],
+    referenceDoses: [0.25, 0.5, 1, 1.5, 2, 3],
+    defaultPenIndex: 0,
+    placeholderDose: '1',
+    placeholderPeriodDose: '1',
+  },
+  klow: {
+    key: 'klow',
+    label: 'KLOW 80mg',
+    subtitle: 'KLOW blend · 80 mg pen · 3 ml',
+    unit: 'mg',
+    frequency: 'day',
+    // 80 mg / 300 clicks → 0.2667 mg/click, 3.75 clicks/mg
+    pens: [
+      { mg: 80, ml: 3, mgPerClick: 80 / 300, clicksPerMg: 300 / 80 },
+    ],
+    referenceDoses: [0.25, 0.5, 1, 1.5, 2, 3],
+    defaultPenIndex: 0,
+    placeholderDose: '1',
+    placeholderPeriodDose: '1',
+  },
+  tbbpc: {
+    key: 'tbbpc',
+    label: 'TB500 / BPC157',
+    subtitle: 'TB500 + BPC157 blend · 30 mg pen · 3 ml',
+    unit: 'mg',
+    frequency: 'day',
+    // 30 mg / 300 clicks → 0.1 mg/click, 10 clicks/mg
+    pens: [
+      { mg: 30, ml: 3, mgPerClick: 0.1, clicksPerMg: 10 },
+    ],
+    referenceDoses: [0.25, 0.5, 0.75, 1, 1.5, 2],
+    defaultPenIndex: 0,
+    placeholderDose: '0.5',
+    placeholderPeriodDose: '0.5',
+  },
+  cagri: {
+    key: 'cagri',
+    label: 'Cagri 5mg',
+    subtitle: 'Cagrilintide · 5 mg pen · 2 ml',
+    unit: 'mg',
+    frequency: 'week',
+    // 5 mg / 200 clicks → 0.025 mg/click, 40 clicks/mg
+    pens: [
+      { mg: 5, ml: 2, mgPerClick: 0.025, clicksPerMg: 40 },
+    ],
+    referenceDoses: [0.25, 0.5, 1, 1.5, 2, 2.5],
+    defaultPenIndex: 0,
+    placeholderDose: '1',
+    placeholderPeriodDose: '1',
+  },
 };
 
-const COMPOUND_ORDER = ['reta', 'ghkcu', 'mt2'];
+const COMPOUND_ORDER = ['reta', 'ghkcu', 'mt2', 'motsc', 'nad', 'glow', 'klow', 'tbbpc', 'cagri'];
 
 // Convert user-facing dose value → mg (internal unit for click math)
 const toMg = (val, unit) => (unit === 'mcg' ? val / 1000 : val);
@@ -185,13 +276,13 @@ const PenProtocol = () => {
                   }`}
                   data-testid={`pen-${p.mg}mg`}
                 >
-                  {p.mg} mg
+                  {p.mg} mg{p.ml ? <span className="ml-1 font-normal text-xs opacity-80">/ {p.ml}ml</span> : null}
                 </button>
               ))}
             </div>
             <p className="text-xs text-slate-500 mt-3 leading-relaxed">
-              <strong>{pen.mg} mg pen</strong> — {pen.clicksPerMg} clicks per mg ({(pen.mgPerClick).toFixed(pen.mgPerClick < 0.1 ? 2 : 2)} mg per click).
-              Total capacity: <strong>{totalClicks} clicks</strong>.
+              <strong>{pen.mg} mg pen{pen.ml ? ` · ${pen.ml} ml` : ''}</strong> — {Number(pen.clicksPerMg.toFixed(2))} clicks per mg ({pen.mgPerClick.toFixed(3)} mg per click).
+              Total capacity: <strong>{Math.round(totalClicks)} clicks</strong>.
             </p>
           </div>
 
