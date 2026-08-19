@@ -67,15 +67,15 @@ PRODUCTS_SEED = [
     ('semax-10mg-nasal', 'Semax 10mg Nasal', 'nasals', 32.50, 'https://content.webfactorysite.co.uk/73086b27-b52c-411e-88e2-04217e6e35d3_largeish.png?t=1780856172', 'Research-grade Semax nasal spray 10mg.'),
 
     # Pens
-    ('bpc-157-tb500-30mg-pen', 'BPC-157 / TB500 30mg Pen', 'pens', 110.00, 'https://content.webfactorysite.co.uk/9585fe8c-260d-492f-a410-c3c7a986386f_largeish.png?t=1780844945', 'Research-grade BPC-157 / TB500 30mg dosing pen.'),
-    ('c4gr1-5mg-pen', 'C4GR1 5mg pen', 'pens', 52.50, 'https://content.webfactorysite.co.uk/641c6d3f-a652-4b9c-9faf-f9e08bbeb829_largeish.png?t=1780823199', 'Research-grade C4GR1 5mg dosing pen.'),
-    ('ghkcu-pen', 'GHKcu Pen', 'pens', 57.50, 'https://content.webfactorysite.co.uk/4233d64e-361e-4749-b32c-0fd71e50dcb3_largeish.jpg?t=1780866576', 'Research-grade GHKcu dosing pen.'),
-    ('glow-70mg-pen', 'GLOW 70mg Pen', 'pens', 55.00, 'https://content.webfactorysite.co.uk/3976afab-ed1b-4ae7-8206-9e6b981094c1_largeish.png?t=1780843545', 'Research-grade GLOW 70mg dosing pen.'),
-    ('klow-80mg-pen', 'KLOW 80mg Pen', 'pens', 65.00, 'https://content.webfactorysite.co.uk/23c28e2d-44f4-4eb5-9339-c12658457caf_largeish.png?t=1780843693', 'Research-grade KLOW 80mg dosing pen.'),
-    ('motsc-40mg-pen', 'MOTSc 40mg Pen', 'pens', 55.00, 'https://content.webfactorysite.co.uk/a86b37bd-0324-4364-8055-d802fa0b48c1_largeish.png?t=1780844413', 'Research-grade MOTSc 40mg dosing pen.'),
-    ('nad-pen', 'NAD + Pen', 'pens', 65.00, 'https://content.webfactorysite.co.uk/7c5530f1-62ac-41c6-a92f-bf44d10813c0_largeish.png?t=1780844686', 'Research-grade NAD+ dosing pen.'),
-    ('r3t4trut1d3-pen', 'R3T4TRUT1D3 Pen', 'pens', 87.50, 'https://content.webfactorysite.co.uk/00add0b5-b869-47ad-bc43-217beede740c_largeish.png?t=1780843905', 'Research-grade R3T4TRUT1D3 dosing pen.'),
-    ('t1rz3p4t1d3-pen', 'T1RZ3P4T1D3 Pen', 'pens', 75.00, 'https://content.webfactorysite.co.uk/1cca7c4d-e4a3-4f64-ba51-5d17c8b7c130_largeish.png?t=1780844127', 'Research-grade T1RZ3P4T1D3 dosing pen.'),
+    ('bpc-157-tb500-30mg-pen', 'BPC-157 / TB500 30mg Pen', 'pens', 110.00, '/pens/bpc-157-tb500-30mg-pen.png', 'Research-grade BPC-157 / TB500 30mg dosing pen.'),
+    ('c4gr1-5mg-pen', 'C4GR1 5mg pen', 'pens', 52.50, '/pens/c4gr1-5mg-pen.png', 'Research-grade C4GR1 5mg dosing pen.'),
+    ('ghkcu-pen', 'GHKcu Pen', 'pens', 57.50, '/pens/ghkcu-pen.png', 'Research-grade GHKcu dosing pen.'),
+    ('glow-70mg-pen', 'GLOW 70mg Pen', 'pens', 55.00, '/pens/glow-70mg-pen.png', 'Research-grade GLOW 70mg dosing pen.'),
+    ('klow-80mg-pen', 'KLOW 80mg Pen', 'pens', 65.00, '/pens/klow-80mg-pen.png', 'Research-grade KLOW 80mg dosing pen.'),
+    ('motsc-40mg-pen', 'MOTSc 40mg Pen', 'pens', 55.00, '/pens/motsc-40mg-pen.png', 'Research-grade MOTSc 40mg dosing pen.'),
+    ('nad-pen', 'NAD + Pen', 'pens', 65.00, '/pens/nad-pen.png', 'Research-grade NAD+ dosing pen.'),
+    ('r3t4trut1d3-pen', 'R3T4TRUT1D3 Pen', 'pens', 87.50, '/pens/r3t4trut1d3-pen.png', 'Research-grade R3T4TRUT1D3 dosing pen.'),
+    ('t1rz3p4t1d3-pen', 'T1RZ3P4T1D3 Pen', 'pens', 75.00, '/pens/t1rz3p4t1d3-pen.png', 'Research-grade T1RZ3P4T1D3 dosing pen.'),
 
     # Syringes
     ('10-x-03ml-8mm-30g-insulin-syringe', '10 x 0.3ml 8mm x 30g Insulin Syringe and needles with alcohol wipes', 'syringes-and-wipes', 4.50, 'https://content.webfactorysite.co.uk/a3c735d5-51ed-4dbc-a085-32cdaf7f10f0_largeish.png?t=1780857564', '10 x 0.3ml 8mm x 30g insulin syringes with alcohol wipes.'),

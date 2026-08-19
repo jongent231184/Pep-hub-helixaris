@@ -124,3 +124,40 @@ async def seed_eloralintide(_admin: dict = Depends(require_admin)):
     payload.update({'id': str(uuid.uuid4()), 'slug': slug, 'created_at': now})
     await db.products.insert_one(payload)
     return {'ok': True, 'action': 'created', 'slug': slug}
+
+
+
+PEN_SLUGS = [
+    'bpc-157-tb500-30mg-pen',
+    'c4gr1-5mg-pen',
+    'ghkcu-pen',
+    'glow-70mg-pen',
+    'klow-80mg-pen',
+    'motsc-40mg-pen',
+    'nad-pen',
+    'r3t4trut1d3-pen',
+    't1rz3p4t1d3-pen',
+]
+
+
+@router.post('/pen-boxes')
+async def seed_pen_boxes(_admin: dict = Depends(require_admin)):
+    """Repoint the 9 pen products to their new branded box images at /pens/{slug}.png.
+
+    Idempotent — safe to call multiple times. Returns which slugs were updated
+    and which weren't found.
+    """
+    now = datetime.now(timezone.utc)
+    updated: list[str] = []
+    missing: list[str] = []
+    for slug in PEN_SLUGS:
+        image_url = f'/pens/{slug}.png'
+        res = await db.products.update_one(
+            {'slug': slug},
+            {'$set': {'image': image_url, 'images': [image_url], 'updated_at': now}},
+        )
+        if res.matched_count:
+            updated.append(slug)
+        else:
+            missing.append(slug)
+    return {'ok': True, 'updated': updated, 'missing': missing}
