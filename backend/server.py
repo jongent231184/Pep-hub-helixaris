@@ -28,6 +28,7 @@ from routes.ambassador_routes import router as ambassador_router  # noqa: E402
 from routes.coa_routes import router as coa_router  # noqa: E402
 from routes.coaching_routes import router as coaching_router  # noqa: E402
 from routes.admin_seed_routes import router as admin_seed_router  # noqa: E402
+from routes.admin_sales_routes import router as admin_sales_router  # noqa: E402
 from routes.wallid_routes import start_wallid_poller  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s - %(message)s')
@@ -96,6 +97,7 @@ api_router.include_router(ambassador_router)
 api_router.include_router(coa_router)
 api_router.include_router(coaching_router)
 api_router.include_router(admin_seed_router)
+api_router.include_router(admin_sales_router)
 
 app.include_router(api_router)
 

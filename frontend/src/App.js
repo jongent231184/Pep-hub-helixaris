@@ -41,6 +41,7 @@ import AdminAmbassadors from './pages/admin/AdminAmbassadors';
 import AdminCoas from './pages/admin/AdminCoas';
 import AdminCoachingRequests from './pages/admin/AdminCoachingRequests';
 import AdminCoaches from './pages/admin/AdminCoaches';
+import AdminSales from './pages/admin/AdminSales';
 
 import CoachLayout from './pages/coach/CoachLayout';
 import CoachDashboard from './pages/coach/CoachDashboard';
@@ -77,6 +78,7 @@ function App() {
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="orders/:orderId" element={<AdminOrderDetail />} />
                 <Route path="orders/:orderId/invoice" element={<AdminOrderInvoice />} />
+                <Route path="sales" element={<AdminSales />} />
                 <Route path="promos" element={<AdminPromos />} />
                 <Route path="paylinks" element={<AdminPaylinks />} />
                 <Route path="ambassadors" element={<AdminAmbassadors />} />

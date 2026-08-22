@@ -64,6 +64,13 @@ export const Orders = {
   setPaylinkAddress: (id, addr) => api.put(`/orders/pay/${id}/address`, addr).then(r => r.data),
 };
 
+export const Sales = {
+  summary: () => api.get('/admin/sales/summary').then(r => r.data),
+  products: () => api.get('/admin/sales/products').then(r => r.data),
+  productOrders: (productId, option) =>
+    api.get(`/admin/sales/products/${productId}/orders`, { params: option != null ? { option } : {} }).then(r => r.data),
+};
+
 export const Uploads = {
   upload: (file) => {
     const fd = new FormData();
