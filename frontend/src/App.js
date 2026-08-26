@@ -41,6 +41,7 @@ import AdminAmbassadors from './pages/admin/AdminAmbassadors';
 import AdminCoas from './pages/admin/AdminCoas';
 import AdminCoachingRequests from './pages/admin/AdminCoachingRequests';
 import AdminCoaches from './pages/admin/AdminCoaches';
+import AdminCoachEarnings from './pages/admin/AdminCoachEarnings';
 import AdminSales from './pages/admin/AdminSales';
 
 import CoachLayout from './pages/coach/CoachLayout';
@@ -48,6 +49,7 @@ import CoachDashboard from './pages/coach/CoachDashboard';
 import CoachRequests from './pages/coach/CoachRequests';
 import CoachClients from './pages/coach/CoachClients';
 import CoachClientDetail from './pages/coach/CoachClientDetail';
+import CoachEarnings from './pages/coach/CoachEarnings';
 
 import Coaching from './pages/Coaching';
 
@@ -85,6 +87,7 @@ function App() {
                 <Route path="coas" element={<AdminCoas />} />
                 <Route path="coaching" element={<AdminCoachingRequests />} />
                 <Route path="coaches" element={<AdminCoaches />} />
+                <Route path="coach-earnings" element={<AdminCoachEarnings />} />
                 <Route path="customers" element={<AdminCustomers />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
@@ -103,6 +106,7 @@ function App() {
                 <Route path="requests" element={<CoachRequests />} />
                 <Route path="clients" element={<CoachClients />} />
                 <Route path="clients/:clientId" element={<CoachClientDetail />} />
+                <Route path="earnings" element={<CoachEarnings />} />
               </Route>
 
               {/* Storefront */}

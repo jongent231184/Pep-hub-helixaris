@@ -142,6 +142,12 @@ export const Coaches = {
   setMyTarget: (target_weight_kg) => api.patch('/coaching/my/target-weight', { target_weight_kg }).then(r => r.data),
   coachWeighIns: (clientId) => api.get(`/coaching/coach/clients/${clientId}/weigh-ins`).then(r => r.data),
   coachSetTarget: (clientId, target_weight_kg) => api.patch(`/coaching/coach/clients/${clientId}/target-weight`, { target_weight_kg }).then(r => r.data),
+  // Earnings & payouts (admin controls, coach view-only)
+  adminEarningsList: () => api.get('/coaching/admin/coach-earnings').then(r => r.data),
+  adminEarningsGet: (coachId) => api.get(`/coaching/admin/coach-earnings/${coachId}`).then(r => r.data),
+  adminCreatePayout: (coachId, data) => api.post(`/coaching/admin/coach-earnings/${coachId}/payouts`, data).then(r => r.data),
+  adminDeletePayout: (coachId, payoutId) => api.delete(`/coaching/admin/coach-earnings/${coachId}/payouts/${payoutId}`).then(r => r.data),
+  myEarnings: () => api.get('/coaching/coach/earnings').then(r => r.data),
 };
 
 export const PayPal = {

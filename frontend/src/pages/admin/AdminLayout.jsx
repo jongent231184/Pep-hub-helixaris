@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Package, Tag, ShoppingBag, Users, Settings as SettingsIcon,
-  LogOut, Loader2, ExternalLink, Ticket, Link as LinkIcon, Award, FileCheck, MessageCircle, BarChart3
+  LogOut, Loader2, ExternalLink, Ticket, Link as LinkIcon, Award, FileCheck, MessageCircle, BarChart3, PoundSterling
 } from 'lucide-react';
 
 const NAV = [
@@ -17,6 +17,7 @@ const NAV = [
   { to: '/admin/ambassadors', label: 'Ambassadors', icon: Award },
   { to: '/admin/coaching', label: 'Coaching', icon: MessageCircle },
   { to: '/admin/coaches', label: 'Coaches', icon: Users },
+  { to: '/admin/coach-earnings', label: 'Coach Earnings', icon: PoundSterling },
   { to: '/admin/coas', label: 'COAs', icon: FileCheck },
   { to: '/admin/customers', label: 'Customers', icon: Users },
   { to: '/admin/settings', label: 'Settings', icon: SettingsIcon },
