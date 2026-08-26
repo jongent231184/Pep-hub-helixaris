@@ -138,7 +138,7 @@ const AdminCoachEarnings = () => {
         </div>
         <div>
           <h1 className="text-3xl font-black uppercase text-slate-900 tracking-tight">Coach Earnings</h1>
-          <p className="text-sm text-slate-500">Paid orders attributed to each coach&apos;s clients. Tick pending rows to record a payout.</p>
+          <p className="text-sm text-slate-500">Paid coaching invoices (£9.99 consult + any follow-up invoices James sends). Tick pending rows to record a payout.</p>
         </div>
       </div>
 
@@ -228,10 +228,10 @@ const AdminCoachEarnings = () => {
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-xs uppercase tracking-widest text-slate-600 font-bold">
-                        Orders attributed to this coach ({(detail.orders || []).length})
+                        Coaching invoices ({(detail.orders || []).length})
                       </h3>
                       {(detail.orders || []).length > 0 && (
-                        <span className="text-[10px] text-slate-500">Paid orders only · Tick rows to include in a payout</span>
+                        <span className="text-[10px] text-slate-500">Paid only · Tick rows to include in a payout</span>
                       )}
                     </div>
                     <div className="border rounded-lg overflow-x-auto max-h-96 overflow-y-auto">
@@ -248,10 +248,11 @@ const AdminCoachEarnings = () => {
                               />
                             </th>
                             <th className="p-2 text-left">Status</th>
-                            <th className="p-2 text-left">Order</th>
+                            <th className="p-2 text-left">Invoice</th>
                             <th className="p-2 text-left">Date</th>
-                            <th className="p-2 text-left">Customer</th>
-                            <th className="p-2 text-right">Total</th>
+                            <th className="p-2 text-left">Client</th>
+                            <th className="p-2 text-left">Plan</th>
+                            <th className="p-2 text-right">Amount</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
@@ -288,14 +289,17 @@ const AdminCoachEarnings = () => {
                                   <p className="font-semibold text-slate-900 leading-tight">{o.shipping_address?.first_name} {o.shipping_address?.last_name}</p>
                                   <p className="text-[10px] text-slate-500 truncate max-w-[160px]">{o.shipping_address?.email}</p>
                                 </td>
+                                <td className="p-2 text-slate-600 text-[11px] truncate max-w-[180px]" title={o.items?.[0]?.name || ''}>
+                                  {o.items?.[0]?.name?.replace(/^Coaching plan · /, '') || '—'}
+                                </td>
                                 <td className="p-2 text-right font-bold text-slate-900">{fmt(o.total)}</td>
                               </tr>
                             );
                           })}
                           {(detail.orders || []).length === 0 && (
                             <tr>
-                              <td colSpan={6} className="p-6 text-center text-slate-500">
-                                No paid orders attributed to this coach yet.
+                              <td colSpan={7} className="p-6 text-center text-slate-500">
+                                No paid coaching invoices yet for this coach.
                               </td>
                             </tr>
                           )}
@@ -303,7 +307,7 @@ const AdminCoachEarnings = () => {
                         {(detail.orders || []).length > 0 && (
                           <tfoot className="bg-slate-50 font-bold sticky bottom-0">
                             <tr>
-                              <td className="p-2" colSpan={5}>Total gross across attributed orders</td>
+                              <td className="p-2" colSpan={6}>Total gross across coaching invoices</td>
                               <td className="p-2 text-right">{fmt(detail.earnings.gross_total)}</td>
                             </tr>
                           </tfoot>

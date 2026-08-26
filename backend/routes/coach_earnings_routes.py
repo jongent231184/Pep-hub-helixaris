@@ -39,7 +39,7 @@ class CoachPayoutCreate(BaseModel):
 
 
 # ---------------- Helpers ----------------
-async def _customer_ids_for_coach(coach_id: str) -> list[str]:
+async def _customer_ids_for_coach(coach_id: str) -> list[str]:  # kept for reference / future use
     """Every customer this coach has (or has ever had) a coaching relationship with."""
     docs = await db.coaching_clients.find(
         {'coach_id': coach_id, 'customer_user_id': {'$ne': None}},
@@ -49,18 +49,45 @@ async def _customer_ids_for_coach(coach_id: str) -> list[str]:
 
 
 async def _orders_for_coach(coach_id: str) -> list[dict]:
-    """Paid orders attributed to this coach. Includes the denorm coach_user_id
-    stamp for older orders too via customer_user_id fallback."""
-    customer_ids = await _customer_ids_for_coach(coach_id)
+    """Paid coaching invoices/paylinks attributed to this coach.
+
+    Only counts orders with `purpose == 'coaching'` — i.e. the £9.99 initial
+    consult fee and any follow-up coaching invoices the coach sends via
+    paylink. Peptide/product orders placed by the coaching client are
+    intentionally excluded (those revenue flows are the store's, not the
+    coach's).
+
+    Attribution priority:
+      1. `orders.coach_user_id` (denorm stamp) — if set
+      2. `orders.protocol_id` → `protocols.coach_id`
+    """
+    proto_ids = [
+        p['id'] async for p in db.protocols.find(
+            {'coach_id': coach_id}, {'id': 1, '_id': 0}
+        )
+    ]
     query = {
         'payment_status': 'paid',
+        'purpose': 'coaching',
         '$or': [
             {'coach_user_id': coach_id},
-            {'user_id': {'$in': customer_ids}} if customer_ids else {'_never': True},
+            {'protocol_id': {'$in': proto_ids}} if proto_ids else {'_never': True},
         ],
     }
     docs = await db.orders.find(query).sort('created_at', -1).to_list(2000)
     return docs
+
+
+async def _order_attributable_to_coach(order: dict, coach_id: str) -> bool:
+    if order.get('purpose') != 'coaching':
+        return False
+    if order.get('coach_user_id') == coach_id:
+        return True
+    proto_id = order.get('protocol_id')
+    if not proto_id:
+        return False
+    proto = await db.protocols.find_one({'id': proto_id}, {'coach_id': 1, '_id': 0})
+    return bool(proto and proto.get('coach_id') == coach_id)
 
 
 def _summarise_orders(orders: list[dict]) -> dict:
@@ -130,19 +157,13 @@ async def create_coach_payout(coach_id: str, payload: CoachPayoutCreate, _=Depen
     if order_ids:
         docs = await db.orders.find({'id': {'$in': order_ids}}).to_list(len(order_ids))
         by_id = {d['id']: d for d in docs}
-        # Validate every ticked order is attributable to this coach + still owed
-        eligible_customer_ids = set(await _customer_ids_for_coach(coach_id))
         for oid in order_ids:
             o = by_id.get(oid)
             if not o:
                 raise HTTPException(400, f'Order not found: {oid}')
             if o.get('payment_status') != 'paid':
                 raise HTTPException(400, f'Order {o.get("order_number")} is not paid yet')
-            attributed = (
-                o.get('coach_user_id') == coach_id
-                or (o.get('user_id') in eligible_customer_ids)
-            )
-            if not attributed:
+            if not await _order_attributable_to_coach(o, coach_id):
                 raise HTTPException(400, f'Order {o.get("order_number")} is not attributed to this coach')
             if o.get('coach_payout_paid'):
                 raise HTTPException(400, f'Order {o.get("order_number")} is already marked paid to coach')

@@ -777,6 +777,7 @@ async def create_protocol_paylink(proto_id: str, payload: Optional[PaylinkIn] = 
         'source': 'paylink',
         'purpose': 'coaching',
         'protocol_id': proto_id,
+        'coach_user_id': user['id'],
         'items': [{
             'product_id': None,
             'slug': 'coaching-plan',

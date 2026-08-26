@@ -40,7 +40,7 @@ const CoachEarnings = () => {
     <div className="space-y-6" data-testid="coach-earnings-page">
       <div>
         <h1 className="text-3xl font-black uppercase text-slate-900 tracking-tight">My Earnings</h1>
-        <p className="text-sm text-slate-500">Paid orders from your coaching clients. Payouts are recorded by GHP-Health admin.</p>
+        <p className="text-sm text-slate-500">Paid coaching invoices — £9.99 initial consults and any follow-up plans you've invoiced. Payouts are recorded by GHP-Health admin.</p>
       </div>
 
       {/* KPI grid */}
@@ -54,7 +54,7 @@ const CoachEarnings = () => {
       {/* Orders */}
       <div className="bg-white border rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b bg-slate-50 flex items-center justify-between">
-          <h2 className="text-sm font-black uppercase tracking-widest text-slate-800">Attributed Orders</h2>
+          <h2 className="text-sm font-black uppercase tracking-widest text-slate-800">Coaching Invoices</h2>
           <span className="text-xs text-slate-500">{(data.orders || []).length} total</span>
         </div>
         <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
@@ -62,10 +62,11 @@ const CoachEarnings = () => {
             <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] sticky top-0 z-10">
               <tr>
                 <th className="p-3 text-left">Status</th>
-                <th className="p-3 text-left">Order</th>
+                <th className="p-3 text-left">Invoice</th>
                 <th className="p-3 text-left">Date</th>
-                <th className="p-3 text-left">Customer</th>
-                <th className="p-3 text-right">Total</th>
+                <th className="p-3 text-left">Client</th>
+                <th className="p-3 text-left">Plan</th>
+                <th className="p-3 text-right">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -84,11 +85,14 @@ const CoachEarnings = () => {
                     <p className="font-semibold text-slate-900 leading-tight">{o.shipping_address?.first_name} {o.shipping_address?.last_name}</p>
                     <p className="text-xs text-slate-500 truncate max-w-[200px]">{o.shipping_address?.email}</p>
                   </td>
+                  <td className="p-3 text-slate-600 text-xs truncate max-w-[200px]" title={o.items?.[0]?.name || ''}>
+                    {o.items?.[0]?.name?.replace(/^Coaching plan · /, '') || '—'}
+                  </td>
                   <td className="p-3 text-right font-bold text-slate-900">{fmt(o.total)}</td>
                 </tr>
               ))}
               {(data.orders || []).length === 0 && (
-                <tr><td colSpan={5} className="p-8 text-center text-slate-500">No paid orders yet from your coaching clients.</td></tr>
+                <tr><td colSpan={6} className="p-8 text-center text-slate-500">No paid coaching invoices yet.</td></tr>
               )}
             </tbody>
           </table>
