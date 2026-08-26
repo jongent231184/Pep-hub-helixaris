@@ -51,14 +51,13 @@ async def _customer_ids_for_coach(coach_id: str) -> list[str]:  # kept for refer
 async def _orders_for_coach(coach_id: str) -> list[dict]:
     """Paid coaching invoices/paylinks attributed to this coach.
 
-    Only counts orders with `purpose == 'coaching'` — i.e. the £9.99 initial
-    consult fee and any follow-up coaching invoices the coach sends via
-    paylink. Peptide/product orders placed by the coaching client are
-    intentionally excluded (those revenue flows are the store's, not the
-    coach's).
+    Counts an order if EITHER:
+      • `purpose == 'coaching'`, OR
+      • any line item has `slug == 'coaching-plan'`  (catches legacy orders
+        created before the `purpose` field was introduced)
 
     Attribution priority:
-      1. `orders.coach_user_id` (denorm stamp) — if set
+      1. `orders.coach_user_id` denorm stamp
       2. `orders.protocol_id` → `protocols.coach_id`
     """
     proto_ids = [
@@ -66,20 +65,37 @@ async def _orders_for_coach(coach_id: str) -> list[dict]:
             {'coach_id': coach_id}, {'id': 1, '_id': 0}
         )
     ]
-    query = {
-        'payment_status': 'paid',
-        'purpose': 'coaching',
+    coaching_selector = {
+        '$or': [
+            {'purpose': 'coaching'},
+            {'items.slug': 'coaching-plan'},
+        ],
+    }
+    attribution_selector = {
         '$or': [
             {'coach_user_id': coach_id},
             {'protocol_id': {'$in': proto_ids}} if proto_ids else {'_never': True},
         ],
     }
+    query = {
+        'payment_status': 'paid',
+        '$and': [coaching_selector, attribution_selector],
+    }
     docs = await db.orders.find(query).sort('created_at', -1).to_list(2000)
     return docs
 
 
+def _looks_like_coaching_order(order: dict) -> bool:
+    if order.get('purpose') == 'coaching':
+        return True
+    for item in order.get('items') or []:
+        if item.get('slug') == 'coaching-plan':
+            return True
+    return False
+
+
 async def _order_attributable_to_coach(order: dict, coach_id: str) -> bool:
-    if order.get('purpose') != 'coaching':
+    if not _looks_like_coaching_order(order):
         return False
     if order.get('coach_user_id') == coach_id:
         return True
@@ -209,6 +225,49 @@ async def delete_coach_payout(coach_id: str, payout_id: str, _=Depends(require_a
         )
     await db.coach_payouts.delete_one({'id': payout_id, 'coach_user_id': coach_id})
     return {'ok': True}
+
+
+@router.post('/admin/coach-earnings/backfill')
+async def backfill_coaching_orders(_=Depends(require_admin)):
+    """One-shot migration: stamp `purpose='coaching'` + `coach_user_id` on legacy
+    coaching paylink orders that predate those fields.
+
+    Idempotent. Reports counts. Uses `items.slug == 'coaching-plan'` to detect
+    coaching orders regardless of whether `purpose` was set at creation time.
+    """
+    now = datetime.now(timezone.utc)
+    purpose_set = 0
+    coach_stamped = 0
+    scanned = 0
+
+    async for o in db.orders.find(
+        {'items.slug': 'coaching-plan'},
+        {'id': 1, 'purpose': 1, 'coach_user_id': 1, 'protocol_id': 1, 'order_number': 1},
+    ):
+        scanned += 1
+        updates: dict = {}
+        if o.get('purpose') != 'coaching':
+            updates['purpose'] = 'coaching'
+        if not o.get('coach_user_id') and o.get('protocol_id'):
+            proto = await db.protocols.find_one(
+                {'id': o['protocol_id']}, {'coach_id': 1, '_id': 0}
+            )
+            if proto and proto.get('coach_id'):
+                updates['coach_user_id'] = proto['coach_id']
+        if updates:
+            updates['updated_at'] = now
+            await db.orders.update_one({'id': o['id']}, {'$set': updates})
+            if 'purpose' in updates:
+                purpose_set += 1
+            if 'coach_user_id' in updates:
+                coach_stamped += 1
+
+    return {
+        'ok': True,
+        'scanned': scanned,
+        'purpose_stamped': purpose_set,
+        'coach_user_id_stamped': coach_stamped,
+    }
 
 
 # ---------------- Coach self-service ----------------
