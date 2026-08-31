@@ -220,7 +220,7 @@ const AdminProductForm = () => {
                 <div>Label</div>
                 <div>Price (£)</div>
                 <div>Stock</div>
-                <div>Vial (mg)</div>
+                <div>Vial mg <span className="normal-case font-normal text-slate-400">(peptides only)</span></div>
                 <div></div>
               </div>
               {variants.map((v, i) => (
@@ -256,8 +256,8 @@ const AdminProductForm = () => {
                     min="0"
                     value={v.vial_strength_mg ?? ''}
                     onChange={e => updateVariant(i, { vial_strength_mg: e.target.value })}
-                    placeholder="5"
-                    title="mg per vial — used by coach vial calculator"
+                    placeholder="—"
+                    title="mg per vial — used by the coach vial calculator (leave blank for pens & non-peptide products)"
                     data-testid={`variant-vial-${i}`}
                   />
                   <Button
