@@ -127,6 +127,41 @@ async def seed_eloralintide(_admin: dict = Depends(require_admin)):
 
 
 
+@router.post('/amino1mq')
+async def seed_5amino1mq(_admin: dict = Depends(require_admin)):
+    """Idempotently seed the 5-Amino1MQ 50mg vial into the Vials category."""
+    now = datetime.now(timezone.utc)
+    cat = await db.categories.find_one({'slug': 'vials'})
+    if not cat:
+        return {'ok': False, 'error': 'Vials category not found'}
+    slug = '5-amino1mq-50mg'
+    image_url = '/vials/5-amino1mq-50mg.png'
+    payload = {
+        'name': '5-Amino1MQ 50mg',
+        'category_id': cat['id'],
+        'category_slug': 'vials',
+        'category': 'vials',
+        'price': 50.0,
+        'description': '5-Amino1MQ is a research small-molecule investigated for NNMT inhibition and metabolic pathways relevant to body-composition and cellular energetics. Supplied as a lyophilised 50mg vial. For laboratory research use only — not for human consumption.',
+        'short_description': 'NNMT inhibitor · 50mg per vial',
+        'image': image_url,
+        'images': [image_url],
+        'options': [],
+        'variants': [{'label': '50mg', 'price': 50.0, 'stock': 6, 'vial_strength_mg': 50}],
+        'stock': 6,
+        'visible': True,
+        'featured': False,
+        'updated_at': now,
+    }
+    existing = await db.products.find_one({'slug': slug})
+    if existing:
+        await db.products.update_one({'id': existing['id']}, {'$set': payload})
+        return {'ok': True, 'action': 'updated', 'slug': slug}
+    payload.update({'id': str(uuid.uuid4()), 'slug': slug, 'created_at': now})
+    await db.products.insert_one(payload)
+    return {'ok': True, 'action': 'created', 'slug': slug}
+
+
 PEN_SLUGS = [
     'bpc-157-tb500-30mg-pen',
     'c4gr1-5mg-pen',
