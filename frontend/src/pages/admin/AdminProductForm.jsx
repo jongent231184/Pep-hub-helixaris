@@ -215,8 +215,9 @@ const AdminProductForm = () => {
               No variants — customers will pay the base price of £{Number(form.price || 0).toFixed(2)}.
             </div>
           ) : (
-            <div className="space-y-2">
-              <div className="grid grid-cols-[1fr,110px,90px,110px,40px] gap-2 text-xs uppercase tracking-wide text-slate-500 px-1">
+            <div className="space-y-3 sm:space-y-2">
+              {/* Header row — desktop only. Mobile uses per-field mini-labels below. */}
+              <div className="hidden sm:grid sm:grid-cols-[1fr,110px,90px,110px,40px] gap-2 text-xs uppercase tracking-wide text-slate-500 px-1">
                 <div>Label</div>
                 <div>Price (£)</div>
                 <div>Stock</div>
@@ -224,52 +225,71 @@ const AdminProductForm = () => {
                 <div></div>
               </div>
               {variants.map((v, i) => (
-                <div key={i} className="grid grid-cols-[1fr,110px,90px,110px,40px] gap-2 items-center">
-                  <Input
-                    value={v.label}
-                    onChange={e => updateVariant(i, { label: e.target.value })}
-                    placeholder="e.g. 5mg"
-                    className="font-mono text-sm"
-                    data-testid={`variant-label-${i}`}
-                  />
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={v.price}
-                    onChange={e => updateVariant(i, { price: e.target.value })}
-                    placeholder="0.00"
-                    data-testid={`variant-price-${i}`}
-                  />
-                  <Input
-                    type="number"
-                    step="1"
-                    min="0"
-                    value={v.stock ?? ''}
-                    onChange={e => updateVariant(i, { stock: e.target.value })}
-                    placeholder="—"
-                    data-testid={`variant-stock-${i}`}
-                  />
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={v.vial_strength_mg ?? ''}
-                    onChange={e => updateVariant(i, { vial_strength_mg: e.target.value })}
-                    placeholder="—"
-                    title="mg per vial — used by the coach vial calculator (leave blank for pens & non-peptide products)"
-                    data-testid={`variant-vial-${i}`}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeVariant(i)}
-                    className="text-red-600 hover:bg-red-50 h-9 w-9"
-                    data-testid={`remove-variant-${i}`}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                <div
+                  key={i}
+                  className="rounded-lg border border-slate-200 p-3 sm:p-0 sm:border-0 sm:rounded-none grid grid-cols-2 sm:grid-cols-[1fr,110px,90px,110px,40px] gap-2 items-end sm:items-center"
+                >
+                  {/* Label — full width on mobile */}
+                  <div className="col-span-2 sm:col-span-1">
+                    <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1 sm:hidden">Label</div>
+                    <Input
+                      value={v.label}
+                      onChange={e => updateVariant(i, { label: e.target.value })}
+                      placeholder="e.g. 5mg"
+                      className="font-mono text-sm w-full"
+                      data-testid={`variant-label-${i}`}
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1 sm:hidden">Price (£)</div>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={v.price}
+                      onChange={e => updateVariant(i, { price: e.target.value })}
+                      placeholder="0.00"
+                      data-testid={`variant-price-${i}`}
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1 sm:hidden">Stock</div>
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={v.stock ?? ''}
+                      onChange={e => updateVariant(i, { stock: e.target.value })}
+                      placeholder="—"
+                      data-testid={`variant-stock-${i}`}
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1 sm:hidden">Vial mg <span className="normal-case font-normal text-slate-400">(peptides)</span></div>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={v.vial_strength_mg ?? ''}
+                      onChange={e => updateVariant(i, { vial_strength_mg: e.target.value })}
+                      placeholder="—"
+                      title="mg per vial — used by the coach vial calculator (leave blank for pens & non-peptide products)"
+                      data-testid={`variant-vial-${i}`}
+                    />
+                  </div>
+                  <div className="col-span-2 sm:col-span-1 flex justify-end sm:justify-start">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeVariant(i)}
+                      className="text-red-600 hover:bg-red-50 h-9 gap-1 sm:h-9 sm:w-9 sm:p-0"
+                      data-testid={`remove-variant-${i}`}
+                    >
+                      <X className="h-4 w-4" />
+                      <span className="sm:hidden text-xs">Remove variant</span>
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
