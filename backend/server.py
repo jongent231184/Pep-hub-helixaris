@@ -30,6 +30,7 @@ from routes.coaching_routes import router as coaching_router  # noqa: E402
 from routes.admin_seed_routes import router as admin_seed_router  # noqa: E402
 from routes.admin_sales_routes import router as admin_sales_router  # noqa: E402
 from routes.coach_earnings_routes import router as coach_earnings_router  # noqa: E402
+from routes.admin_product_desc_routes import router as admin_product_desc_router  # noqa: E402
 from routes.wallid_routes import start_wallid_poller  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s - %(message)s')
@@ -100,6 +101,7 @@ api_router.include_router(coaching_router)
 api_router.include_router(admin_seed_router)
 api_router.include_router(admin_sales_router)
 api_router.include_router(coach_earnings_router)
+api_router.include_router(admin_product_desc_router)
 
 app.include_router(api_router)
 
