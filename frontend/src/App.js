@@ -52,6 +52,7 @@ import CoachClientDetail from './pages/coach/CoachClientDetail';
 import CoachEarnings from './pages/coach/CoachEarnings';
 
 import Coaching from './pages/Coaching';
+import Portal from './pages/Portal';
 
 import AmbassadorLayout from './pages/ambassador/AmbassadorLayout';
 import AmbassadorDashboard from './pages/ambassador/AmbassadorDashboard';
@@ -128,6 +129,7 @@ function App() {
               <Route path="/coa" element={<Coa />} />
               <Route path="/coas" element={<Coa />} />
               <Route path="/coaching" element={<Coaching />} />
+              <Route path="/portal" element={<Portal />} />
               <Route path="/:categorySlug" element={<CategoryPage />} />
               <Route path="/:categorySlug/:productSlug" element={<ProductDetail />} />
               </Routes>

@@ -31,6 +31,7 @@ from routes.admin_seed_routes import router as admin_seed_router  # noqa: E402
 from routes.admin_sales_routes import router as admin_sales_router  # noqa: E402
 from routes.coach_earnings_routes import router as coach_earnings_router  # noqa: E402
 from routes.admin_product_desc_routes import router as admin_product_desc_router  # noqa: E402
+from routes.portal_routes import router as portal_router, ensure_default_portal_user_and_brands  # noqa: E402
 from routes.wallid_routes import start_wallid_poller  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s - %(message)s')
@@ -102,6 +103,7 @@ api_router.include_router(admin_seed_router)
 api_router.include_router(admin_sales_router)
 api_router.include_router(coach_earnings_router)
 api_router.include_router(admin_product_desc_router)
+api_router.include_router(portal_router)
 
 app.include_router(api_router)
 
@@ -122,6 +124,7 @@ async def on_startup():
             logger.info('Background init: creating indexes and seeding data...')
             await init_indexes()
             await seed_all()
+            await ensure_default_portal_user_and_brands()
             logger.info('Background init complete')
         except Exception as e:
             logger.exception(f'Background init error (server still running): {e}')
