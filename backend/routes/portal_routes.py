@@ -128,9 +128,10 @@ async def ensure_default_portal_user_and_brands():
     """Called once on backend startup — creates the initial portal user + brand
     entries from env vars if they don't exist yet. Never overwrites."""
     # Master user
-    email = os.environ.get('PORTAL_ADMIN_EMAIL', 'owner@ghp-health.com').lower()
-    password = os.environ.get('PORTAL_ADMIN_PASSWORD', 'Portal-Owner-2026')
-    if not await db.portal_users.find_one({'email': email}):
+    email = os.environ.get('PORTAL_ADMIN_EMAIL', 'jongent@hotmail.co.uk').lower()
+    password = os.environ.get('PORTAL_ADMIN_PASSWORD', 'admin123')
+    existing = await db.portal_users.find_one({'email': email})
+    if not existing:
         await db.portal_users.insert_one({
             'id': str(uuid.uuid4()),
             'email': email,
@@ -138,6 +139,8 @@ async def ensure_default_portal_user_and_brands():
             'name': 'Portal Owner',
             'created_at': datetime.now(timezone.utc),
         })
+    # Clean up the earlier placeholder if it still exists
+    await db.portal_users.delete_many({'email': 'owner@ghp-health.com'})
 
     # Brand cards — upsert so config edits in env vars propagate on restart
     defaults = [
