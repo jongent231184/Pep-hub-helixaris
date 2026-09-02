@@ -129,7 +129,7 @@ function App() {
               <Route path="/coa" element={<Coa />} />
               <Route path="/coas" element={<Coa />} />
               <Route path="/coaching" element={<Coaching />} />
-              <Route path="/portal" element={<Portal />} />
+              <Route path="/hub" element={<Portal />} />
               <Route path="/:categorySlug" element={<CategoryPage />} />
               <Route path="/:categorySlug/:productSlug" element={<ProductDetail />} />
               </Routes>
