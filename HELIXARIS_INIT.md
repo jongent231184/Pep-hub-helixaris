@@ -96,3 +96,25 @@ until the user explicitly asks. In particular:
 
 Just run step 2 again. `init_helixaris.py` is idempotent — it upserts by
 slug so any new products / price changes on GHP prod propagate.
+
+## 10. Targeted fix — Oral Peptides missing / "Category not found"
+
+If `/category/oral-peptides` shows **"Category not found"** on the Helixaris
+storefront, the initial seed missed the category document (this happened on
+early deploys where oral-peptides was added upstream after the first seed).
+
+Run the focused fix — it only touches oral-peptides, leaves everything else
+alone:
+
+```bash
+cd /app/backend && python fix_helixaris_orals.py
+```
+
+It will:
+1. Upsert the `oral-peptides` category (with the correct name, description,
+   sort_order, and Helixaris-branded image if one exists on disk).
+2. Set `category='oral-peptides'` and `category_slug='oral-peptides'` on the
+   8 known oral product slugs.
+3. Print a verification block listing the products it fixed.
+
+Then refresh `/category/oral-peptides` on the storefront.

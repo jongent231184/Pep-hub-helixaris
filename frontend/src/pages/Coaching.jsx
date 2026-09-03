@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Coaching } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
@@ -11,7 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../components/ui/select';
 import { useToast } from '../hooks/use-toast';
-import { Users, Scale, ClipboardList, Calculator, BookOpen, ShieldAlert, Loader2, CheckCircle2, Sparkles } from 'lucide-react';
+import { Users, Scale, ClipboardList, Calculator, BookOpen, ShieldAlert, Loader2, CheckCircle2, Sparkles, Lock } from 'lucide-react';
 
 const AREAS = [
   { value: 'weightloss', label: 'Weight loss', icon: Scale, blurb: 'Peptide-supported weight loss approach and lifestyle guidance.' },
@@ -22,6 +24,9 @@ const AREAS = [
 
 const Coaching_ = () => {
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -33,6 +38,18 @@ const Coaching_ = () => {
     message: '',
     waiver_accepted: false,
   });
+
+  // Pre-fill the form for a logged-in customer once auth resolves.
+  useEffect(() => {
+    if (user) {
+      setForm(f => ({
+        ...f,
+        first_name: f.first_name || user.first_name || '',
+        last_name: f.last_name || user.last_name || '',
+        email: f.email || user.email || '',
+      }));
+    }
+  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,6 +74,50 @@ const Coaching_ = () => {
       <div className="max-w-6xl mx-auto px-4 py-10">
         <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Coaching' }]} />
 
+        {authLoading ? (
+          <div className="py-24 grid place-items-center">
+            <Loader2 className="h-8 w-8 animate-spin text-sky-500" />
+          </div>
+        ) : !user ? (
+          /* Auth gate — coaching is a paid, private service. Requiring an
+             account keeps merchant underwriting reviews clean and blocks
+             drive-by public exposure of the signup flow. */
+          <section
+            className="mt-6 max-w-xl mx-auto bg-white border-2 border-sky-100 rounded-xl p-8 md:p-10 text-center"
+            data-testid="coaching-auth-gate"
+          >
+            <div className="h-14 w-14 mx-auto rounded-full bg-sky-50 grid place-items-center">
+              <Lock className="h-6 w-6 text-sky-600" />
+            </div>
+            <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight mt-6 text-slate-900">
+              Sign in to request coaching
+            </h1>
+            <p className="text-slate-600 mt-3 text-sm leading-relaxed">
+              1-to-1 peer education is a private, account-holder service.
+              Sign in or create a free account to submit a coaching request — it takes about 30 seconds.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+              <Button
+                onClick={() => navigate(`/login?returnTo=${encodeURIComponent(location.pathname)}`)}
+                className="bg-sky-500 hover:bg-sky-600 text-white font-bold uppercase tracking-wider h-11 px-6"
+                data-testid="coaching-gate-login-btn"
+              >
+                Sign in
+              </Button>
+              <Link
+                to={`/login?returnTo=${encodeURIComponent(location.pathname)}`}
+                className="inline-flex items-center justify-center border border-slate-300 hover:border-slate-500 text-slate-800 font-bold uppercase tracking-wider h-11 px-6 rounded"
+                data-testid="coaching-gate-register-btn"
+              >
+                Create account
+              </Link>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-8">
+              Coaching is <strong>peer-to-peer education</strong> based on personal experience — <strong>not medical advice</strong>.
+            </p>
+          </section>
+        ) : (
+          <>
         {/* Hero */}
         <section className="mt-6 mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-[11px] uppercase tracking-widest text-emerald-800 font-bold mb-4">
@@ -187,6 +248,8 @@ const Coaching_ = () => {
               </p>
             </form>
           </div>
+        )}
+          </>
         )}
       </div>
     </Layout>

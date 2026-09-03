@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LayoutDashboard, ClipboardList, Users, LogOut, Loader2, ExternalLink, PoundSterling } from 'lucide-react';
+import BRAND from '../../config/brand';
 
 const NAV = [
   { to: '/coach', label: 'Overview', icon: LayoutDashboard, end: true },
@@ -28,7 +29,7 @@ const CoachLayout = () => {
       <div className="min-h-screen grid place-items-center bg-slate-50 px-4">
         <div className="max-w-sm text-center">
           <h1 className="text-2xl font-black uppercase">Access denied</h1>
-          <p className="text-slate-600 mt-2">This portal is for GHP-Health coaches only.</p>
+          <p className="text-slate-600 mt-2">This portal is for {BRAND.fullName} coaches only.</p>
           <Link to="/" className="inline-block mt-6 bg-sky-500 text-white px-5 py-2.5 rounded font-bold uppercase text-sm tracking-wider">Return to site</Link>
         </div>
       </div>
@@ -40,7 +41,7 @@ const CoachLayout = () => {
       <aside className="hidden lg:flex flex-col w-64 bg-slate-900 text-slate-200 sticky top-0 h-screen">
         <div className="p-6 border-b border-slate-800">
           <p className="text-[10px] uppercase tracking-widest text-sky-400">Coach Portal</p>
-          <h1 className="text-base font-black text-white mt-1">GHP-Health</h1>
+          <h1 className="text-base font-black text-white mt-1">{BRAND.fullName}</h1>
         </div>
         <nav className="flex-1 p-4 space-y-1">
           {NAV.map(item => (

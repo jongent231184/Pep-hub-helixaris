@@ -4,7 +4,6 @@ import logging
 from pathlib import Path
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
 ROOT_DIR = Path(__file__).parent
@@ -57,17 +56,10 @@ async def _add_noai_header(request, call_next):
     response.headers['X-Robots-Tag'] = 'noindex, nofollow, noai, noimageai'
     return response
 
-# Static uploads (served at /api/uploads/<filename>) — mounted AFTER the API
-# router below, so specific POST endpoints like /api/uploads and
-# /api/uploads/document take precedence over the static file catch-all.
-UPLOADS_DIR = Path(os.environ.get('UPLOADS_DIR', '/app/backend/uploads'))
-try:
-    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-except Exception as e:
-    logger_boot = logging.getLogger('ghp.boot')
-    logger_boot.warning(f'Could not create UPLOADS_DIR {UPLOADS_DIR}: {e}. Using /tmp/uploads instead.')
-    UPLOADS_DIR = Path('/tmp/uploads')
-    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+# Static uploads are now served from Emergent Object Storage via the
+# `/api/uploads/{filename}` GET route in `routes/upload_routes.py` — no
+# local disk directory is needed. The old UPLOADS_DIR / StaticFiles mount
+# has been removed for pod-restart durability.
 
 # Main API router with /api prefix
 api_router = APIRouter(prefix='/api')
@@ -107,10 +99,6 @@ api_router.include_router(portal_router)
 
 app.include_router(api_router)
 
-# Mount static uploads AFTER the router so specific POST endpoints win over
-# the static file catch-all (StaticFiles otherwise intercepts POST with 405).
-app.mount('/api/uploads', StaticFiles(directory=str(UPLOADS_DIR)), name='uploads')
-
 
 @app.on_event('startup')
 async def on_startup():
@@ -118,6 +106,14 @@ async def on_startup():
     can return immediately even if the DB is temporarily slow.
     """
     import asyncio
+
+    # Warm the object-storage session key so the first admin upload doesn't
+    # pay the init round-trip. Non-fatal if it fails — put_object retries.
+    try:
+        from storage import init_storage
+        await asyncio.to_thread(init_storage)
+    except Exception as e:
+        logger.warning(f'Object storage warm-up failed (uploads may still work): {e}')
 
     async def _background_init():
         try:

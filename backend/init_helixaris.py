@@ -88,8 +88,10 @@ async def clone_products(db, source_products: list):
         payload = {
             'slug': slug,
             'name': p['name'],
-            'category': p.get('category', ''),
-            'category_slug': p.get('category_slug', p.get('category', '')),
+            'category': p.get('category') or '',
+            # dict.get returns None (not fallback) when the API explicitly sends
+            # `null`, so use `or` chain to guarantee a real slug value.
+            'category_slug': p.get('category_slug') or p.get('category') or '',
             'price': p.get('price', 0.0),
             'description': p.get('description', ''),
             'short_description': p.get('short_description', ''),
