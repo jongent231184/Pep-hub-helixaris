@@ -83,7 +83,6 @@ PRODUCTS_SEED = [
     ('10-x-31g-pen-needles', '10 x 31G 0.25mm x 6mm Pen Needles with wipes', 'syringes-and-wipes', 2.50, 'https://content.webfactorysite.co.uk/1d7a400b-9cc7-4786-9831-f3b9f0ca4af3_largeish.png?t=1780857490', '10 x 31G 0.25mm x 6mm pen needles with alcohol wipes.'),
 
     # Bundles
-    ('super-shredder', 'Super shredder', 'bundles', 40.00, 'https://content.webfactorysite.co.uk/16edb920-4e65-4fa7-955c-0117a6fc3dbd_largeish.png?t=1781525645', 'Super shredder research bundle.'),
     ('neurological-trio', 'Neurological trio', 'bundles', 65.00, 'https://content.webfactorysite.co.uk/beb1992d-4604-4c8c-a4aa-8bee01e59413_largeish.png?t=1781351141', 'Make a nice saving when bought together.'),
     ('stay-beautiful-beauty-stack', 'Stay beautiful with this beauty stack', 'bundles', 75.00, 'https://content.webfactorysite.co.uk/44fba0da-2223-41f5-aec4-01840a4a5ec4_largeish.png?t=1781298800', 'Great saving when bought together.'),
     ('t1rz3p4t1d3-20mg-x3-multipack', 'T1RZ3P4T1D3 20mg x 3 multipack', 'bundles', 152.00, 'https://content.webfactorysite.co.uk/ad818e16-44ec-46eb-9bd4-911f6d4f16c0_largeish.png?t=1781298093', 'Huge discounts when bought together.'),
@@ -92,7 +91,6 @@ PRODUCTS_SEED = [
 ]
 
 BUNDLE_EXTRAS = {
-    'super-shredder': {'badge': '', 'featured': True},
     'neurological-trio': {'badge': 'Recommended', 'tagline': 'Make a nice saving when bought together.', 'featured': True},
     'stay-beautiful-beauty-stack': {'badge': 'Popular', 'was_price': 90.00, 'featured': True},
     't1rz3p4t1d3-20mg-x3-multipack': {'badge': 'Great Value', 'was_price': 180.00, 'featured': True},

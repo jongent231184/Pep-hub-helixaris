@@ -42,8 +42,6 @@ JOBS = [
         'ULTIMATE POWER COMBO', 'R3T4TRUT1D3  +  TESAMORELIN  +  MOTS-C'),
     ('stay-beautiful-beauty-stack', 'bundle', 'BEAUTY STACK',
         'GHK-CU  +  AHK-CU  +  GLOW'),
-    ('super-shredder', 'bundle', 'SUPER SHREDDER',
-        'PERFORMANCE + BODY COMPOSITION BLEND'),
     ('t1rz3p4t1d3-20mg-x3-multipack', 'bundle',
         'T1RZ3P4T1D3 20MG × 3', 'MULTIPACK · THREE VIALS'),
 ]
