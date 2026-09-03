@@ -7,6 +7,42 @@ MongoDB, its own product catalog, and its own brand assets.
 Everything in this file is what you should do on your FIRST turn (or whenever
 the user asks you to "reset Helixaris to a clean state").
 
+---
+
+## ⚡ TL;DR — After every GitHub sync run these two commands
+
+```bash
+# 1. Make sure the frontend builds with Helixaris branding (see § 0 below)
+grep REACT_APP_BRAND /app/frontend/.env || echo "REACT_APP_BRAND=helixaris" >> /app/frontend/.env
+sudo supervisorctl restart frontend
+
+# 2. Ensure DB has all latest categories (esp. oral-peptides) + products
+cd /app/backend && python init_helixaris.py
+# If /category/oral-peptides shows "Category not found", run the targeted fix:
+cd /app/backend && python fix_helixaris_orals.py
+```
+
+Also — if production shows GHP branding after a redeploy, the deployment env
+var `REACT_APP_BRAND=helixaris` is missing on the Emergent deploy. Add it in
+the deploy panel and redeploy — it's baked into the JS bundle at build time
+so a browser refresh alone won't fix it.
+
+---
+
+## 0. Frontend brand env var (CRITICAL)
+
+The frontend reads `REACT_APP_BRAND` **at build time** to pick between GHP
+and Helixaris theming (logos, colours, meta tags, admin header). CRA inlines
+`process.env.REACT_APP_*` into the JS bundle when it builds, so:
+
+- **Preview pod**: put `REACT_APP_BRAND=helixaris` in `/app/frontend/.env`
+  and `sudo supervisorctl restart frontend`.
+- **Production deploy**: set `REACT_APP_BRAND=helixaris` on the Emergent
+  deployment env (not just the pod .env). Trigger a redeploy to rebuild.
+
+If this is missing the app silently falls back to `ghp-health` — that's why
+the admin dashboard shows "GHP Health Admin" instead of "Helixaris Admin".
+
 ## 1. Confirm you're on the right pod
 
 Your `MONGO_URL` and `DB_NAME` env vars should be different from the GHP pod's.

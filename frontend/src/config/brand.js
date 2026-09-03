@@ -30,6 +30,21 @@ const BRANDS = {
   },
 };
 
-const key = (process.env.REACT_APP_BRAND || 'ghp-health').toLowerCase();
+// Prefer the build-time env var, but fall back to the current hostname so
+// that a deploy which forgets to set REACT_APP_BRAND=helixaris still shows
+// the Helixaris theme instead of silently degrading to GHP branding.
+const _detectFromHost = () => {
+  if (typeof window === 'undefined') return null;
+  const host = (window.location?.hostname || '').toLowerCase();
+  if (host.includes('helixaris')) return 'helixaris';
+  if (host.includes('ghp-health') || host.includes('ghp')) return 'ghp-health';
+  return null;
+};
+
+const key = (
+  process.env.REACT_APP_BRAND
+  || _detectFromHost()
+  || 'ghp-health'
+).toLowerCase();
 export const BRAND = BRANDS[key] || BRANDS['ghp-health'];
 export default BRAND;
