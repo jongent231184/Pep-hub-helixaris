@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { useToast } from '../hooks/use-toast';
+import BRAND from '../config/brand';
 
 const AgeModal = () => {
   const [open, setOpen] = useState(false);
@@ -31,7 +32,7 @@ const AgeModal = () => {
       <DialogContent className="max-w-md [&>button]:hidden p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6">
           <DialogTitle className="text-center text-base md:text-lg font-bold tracking-wide leading-snug">
-            GHP-HEALTH &ndash; RESEARCH PEPTIDE<br />TERMS &amp; CONDITIONS DISCLAIMER
+            {BRAND.name.toUpperCase()} &ndash; RESEARCH PEPTIDE<br />TERMS &amp; CONDITIONS DISCLAIMER
           </DialogTitle>
         </DialogHeader>
 
@@ -39,7 +40,7 @@ const AgeModal = () => {
           <div className="border border-slate-200 rounded-md p-4">
             <h4 className="font-bold text-center mb-2 text-sm tracking-wide">AGE REQUIREMENT</h4>
             <p className="text-sm text-slate-700 leading-relaxed">
-              By accessing the GHP-Health website or purchasing any research materials, you confirm that you are 18 years of age or older and legally permitted to purchase laboratory-grade research products in your region. Any form of ingestion, injection, or topical use is prohibited.
+              By accessing the {BRAND.fullName} website or purchasing any research materials, you confirm that you are 18 years of age or older and legally permitted to purchase laboratory-grade research products in your region. Any form of ingestion, injection, or topical use is prohibited.
             </p>
           </div>
         </div>

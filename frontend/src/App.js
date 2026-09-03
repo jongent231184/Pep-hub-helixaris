@@ -59,10 +59,27 @@ import AmbassadorDashboard from './pages/ambassador/AmbassadorDashboard';
 import AmbassadorOrders from './pages/ambassador/AmbassadorOrders';
 import AmbassadorOrderDetail from './pages/ambassador/AmbassadorOrderDetail';
 import AmbassadorPayouts from './pages/ambassador/AmbassadorPayouts';
+import BRAND from './config/brand';
 
 import './App.css';
 
 function App() {
+  // Dynamic <title> + favicon per brand (runtime, since build is shared)
+  React.useEffect(() => {
+    document.title = `${BRAND.name} | ${BRAND.tagline}`;
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.setAttribute('content', `${BRAND.fullName} — premium-grade research peptides supplied in the UK. For laboratory research use only.`);
+    // Update favicon if brand config provides one
+    if (BRAND.logo) {
+      let link = document.querySelector("link[rel*='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = BRAND.logo;
+    }
+  }, []);
   return (
     <AuthProvider>
       <StoreProvider>

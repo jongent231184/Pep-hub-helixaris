@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+import BRAND from '../config/brand';
 
 const NAV = [
   { to: '/', label: 'Home' },
@@ -39,8 +40,8 @@ const Header = () => {
         {/* Logo */}
         <Link to="/" className="flex-shrink-0">
           <img
-            src="https://customer-assets.emergentagent.com/job_ghp-ecommerce-pay/artifacts/0f0tlig3_ghp%20logo.jpg"
-            alt="GHP-Health"
+            src={BRAND.logo}
+            alt={BRAND.fullName}
             className="h-20 md:h-24 w-auto rounded-lg shadow-md"
           />
         </Link>

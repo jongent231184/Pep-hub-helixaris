@@ -6,6 +6,7 @@ import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+import BRAND from '../config/brand';
 
 const BYPASS_PATH_PREFIXES = ['/admin', '/login', '/pay/', '/hub'];
 
@@ -63,7 +64,7 @@ const SitePasswordGate = ({ children }) => {
         <div className="h-14 w-14 mx-auto rounded-full bg-sky-500/20 grid place-items-center text-sky-400 mb-4">
           <Lock className="h-6 w-6" />
         </div>
-        <h1 className="text-xl font-black uppercase tracking-wider">{settings?.site_name || 'Site'}</h1>
+        <h1 className="text-xl font-black uppercase tracking-wider">{BRAND.name}</h1>
         <p className="text-sm text-slate-400 mt-2">This site is private. Please enter the password to view.</p>
         <form onSubmit={submit} className="mt-6 space-y-3">
           <Input
