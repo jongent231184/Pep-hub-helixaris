@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import BRAND from '../../config/brand';
 import {
   LayoutDashboard, Package, Tag, ShoppingBag, Users, Settings as SettingsIcon,
   LogOut, Loader2, ExternalLink, Ticket, Link as LinkIcon, Award, FileCheck, MessageCircle, BarChart3, PoundSterling
@@ -59,13 +60,13 @@ const AdminLayout = () => {
       <aside className="hidden lg:flex flex-col w-64 bg-slate-900 text-slate-200 sticky top-0 h-screen">
         <div className="p-6 border-b border-slate-800 flex items-center gap-3">
           <img
-            src="https://customer-assets.emergentagent.com/job_ghp-ecommerce-pay/artifacts/0f0tlig3_ghp%20logo.jpg"
-            alt="GHP-Health"
+            src={BRAND.logo}
+            alt={BRAND.fullName}
             className="h-12 w-12 rounded object-cover"
           />
           <div>
             <p className="text-[10px] uppercase tracking-widest text-slate-400">Admin</p>
-            <h1 className="text-base font-black text-white leading-tight">GHP-Health</h1>
+            <h1 className="text-base font-black text-white leading-tight">{BRAND.name}</h1>
           </div>
         </div>
         <nav className="flex-1 p-4 space-y-1">
@@ -98,8 +99,8 @@ const AdminLayout = () => {
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 inset-x-0 z-40 bg-slate-900 text-white p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <img src="https://customer-assets.emergentagent.com/job_ghp-ecommerce-pay/artifacts/0f0tlig3_ghp%20logo.jpg" alt="GHP-Health" className="h-8 w-8 rounded object-cover" />
-          <p className="font-bold">GHP-Health Admin</p>
+          <img src={BRAND.logo} alt={BRAND.fullName} className="h-8 w-8 rounded object-cover" />
+          <p className="font-bold">{BRAND.name} Admin</p>
         </div>
         <button onClick={() => { logout(); navigate('/login'); }} className="text-xs flex items-center gap-1"><LogOut className="h-4 w-4" /> Out</button>
       </div>

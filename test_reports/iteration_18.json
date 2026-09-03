@@ -1,0 +1,33 @@
+{
+  "summary": "Frontend-only verification of the BRAND-aware AdminLayout refactor. (1) Helixaris preview (aris-platform-1.preview.emergentagent.com): logged in at /admin as admin@helixaris.com/admin123 (age-gate modal had to be dismissed first). Storefront IS Helixaris-branded (title 'Helixaris | Advancing Peptide Research', header logo /brands/helixaris/logo.png, footer support@helixaris.com), but the ADMIN layout still renders GHP branding on BOTH viewports -> Helixaris app has NOT been synced with the AdminLayout fix. (2) GHP prod (www.ghp-health.com/admin, admin@ghp-health.com): sidebar + mobile bar still show correct GHP branding - regression PASS. (3) Extra: GHP preview (ghp-ecommerce-pay.preview.emergentagent.com) which runs the refactored code renders BRAND-driven values correctly (img alt = 'GHP Health' = BRAND.fullName, heading 'GHP-Health'), proving the refactor itself is correct.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminLayout (Helixaris preview - desktop sidebar)", "issue": "Sidebar still shows GHP branding: img src = https://customer-assets.emergentagent.com/job_ghp-ecommerce-pay/artifacts/0f0tlig3_ghp%20logo.jpg, alt 'GHP-Health', heading 'GHP-Health' (expected /brands/helixaris/logo.png + 'Helixaris'). Old hardcoded alt value indicates the Helixaris deployment is serving a pre-refactor build.", "selector": "aside img / aside h1", "priority": "HIGH"},
+      {"component": "AdminLayout (Helixaris preview - mobile 390px top bar)", "issue": "Mobile admin top bar shows GHP logo and text 'GHP-Health Admin' instead of 'Helixaris Admin'.", "selector": "div.fixed.top-0 img / div.fixed.top-0 p", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Login / age-gate modal (both brands)", "issues": ["Age-disclaimer DialogOverlay covers the page and blocks the login form until dismissed; console warns 'Missing Description or aria-describedby for DialogContent' (a11y). Not a blocker but worth noting."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Trigger a GitHub sync + rebuild in the Helixaris Emergent app so the BRAND-aware AdminLayout.jsx (and any other pending brand refactors) lands there; the current Helixaris deploy is running an older build.",
+    "After the Helixaris sync, re-verify /admin at desktop (aside img src contains /brands/helixaris/logo.png, aside h1 = 'Helixaris') and at 390px (top bar text 'Helixaris Admin').",
+    "Optional: redeploy GHP prod so it also runs the refactored AdminLayout (prod img alt is still the old hardcoded 'GHP-Health' vs 'GHP Health' from BRAND.fullName). Visible branding is identical either way, so no user-facing regression."
+  ],
+  "critical_code_review_comments": [
+    "AdminLayout.jsx correctly consumes BRAND for logo/alt/name in both desktop and mobile headers; no hardcoded brand strings remain in that file.",
+    "brand.js falls back to 'ghp-health' for unknown REACT_APP_BRAND keys - safe default, no issue.",
+    "Admin sidebar/mobile bar branding elements have no data-testid; add e.g. data-testid=\"admin-sidebar-logo\" / \"admin-sidebar-brand-name\" / \"admin-mobile-brand\" to make brand verification robust."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested", "frontend": "1/3 target checks passed (GHP regression PASS; Helixaris desktop + mobile FAIL due to unsynced deployment)"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "Helixaris admin admin@helixaris.com/admin123 works (login succeeded, dashboard loaded, 64 products, 0 orders). GHP prod admin@ghp-health.com/GHP-Health26 works. /app/memory/test_credentials.md lists Helixaris admin as 'helixaris/admin123' - should be updated to admin@helixaris.com.",
+  "context_for_next_testing_agent": "Both sites gate the page behind an age-disclaimer Radix dialog: click text 'Yes' then button 'Submit' before touching the login form, otherwise DialogOverlay intercepts clicks. Login button: page.get_by_role('button', name='LOG IN').last (the .first match is the header search button). After login navigate to /admin explicitly. Verify branding via page.evaluate reading document.querySelector('aside') img.src/alt + h1, and div.fixed.top-0 for the 390px mobile bar.",
+  "rca_of_the_issue": "The AdminLayout BRAND refactor exists and works in the GHP codebase/preview, but the Helixaris Emergent app is a separate fork whose deployed bundle predates the fix (evidenced by the stale hardcoded img alt 'GHP-Health' and GHP logo URL while its storefront is fully Helixaris-branded). Fix = sync Helixaris from GitHub and rebuild; no code change needed."
+}
