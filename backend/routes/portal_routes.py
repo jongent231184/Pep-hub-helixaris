@@ -162,7 +162,7 @@ async def ensure_default_portal_user_and_brands():
             'logo': '/brands/helixaris/logo.png',
             'primary_color': '#050b1a',
             'accent_color': '#7ec8ff',
-            'admin_url': os.environ.get('HELIXARIS_ADMIN_URL', ''),
+            'admin_url': os.environ.get('HELIXARIS_ADMIN_URL', 'https://helixaris.com/admin'),
             'order': 2,
             'visible': True,
         },
