@@ -240,6 +240,12 @@ class Settings(BaseModel):
     company_number: str = ''
     registered_address: str = ''
     vat_number: str = ''
+    # Community — an invite link (e.g. WhatsApp group) that appears on the
+    # order confirmation email + thank-you page after successful checkout.
+    # Leave `whatsapp_invite_url` blank to hide the block entirely.
+    whatsapp_invite_url: str = ''
+    whatsapp_invite_headline: str = 'Join our WhatsApp community'
+    whatsapp_invite_body: str = 'Get first-look drops, batch updates, restock alerts and peer discussion — direct from the team.'
 
 
 # ---------- PROMO CODES ----------

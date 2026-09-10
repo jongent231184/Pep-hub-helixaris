@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { CheckCircle2, Loader2, Clock } from 'lucide-react';
-import { Orders, Wallid } from '../lib/api';
+import { CheckCircle2, Loader2, Clock, MessageCircle } from 'lucide-react';
+import { Orders, Wallid, Settings } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import PaymentSuccessSplash from '../components/PaymentSuccessSplash';
@@ -19,7 +19,14 @@ const OrderConfirmation = () => {
   const [loading, setLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [settings, setSettings] = useState(null);
   const pollRef = useRef(null);
+
+  // Fetch site settings so we can conditionally render the WhatsApp
+  // community invite. Silent failure — the page still works without it.
+  useEffect(() => {
+    Settings.get().then(setSettings).catch(() => {});
+  }, []);
 
   const cameFromWallid = searchParams.get('wallid') === '1';
 
@@ -140,6 +147,37 @@ const OrderConfirmation = () => {
             Continue Shopping
           </Link>
         </div>
+
+        {/* WhatsApp / community invite — shown only if admin has set a URL
+            in Admin → Settings → Community invite. Sits below the primary
+            CTAs so it doesn't distract from the confirmation itself. */}
+        {paid && settings?.whatsapp_invite_url && (
+          <div
+            className="mt-10 max-w-lg mx-auto bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-left flex items-start gap-4"
+            data-testid="whatsapp-invite-card"
+          >
+            <div className="h-12 w-12 shrink-0 rounded-full bg-[#25D366] grid place-items-center text-white">
+              <MessageCircle className="h-6 w-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-black text-emerald-900 leading-snug">
+                {settings.whatsapp_invite_headline || 'Join our WhatsApp community'}
+              </p>
+              <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
+                {settings.whatsapp_invite_body || 'Get first-look drops, batch updates and peer discussion — direct from the team.'}
+              </p>
+              <a
+                href={settings.whatsapp_invite_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 mt-4 bg-[#25D366] hover:bg-[#1ebe58] text-white px-5 py-2.5 rounded font-bold uppercase tracking-wider text-sm"
+                data-testid="whatsapp-invite-btn"
+              >
+                Join the group →
+              </a>
+            </div>
+          </div>
+        )}
         {!user && paid && <GuestAccountPrompt order={order} />}
       </div>
       {showSplash && (

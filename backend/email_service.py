@@ -288,7 +288,39 @@ def _addresses_html(order: dict) -> str:
     )
 
 
-def _order_summary_html(order: dict) -> str:
+def _whatsapp_invite_html(settings: Optional[dict]) -> str:
+    """Return a green CTA block for the customer email if an invite URL is
+    configured — otherwise an empty string. Kept isolated so the surrounding
+    email HTML doesn't have to care whether the setting is populated."""
+    s = settings or {}
+    url = (s.get('whatsapp_invite_url') or '').strip()
+    if not url:
+        return ''
+    headline = s.get('whatsapp_invite_headline') or 'Join our WhatsApp community'
+    body = s.get('whatsapp_invite_body') or 'Get first-look drops, batch updates, restock alerts and peer discussion.'
+    return f"""
+<div style="margin-top:24px;padding:20px;background:#e8f7ee;border:1px solid #b7e4c4;border-radius:8px;">
+  <table role="presentation" width="100%" style="border-collapse:collapse;">
+    <tr>
+      <td valign="middle" style="width:44px;">
+        <div style="width:36px;height:36px;background:#25D366;border-radius:50%;text-align:center;line-height:36px;color:#ffffff;font-weight:800;font-size:16px;">W</div>
+      </td>
+      <td valign="middle" style="padding-left:12px;">
+        <div style="font-size:14px;font-weight:800;color:#065f46;">{headline}</div>
+        <div style="font-size:12px;color:#047857;line-height:1.5;margin-top:2px;">{body}</div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding-top:14px;">
+        <a href="{url}" style="display:inline-block;background:#25D366;color:#ffffff;font-weight:800;text-transform:uppercase;letter-spacing:0.6px;font-size:13px;padding:11px 22px;border-radius:6px;text-decoration:none;">Join the group →</a>
+      </td>
+    </tr>
+  </table>
+</div>
+""".strip()
+
+
+def _order_summary_html(order: dict, settings: Optional[dict] = None) -> str:
     items_html = ''
     for it in order.get('items', []):
         opt = f" ({it['option']})" if it.get('option') else ''
@@ -393,6 +425,8 @@ def _order_summary_html(order: dict) -> str:
             Any questions? Just reply to this email or write to
             <a href="mailto:{ADMIN_NOTIFY_EMAIL}" style="color:#0284c7;">{ADMIN_NOTIFY_EMAIL}</a>.
           </p>
+
+          {_whatsapp_invite_html(settings)}
         </td>
       </tr>
       <tr>
@@ -447,6 +481,16 @@ async def send_order_emails(order: dict) -> None:
 
     order_number = order.get('order_number', '?')
 
+    # Fetch settings once for any dynamic content in the customer email
+    # (currently: the WhatsApp community invite CTA). Non-fatal if the
+    # settings collection is empty — we just skip the extra block.
+    try:
+        from db import db as _db
+        settings_doc = await _db.settings.find_one({'_singleton': True}) or {}
+    except Exception as e:
+        logger.warning(f'settings lookup failed for email: {e}')
+        settings_doc = {}
+
     # Build the PDF once — used for both customer and admin emails.
     try:
         pdf_bytes = await asyncio.to_thread(build_invoice_pdf, order)
@@ -462,7 +506,7 @@ async def send_order_emails(order: dict) -> None:
                 'from': f'{BUSINESS_NAME} <{FROM_EMAIL}>',
                 'to': [customer_email],
                 'subject': f'Order confirmed — {order_number}',
-                'html': _order_summary_html(order),
+                'html': _order_summary_html(order, settings_doc),
             }
             if pdf_bytes:
                 params['attachments'] = [{

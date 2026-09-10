@@ -97,6 +97,46 @@ const AdminSettings = () => {
           </div>
         </section>
 
+        {/* --- COMMUNITY / WHATSAPP INVITE --- */}
+        <section className="bg-white border rounded-lg p-6 space-y-4">
+          <h2 className="text-base font-bold uppercase tracking-wide">Community invite</h2>
+          <p className="text-xs text-slate-500 -mt-2">
+            Optional WhatsApp / Telegram / Discord group link shown on the
+            order confirmation email and the checkout thank-you page. Leave
+            the URL blank to hide the block completely.
+          </p>
+          <div>
+            <Label>Invite URL</Label>
+            <Input
+              value={form.whatsapp_invite_url || ''}
+              onChange={update('whatsapp_invite_url')}
+              placeholder="https://chat.whatsapp.com/xxxxxxxxxxxxxxxxxxxxxx"
+              className="mt-1"
+              data-testid="settings-whatsapp-url"
+            />
+          </div>
+          <div>
+            <Label>Headline</Label>
+            <Input
+              value={form.whatsapp_invite_headline || ''}
+              onChange={update('whatsapp_invite_headline')}
+              placeholder="Join our WhatsApp community"
+              className="mt-1"
+              data-testid="settings-whatsapp-headline"
+            />
+          </div>
+          <div>
+            <Label>Body text</Label>
+            <Input
+              value={form.whatsapp_invite_body || ''}
+              onChange={update('whatsapp_invite_body')}
+              placeholder="Get first-look drops, batch updates, restock alerts and peer discussion — direct from the team."
+              className="mt-1"
+              data-testid="settings-whatsapp-body"
+            />
+          </div>
+        </section>
+
         {/* --- LEGAL / COMPLIANCE --- */}
         <section className="bg-white border rounded-lg p-6 space-y-4">
           <h2 className="text-base font-bold uppercase tracking-wide">Legal &amp; compliance</h2>
