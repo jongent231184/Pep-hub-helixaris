@@ -236,6 +236,10 @@ class Settings(BaseModel):
     # Publish controls (Squarespace-style)
     published: bool = False
     site_password: str = ''
+    # Legal / compliance (shown in footer + used on merchant applications)
+    company_number: str = ''
+    registered_address: str = ''
+    vat_number: str = ''
 
 
 # ---------- PROMO CODES ----------

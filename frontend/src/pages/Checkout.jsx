@@ -32,6 +32,7 @@ const Checkout = () => {
   const [wallidLoading, setWallidLoading] = useState(false);
   const [createdOrder, setCreatedOrder] = useState(null);
   const [wallidFailed, setWallidFailed] = useState(false);
+  const [complianceConfirmed, setComplianceConfirmed] = useState(false);
   const [form, setForm] = useState({
     email: '', firstName: '', lastName: '', phone: '',
     address1: '', address2: '', city: '', postcode: '', country: 'United Kingdom',
@@ -492,10 +493,28 @@ const Checkout = () => {
 
                 {wallidConfig?.configured ? (
                   <div data-testid="wallid-section">
+                    {/* Compliance confirmation — underwriters look for this
+                        checkbox on high-risk research merchant sites. */}
+                    <label
+                      className="flex items-start gap-3 cursor-pointer select-none mb-4 border border-slate-200 bg-slate-50 rounded-md p-3"
+                      data-testid="checkout-compliance-label"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={complianceConfirmed}
+                        onChange={(e) => setComplianceConfirmed(e.target.checked)}
+                        className="h-4 w-4 mt-0.5 accent-sky-500 cursor-pointer shrink-0"
+                        data-testid="checkout-compliance-checkbox"
+                      />
+                      <span className="text-[13px] text-slate-800 leading-snug">
+                        I confirm the products in this order are for <strong>research or educational use only</strong> and will not be used for human or animal consumption. I am 18 or older and reside in a jurisdiction where the sale of laboratory research chemicals is not restricted. I accept the <Link to="/terms" className="underline text-sky-600 hover:text-sky-700">Terms &amp; Conditions</Link>.
+                      </span>
+                    </label>
+
                     <Button
                       onClick={payWithWallid}
-                      disabled={wallidLoading}
-                      className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-wider text-base"
+                      disabled={wallidLoading || !complianceConfirmed}
+                      className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-wider text-base disabled:opacity-50 disabled:cursor-not-allowed"
                       data-testid="wallid-pay-btn"
                     >
                       {wallidLoading

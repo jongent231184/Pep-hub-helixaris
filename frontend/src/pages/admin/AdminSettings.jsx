@@ -97,6 +97,47 @@ const AdminSettings = () => {
           </div>
         </section>
 
+        {/* --- LEGAL / COMPLIANCE --- */}
+        <section className="bg-white border rounded-lg p-6 space-y-4">
+          <h2 className="text-base font-bold uppercase tracking-wide">Legal &amp; compliance</h2>
+          <p className="text-xs text-slate-500 -mt-2">
+            Shown in the site footer and referenced on merchant / payment
+            provider applications. Leave blank to hide a field.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>UK company number</Label>
+              <Input
+                value={form.company_number || ''}
+                onChange={update('company_number')}
+                placeholder="e.g. 15234567"
+                className="mt-1"
+                data-testid="settings-company-number"
+              />
+            </div>
+            <div>
+              <Label>VAT number (optional)</Label>
+              <Input
+                value={form.vat_number || ''}
+                onChange={update('vat_number')}
+                placeholder="e.g. GB 123 4567 89"
+                className="mt-1"
+                data-testid="settings-vat-number"
+              />
+            </div>
+          </div>
+          <div>
+            <Label>Registered address</Label>
+            <Input
+              value={form.registered_address || ''}
+              onChange={update('registered_address')}
+              placeholder="e.g. 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ"
+              className="mt-1"
+              data-testid="settings-registered-address"
+            />
+          </div>
+        </section>
+
         {/* --- SHIPPING --- */}
         <section className="bg-white border rounded-lg p-6 space-y-4">
           <h2 className="text-base font-bold uppercase tracking-wide">Shipping</h2>

@@ -73,6 +73,24 @@ const Footer = () => {
           <p>Copyright © {new Date().getFullYear()} {s.site_name || BRAND.legalName} | <Link to="/terms" className="hover:text-sky-400">Terms &amp; Conditions</Link></p>
           <p>Premium-grade research peptides</p>
         </div>
+        {(s.company_number || s.registered_address || s.vat_number) && (
+          <div
+            className="max-w-7xl mx-auto px-4 pb-5 text-[11px] text-slate-500 leading-relaxed border-t border-slate-800/60 pt-4 space-y-1"
+            data-testid="footer-legal"
+          >
+            <p>
+              {s.site_name || BRAND.legalName}
+              {s.company_number && <> · Registered in England &amp; Wales, Company No. <span className="text-slate-300">{s.company_number}</span></>}
+              {s.vat_number && <> · VAT Reg. <span className="text-slate-300">{s.vat_number}</span></>}
+            </p>
+            {s.registered_address && (
+              <p>Registered office: <span className="text-slate-300">{s.registered_address}</span></p>
+            )}
+            <p className="text-slate-500">
+              All products are supplied <strong className="text-slate-300">for research use only</strong> — not for human or animal consumption, ingestion, injection, inhalation, or topical use.
+            </p>
+          </div>
+        )}
       </div>
     </footer>
   );
