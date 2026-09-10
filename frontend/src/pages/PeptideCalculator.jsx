@@ -18,9 +18,124 @@ const SYRINGES = [
 ];
 const VIAL_MG = [1, 2, 5, 10, 15];
 const BAC_ML = [1, 2, 3, 5];
+// Dose presets in both units. mg presets are the values researchers most
+// commonly enter in mg (0.05mg = 50mcg, 0.25mg = 250mcg etc.) — keeps parity
+// with the mcg presets so switching units is intuitive.
 const DOSE_MCG = [50, 100, 250, 500, 1000];
+const DOSE_MG = [0.05, 0.1, 0.25, 0.5, 1];
 
-const ChipRow = ({ options, value, onChange, suffix, allowOther = true, otherValue, onOtherChange }) => (
+/**
+ * Visual insulin-syringe rendering the exact draw position for the calculated
+ * units. Renders a horizontal barrel with tick marks matching the selected
+ * syringe capacity (30u / 50u / 100u) and a coloured fill from the needle end
+ * to the calculated stop line.
+ */
+const SyringeGraphic = ({ units, capacity, overflow }) => {
+  // Clamp fill so overflow doesn't render past the barrel — the amber warning
+  // in the result card handles that case explicitly.
+  const fillPct = Math.max(0, Math.min(units / capacity, 1));
+  // Barrel geometry (in SVG units).
+  const barrelX = 40;
+  const barrelY = 28;
+  const barrelW = 240;
+  const barrelH = 28;
+  // Tick every 10 units for 100u/50u syringes, every 5 for 30u.
+  const tickEvery = capacity <= 30 ? 5 : 10;
+  const ticks = [];
+  for (let u = 0; u <= capacity; u += tickEvery) {
+    const x = barrelX + (u / capacity) * barrelW;
+    ticks.push({ u, x, major: u % (tickEvery * 2) === 0 });
+  }
+  const stopX = barrelX + fillPct * barrelW;
+  const fillColor = overflow ? '#f59e0b' : '#10b981'; // amber vs emerald
+
+  return (
+    <svg viewBox="0 0 340 90" className="w-full h-auto" data-testid="syringe-graphic">
+      {/* Needle */}
+      <line x1="4" y1="42" x2="34" y2="42" stroke="#94a3b8" strokeWidth="1.5" />
+      {/* Needle hub */}
+      <rect x="32" y="36" width="10" height="12" rx="1" fill="#cbd5e1" />
+      {/* Barrel outline */}
+      <rect
+        x={barrelX}
+        y={barrelY}
+        width={barrelW}
+        height={barrelH}
+        rx="3"
+        fill="#f8fafc"
+        stroke="#94a3b8"
+        strokeWidth="1.5"
+      />
+      {/* Filled liquid section (from needle end to stop line) */}
+      <rect
+        x={barrelX}
+        y={barrelY}
+        width={Math.max(0, stopX - barrelX)}
+        height={barrelH}
+        rx="3"
+        fill={fillColor}
+        opacity="0.85"
+      />
+      {/* Graduation ticks + labels */}
+      {ticks.map(({ u, x, major }) => (
+        <g key={u}>
+          <line
+            x1={x}
+            y1={barrelY + barrelH}
+            x2={x}
+            y2={barrelY + barrelH + (major ? 6 : 3)}
+            stroke="#64748b"
+            strokeWidth={major ? 1.2 : 0.8}
+          />
+          {major && (
+            <text
+              x={x}
+              y={barrelY + barrelH + 16}
+              textAnchor="middle"
+              fontSize="8"
+              fill="#64748b"
+              fontFamily="ui-monospace, monospace"
+            >
+              {u}
+            </text>
+          )}
+        </g>
+      ))}
+      {/* "Draw to" marker line + label — the whole point of the visual */}
+      {units > 0 && !overflow && (
+        <>
+          <line
+            x1={stopX}
+            y1={barrelY - 8}
+            x2={stopX}
+            y2={barrelY + barrelH + 8}
+            stroke="#0ea5e9"
+            strokeWidth="2.5"
+          />
+          <text
+            x={stopX}
+            y={barrelY - 12}
+            textAnchor="middle"
+            fontSize="10"
+            fontWeight="700"
+            fill="#0ea5e9"
+          >
+            {units.toFixed(units < 10 ? 1 : 0)}u
+          </text>
+        </>
+      )}
+      {/* Plunger stem + thumb rest — sits at the end of the barrel */}
+      <rect x={barrelX + barrelW} y={barrelY + 8} width="30" height="12" fill="#cbd5e1" />
+      <rect x={barrelX + barrelW + 30} y={barrelY - 2} width="8" height="32" rx="1" fill="#94a3b8" />
+      {/* Capacity label */}
+      <text x={barrelX + barrelW / 2} y={20} textAnchor="middle" fontSize="9" fill="#64748b">
+        {capacity}-unit insulin syringe
+      </text>
+    </svg>
+  );
+};
+
+const ChipRow = ({ options, value, onChange, suffix, allowOther = true, otherValue, onOtherChange, step = 'any' }) => (
   <div className="flex flex-wrap gap-2 mt-2">
     {options.map((v) => (
       <button
@@ -39,7 +154,7 @@ const ChipRow = ({ options, value, onChange, suffix, allowOther = true, otherVal
       <div className="flex items-center gap-2">
         <Input
           type="number"
-          step="any"
+          step={step}
           min="0"
           value={otherValue}
           onChange={(e) => onOtherChange(e.target.value)}
@@ -77,6 +192,30 @@ const PeptideCalculator = () => {
   const [bacOther, setBacOther] = useState('');
   const [dose, setDose] = useState(250);
   const [doseOther, setDoseOther] = useState('');
+  // 'mcg' (default) | 'mg' — presentation only, calc always uses mcg internally
+  const [doseUnit, setDoseUnit] = useState('mcg');
+
+  // Toggle between mcg and mg WITHOUT changing the effective dose. We recompute
+  // the underlying `dose` (and `doseOther`, if the user was typing a free
+  // value) so switching units feels like a display change, not a 1000×
+  // multiplier.
+  const switchDoseUnit = (nextUnit) => {
+    if (nextUnit === doseUnit) return;
+    const currentMcg = Number(doseOther) > 0
+      ? (doseUnit === 'mg' ? Number(doseOther) * 1000 : Number(doseOther))
+      : (doseUnit === 'mg' ? dose * 1000 : dose);
+    const nextValue = nextUnit === 'mg' ? currentMcg / 1000 : currentMcg;
+    const nextPresets = nextUnit === 'mg' ? DOSE_MG : DOSE_MCG;
+    if (nextPresets.includes(nextValue)) {
+      setDose(nextValue);
+      setDoseOther('');
+    } else {
+      // Not a preset — put it in the "Other" input so the user still sees the
+      // exact same effective dose after toggling.
+      setDoseOther(String(nextValue));
+    }
+    setDoseUnit(nextUnit);
+  };
 
   // Saved plans
   const [plans, setPlans] = useState([]);
@@ -85,7 +224,11 @@ const PeptideCalculator = () => {
 
   const vialMg = Number(vialOther) > 0 ? Number(vialOther) : vial;
   const bacMl = Number(bacOther) > 0 ? Number(bacOther) : bac;
-  const doseMcg = Number(doseOther) > 0 ? Number(doseOther) : dose;
+  // Dose is always calculated in mcg internally; when the user is entering in
+  // mg we multiply by 1000. Both chip-preset and free-text "Other" values flow
+  // through the same converter so switching units mid-flow just works.
+  const rawDose = Number(doseOther) > 0 ? Number(doseOther) : dose;
+  const doseMcg = doseUnit === 'mg' ? rawDose * 1000 : rawDose;
 
   const loadPlans = () => {
     if (!user) { setPlans([]); return; }
@@ -102,6 +245,9 @@ const PeptideCalculator = () => {
     else { setBacOther(String(p.bac_ml)); }
     if (DOSE_MCG.includes(p.dose_mcg)) { setDose(p.dose_mcg); setDoseOther(''); }
     else { setDoseOther(String(p.dose_mcg)); }
+    // Saved plans always store dose_mcg on the server, so switch the UI to mcg
+    // on load — user can flip to mg after if they prefer.
+    setDoseUnit('mcg');
     toast({ title: `Loaded "${p.title}"` });
   };
 
@@ -279,13 +425,34 @@ const PeptideCalculator = () => {
             </StepCard>
 
             <StepCard icon={Target} label="4 · Desired dose per injection">
+              {/* mcg / mg toggle — most researchers think in mg, but pen-scale
+                  doses (~50-500mcg) are more natural in mcg. Let them pick. */}
+              <div className="flex items-center gap-1 mt-3 p-1 bg-slate-100 rounded-full w-fit" data-testid="dose-unit-toggle">
+                {['mcg', 'mg'].map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => switchDoseUnit(u)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+                      doseUnit === u
+                        ? 'bg-white text-sky-700 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                    data-testid={`dose-unit-${u}`}
+                  >
+                    {u}
+                  </button>
+                ))}
+                <span className="text-[10px] text-slate-500 ml-2 pr-2 font-mono">1 mg = 1000 mcg</span>
+              </div>
               <ChipRow
-                options={DOSE_MCG}
+                options={doseUnit === 'mg' ? DOSE_MG : DOSE_MCG}
                 value={dose}
                 onChange={(v) => { setDose(v); setDoseOther(''); }}
-                suffix=" mcg"
+                suffix={` ${doseUnit}`}
                 otherValue={doseOther}
                 onOtherChange={setDoseOther}
+                step={doseUnit === 'mg' ? '0.01' : '1'}
               />
             </StepCard>
 
@@ -334,7 +501,16 @@ const PeptideCalculator = () => {
             {result ? (
               <>
                 <p className="text-sm text-slate-300 mb-3 leading-relaxed">
-                  For a <span className="font-bold text-white">{doseMcg} mcg</span> dose, draw the syringe to:
+                  For a{' '}
+                  <span className="font-bold text-white">
+                    {doseUnit === 'mg'
+                      ? `${(doseMcg / 1000).toLocaleString(undefined, { maximumFractionDigits: 3 })} mg`
+                      : `${doseMcg.toLocaleString()} mcg`}
+                  </span>{' '}
+                  <span className="text-slate-400 text-xs">
+                    ({doseUnit === 'mg' ? `${doseMcg} mcg` : `${(doseMcg / 1000).toLocaleString(undefined, { maximumFractionDigits: 3 })} mg`})
+                  </span>{' '}
+                  dose, draw the syringe to:
                 </p>
                 <div className={`text-5xl font-black tracking-tight ${result.overflow ? 'text-amber-300' : 'text-emerald-400'}`}>
                   {result.units.toFixed(result.units < 10 ? 1 : 0)}
@@ -343,6 +519,11 @@ const PeptideCalculator = () => {
                 <p className="text-xs text-slate-400 mt-1">
                   = {result.volumeMlPerDose.toFixed(3)} ml
                 </p>
+
+                {/* Visual syringe with the draw position marked */}
+                <div className="mt-4 bg-slate-800/60 border border-slate-700 rounded-lg p-3">
+                  <SyringeGraphic units={result.units} capacity={syringe.units} overflow={result.overflow} />
+                </div>
 
                 {result.overflow && (
                   <div className="mt-4 flex items-start gap-2 border border-amber-400/50 bg-amber-400/10 rounded-lg p-3 text-xs text-amber-200">
