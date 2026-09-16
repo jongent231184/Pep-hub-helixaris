@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Orders, Wallid } from '../../lib/api';
-import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw } from 'lucide-react';
+import { Orders, Wallid, Square } from '../../lib/api';
+import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw, CreditCard } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
@@ -26,6 +26,7 @@ const AdminOrders = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [paylinkOpen, setPaylinkOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [syncingSquare, setSyncingSquare] = useState(false);
   const { toast } = useToast();
 
   const load = () => Orders.all().then(setOrders).catch(() => setOrders([])).finally(() => setLoading(false));
@@ -56,6 +57,33 @@ const AdminOrders = () => {
       });
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleSyncFromSquare = async () => {
+    setSyncingSquare(true);
+    try {
+      const res = await Square.syncPending();
+      const changesText = (res.changes || [])
+        .map(c => `${c.order_number}: ${c.from} → ${c.to}`)
+        .join(', ');
+      toast({
+        title: `Checked ${res.checked} pending Square order${res.checked !== 1 ? 's' : ''}`,
+        description: res.updated
+          ? `${res.now_paid} newly paid · ${res.updated} updated${changesText ? ` (${changesText})` : ''}`
+          : res.checked === 0
+            ? 'No pending Square orders to sync.'
+            : 'No changes — all pending orders are still awaiting payment.',
+      });
+      if (res.updated > 0) load();
+    } catch (e) {
+      toast({
+        title: 'Sync failed',
+        description: String(e.response?.data?.detail || e.message),
+        variant: 'destructive',
+      });
+    } finally {
+      setSyncingSquare(false);
     }
   };
 
@@ -117,6 +145,17 @@ const AdminOrders = () => {
           >
             {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Sync from Wallid
+          </Button>
+          <Button
+            onClick={handleSyncFromSquare}
+            disabled={syncingSquare}
+            variant="outline"
+            className="gap-2"
+            data-testid="sync-all-square-btn"
+            title="Poll Square for every pending card / Apple-Pay / Google-Pay order and update its payment status"
+          >
+            {syncingSquare ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+            Sync from Square
           </Button>
           <Button
             onClick={() => setPaylinkOpen(true)}

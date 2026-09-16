@@ -163,6 +163,13 @@ export const Wallid = {
   syncPending: () => api.post('/wallid/sync-pending').then(r => r.data),
 };
 
+export const Square = {
+  config: () => api.get('/square/config').then(r => r.data),
+  createCheckout: (orderId) => api.post('/square/create-checkout', { order_id: orderId }).then(r => r.data),
+  reconcile: (orderId) => api.post('/square/reconcile', { order_id: orderId }).then(r => r.data),
+  syncPending: () => api.post('/square/sync-pending').then(r => r.data),
+};
+
 export const DosePlans = {
   mine: () => api.get('/dose-plans/mine').then(r => r.data),
   create: (data) => api.post('/dose-plans', data).then(r => r.data),

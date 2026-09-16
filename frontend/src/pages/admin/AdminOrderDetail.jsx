@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Orders, Wallid, resolveImage } from '../../lib/api';
+import { Orders, Wallid, Square, resolveImage } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
@@ -61,6 +61,20 @@ const AdminOrderDetail = () => {
     } finally { setSyncing(false); }
   };
 
+  const syncFromSquare = async () => {
+    setSyncing(true);
+    try {
+      const res = await Square.reconcile(order.id);
+      toast({
+        title: res.status === 'paid' ? 'Synced from Square — marked paid' : 'Synced from Square',
+        description: `Status: ${res.status}${res.source ? ` (${res.source})` : ''}`,
+      });
+      load();
+    } catch (e) {
+      toast({ title: 'Sync failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally { setSyncing(false); }
+  };
+
   if (loading) return <div className="grid place-items-center py-20"><Loader2 className="h-8 w-8 animate-spin text-sky-500" /></div>;
   if (!order) return <p>Order not found.</p>;
 
@@ -97,6 +111,18 @@ const AdminOrderDetail = () => {
             >
               {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Sync from Wallid
+            </Button>
+          )}
+          {order.square_order_id && (
+            <Button
+              variant="outline"
+              className="gap-2 border-sky-300 text-sky-700 hover:bg-sky-50"
+              onClick={syncFromSquare}
+              disabled={syncing}
+              data-testid="square-sync-btn"
+            >
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Sync from Square
             </Button>
           )}
           <Button

@@ -26,7 +26,7 @@ from square import Square
 from square.core.api_error import ApiError
 from square.environment import SquareEnvironment
 
-from auth import get_current_user_optional
+from auth import get_current_user_optional, require_admin
 from db import db
 
 logger = logging.getLogger('ghp.square')
@@ -284,6 +284,91 @@ async def webhook(request: Request):
         except Exception as e:
             logger.warning(f'Email send after Square payment failed (non-fatal): {e}')
     return {'ok': 'paid' if result.modified_count else 'already_processed_or_mismatch'}
+
+
+# ------------------------------------------------------------- SYNC PENDING
+
+@router.post('/sync-pending')
+async def sync_pending(_=Depends(require_admin)):
+    """Admin utility — poll Square for every order that is still pending +
+    has a `square_order_id`, then reconcile using the same rules the webhook
+    and per-order reconciler apply.
+
+    Returns a summary so the admin UI can toast the number of orders now paid.
+    """
+    pending = await db.orders.find({
+        'payment_status': {'$in': ['pending', 'processing', 'failed']},
+        'square_order_id': {'$exists': True, '$ne': None},
+    }).to_list(500)
+
+    client = _client_singleton()
+    now = datetime.now(timezone.utc)
+    checked = len(pending)
+    updated = 0
+    now_paid = 0
+    changes: list = []
+
+    for order in pending:
+        sq_order_id = order.get('square_order_id')
+        expected_pence = order.get('square_amount_pence')
+        try:
+            sq_order = client.orders.get(order_id=sq_order_id).order
+        except ApiError as e:
+            logger.warning(f'sync-pending: fetch failed for {sq_order_id}: {e}')
+            continue
+
+        tenders = sq_order.tenders or []
+        if not tenders or not tenders[0].payment_id:
+            continue
+        payment_id = tenders[0].payment_id
+        try:
+            payment = client.payments.get(payment_id=payment_id).payment
+        except ApiError as e:
+            logger.warning(f'sync-pending: payment fetch failed {payment_id}: {e}')
+            continue
+
+        if payment.status != 'COMPLETED':
+            continue
+        if expected_pence and payment.amount_money.amount != expected_pence:
+            logger.warning(
+                f'sync-pending: amount mismatch on {order.get("order_number")}: '
+                f'expected {expected_pence}, Square says {payment.amount_money.amount}'
+            )
+            continue
+
+        r = await db.orders.update_one(
+            {'id': order['id'], 'payment_status': {'$ne': 'paid'}},
+            {'$set': {
+                'payment_status': 'paid',
+                'paid_at': now.isoformat(),
+                'square_payment_id': payment_id,
+                'payment_provider': 'square',
+                'updated_at': now,
+                'reconciled_via': 'admin-sync',
+            }},
+        )
+        if r.modified_count:
+            updated += 1
+            now_paid += 1
+            changes.append({
+                'order_number': order.get('order_number'),
+                'from': order.get('payment_status'),
+                'to': 'paid',
+            })
+            try:
+                from email_service import send_order_emails
+                fresh = await db.orders.find_one({'id': order['id']})
+                if fresh:
+                    await send_order_emails(fresh)
+            except Exception as e:
+                logger.warning(f'sync-pending: email send failed for {order.get("order_number")} (non-fatal): {e}')
+
+    return {
+        'checked': checked,
+        'updated': updated,
+        'now_paid': now_paid,
+        'changes': changes,
+    }
 
 
 # ------------------------------------------------------------- CONFIG PROBE
