@@ -180,6 +180,7 @@ export const Ambassadors = {
   // Admin
   adminList: () => api.get('/ambassadors/admin').then(r => r.data),
   adminGet: (id) => api.get(`/ambassadors/admin/${id}`).then(r => r.data),
+  resendWelcome: (id) => api.post(`/ambassadors/admin/${id}/resend-welcome`).then(r => r.data),
   adminCreate: (data) => api.post('/ambassadors/admin', data).then(r => r.data),
   adminUpdate: (id, data) => api.put(`/ambassadors/admin/${id}`, data).then(r => r.data),
   adminRemove: (id) => api.delete(`/ambassadors/admin/${id}`).then(r => r.data),

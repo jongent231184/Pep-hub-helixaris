@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Ambassadors } from '../../lib/api';
-import { Loader2, Plus, Trash2, PoundSterling, ChevronRight, X, CheckCircle2 } from 'lucide-react';
+import { Loader2, Plus, Trash2, PoundSterling, ChevronRight, X, CheckCircle2, Mail } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
@@ -287,7 +287,30 @@ const AdminAmbassadors = () => {
                 <h2 className="text-xl font-black uppercase">{selected.user.first_name} {selected.user.last_name}</h2>
                 <p className="text-xs text-slate-500 font-mono">{selected.user.ambassador_code} · {selected.user.email}</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={closeDetail}><X className="h-5 w-5" /></Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 border-sky-200 text-sky-700 hover:bg-sky-50"
+                  onClick={async () => {
+                    try {
+                      const res = await Ambassadors.resendWelcome(selected.user.id);
+                      toast({ title: 'Welcome email sent', description: `Delivered to ${res.sent_to}` });
+                    } catch (e) {
+                      toast({
+                        title: 'Send failed',
+                        description: String(e.response?.data?.detail || e.message),
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                  data-testid={`resend-welcome-${selected.user.ambassador_code}`}
+                  title="Resend the branded welcome email with login link and referral code"
+                >
+                  <Mail className="h-4 w-4" /> Resend welcome
+                </Button>
+                <Button variant="ghost" size="icon" onClick={closeDetail}><X className="h-5 w-5" /></Button>
+              </div>
             </div>
 
             <div className="p-6 space-y-6">

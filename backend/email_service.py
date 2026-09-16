@@ -591,3 +591,154 @@ async def send_coaching_request_email(req: dict) -> None:
         logger.info(f'coaching notify sent to {coach_email}: {res.get("id")}')
     except Exception as e:
         logger.error(f'coaching notify failed: {e}')
+
+
+# --------------------------------------------------------- AMBASSADOR WELCOME
+
+async def send_ambassador_welcome(user: dict, temp_password: Optional[str] = None) -> Optional[str]:
+    """Send a branded welcome email to a newly-created (or re-onboarded)
+    ambassador with their login URL, referral code, share link and dashboard.
+
+    Returns the Resend message id on success, None on failure — never raises,
+    so a delivery hiccup can't fail the admin's create-ambassador request.
+
+    Args:
+        user: The user document (must contain email, ambassador_code, and
+              ideally first_name + commission_rate + customer_discount).
+        temp_password: If the admin created the account with a fresh password,
+                       pass it here to be included in the email so the
+                       ambassador doesn't have to guess. Optional.
+    """
+    if not _init_resend():
+        logger.warning('ambassador welcome skipped: RESEND_API_KEY not set')
+        return None
+
+    email = (user.get('email') or '').strip()
+    if not email:
+        logger.warning('ambassador welcome skipped: no email on user record')
+        return None
+
+    first_name = (user.get('first_name') or '').strip()
+    greeting = f'Welcome, {first_name}!' if first_name else 'Welcome to the team!'
+    code = (user.get('ambassador_code') or '').strip().upper()
+    commission = float(user.get('commission_rate') or 0)
+    discount = float(user.get('customer_discount') or 0)
+    login_url = f'{BUSINESS_URL}/login'
+    dashboard_url = f'{BUSINESS_URL}/ambassador'
+    share_url = f'{BUSINESS_URL}/?ref={code}' if code else BUSINESS_URL
+
+    password_block = ''
+    if temp_password:
+        password_block = f"""
+            <tr>
+              <td style="padding:6px 0;color:#64748b;width:140px;">Temporary password</td>
+              <td style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">
+                <span style="background:#fef3c7;padding:2px 8px;border-radius:4px;color:#92400e;">{temp_password}</span>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding:4px 0 0 0;font-size:11px;color:#94a3b8;">
+                Please change this after your first login.
+              </td>
+            </tr>
+        """
+
+    html = f"""
+<div style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;background:#f8fafc;padding:24px;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+    <div style="background:#0f172a;color:#ffffff;padding:24px 28px;">
+      <table role="presentation" width="100%" style="border-collapse:collapse;">
+        <tr>
+          <td valign="middle" style="width:56px;">
+            <img src="{LOGO_URL}" alt="{BUSINESS_NAME}" width="48" height="48" style="display:block;border-radius:6px;" />
+          </td>
+          <td valign="middle" style="padding-left:14px;">
+            <div style="font-size:20px;font-weight:800;letter-spacing:0.5px;">{BUSINESS_NAME}</div>
+            <div style="font-size:11px;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-top:2px;">Ambassador Programme</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="padding:32px 28px;color:#0f172a;">
+      <h1 style="margin:0 0 8px 0;font-size:24px;font-weight:900;">{greeting}</h1>
+      <p style="margin:0 0 20px 0;font-size:15px;color:#475569;line-height:1.55;">
+        You're set up as a {BUSINESS_NAME} ambassador. Your dashboard, referral
+        code and commission tracking are ready to go.
+      </p>
+
+      <!-- Referral code card -->
+      <div style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border:1px solid #bae6fd;border-radius:10px;padding:20px;margin-bottom:24px;text-align:center;">
+        <p style="margin:0 0 8px 0;font-size:11px;color:#0369a1;letter-spacing:2px;text-transform:uppercase;font-weight:800;">Your referral code</p>
+        <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:28px;font-weight:900;color:#0c4a6e;letter-spacing:3px;margin:4px 0 10px 0;">{code or '—'}</div>
+        <p style="margin:0;font-size:12px;color:#0369a1;">
+          Customers using your code get <strong>{discount:.0f}% off</strong> · You earn <strong>{commission:.0f}% commission</strong>
+        </p>
+      </div>
+
+      <!-- Login credentials -->
+      <h2 style="margin:0 0 12px 0;font-size:14px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;color:#0f172a;">Log in to your portal</h2>
+      <table role="presentation" style="border-collapse:collapse;font-size:14px;margin-bottom:16px;">
+        <tr>
+          <td style="padding:6px 0;color:#64748b;width:140px;">Login URL</td>
+          <td><a href="{login_url}" style="color:#0284c7;text-decoration:none;">{login_url}</a></td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#64748b;">Email</td>
+          <td style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">{email}</td>
+        </tr>
+        {password_block}
+      </table>
+
+      <div style="margin:24px 0;">
+        <a href="{login_url}" style="display:inline-block;background:#0284c7;color:#ffffff;font-weight:800;text-transform:uppercase;letter-spacing:0.6px;font-size:13px;padding:12px 24px;border-radius:6px;text-decoration:none;">Log in to your dashboard →</a>
+      </div>
+
+      <!-- Share section -->
+      <div style="background:#f8fafc;border-left:3px solid #10b981;padding:14px 16px;margin:24px 0;border-radius:4px;">
+        <p style="margin:0 0 6px 0;font-size:11px;color:#059669;letter-spacing:1px;text-transform:uppercase;font-weight:800;">Share your link</p>
+        <p style="margin:0 0 8px 0;font-size:13px;color:#334155;line-height:1.5;">
+          Send this link to friends and followers — orders through it are automatically tracked to you.
+        </p>
+        <a href="{share_url}" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#0284c7;word-break:break-all;">{share_url}</a>
+      </div>
+
+      <!-- What to expect -->
+      <h2 style="margin:24px 0 12px 0;font-size:14px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;color:#0f172a;">What's in your dashboard</h2>
+      <ul style="margin:0 0 16px 0;padding-left:20px;color:#475569;font-size:14px;line-height:1.6;">
+        <li>Every order placed with your code — live tracking</li>
+        <li>Commission earned to date + pending payout balance</li>
+        <li>Payout history once we've settled with you</li>
+        <li>Your unique share link and referral analytics</li>
+      </ul>
+
+      <p style="margin:24px 0 0 0;font-size:13px;color:#64748b;line-height:1.55;">
+        Any questions? Just reply to this email or write to
+        <a href="mailto:{ADMIN_NOTIFY_EMAIL}" style="color:#0284c7;">{ADMIN_NOTIFY_EMAIL}</a>.
+      </p>
+    </div>
+
+    <div style="background:#f1f5f9;padding:16px 28px;font-size:11px;color:#94a3b8;text-align:center;line-height:1.6;">
+      {BUSINESS_NAME} · Products supplied strictly for laboratory research use only.<br/>
+      This email was sent because you were added as a {BUSINESS_NAME} ambassador.
+    </div>
+  </div>
+</div>
+""".strip()
+
+    try:
+        params = {
+            'from': f'{BUSINESS_NAME} <{FROM_EMAIL}>',
+            'to': [email],
+            'reply_to': [ADMIN_NOTIFY_EMAIL],
+            'subject': f"You're in — welcome to the {BUSINESS_NAME} ambassador programme",
+            'html': html,
+        }
+        res = await asyncio.to_thread(resend.Emails.send, params)
+        msg_id = res.get('id')
+        logger.info(f'ambassador welcome sent to {email} · id={msg_id}')
+        return msg_id
+    except Exception as e:
+        logger.error(f'ambassador welcome failed for {email}: {e}')
+        return None
+

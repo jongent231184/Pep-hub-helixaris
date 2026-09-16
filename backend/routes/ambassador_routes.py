@@ -16,6 +16,7 @@ Ambassador endpoints (require_ambassador):
 - GET /api/ambassadors/payouts      History of payouts received
 """
 from datetime import datetime
+import logging
 import uuid
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
@@ -150,10 +151,36 @@ async def create_ambassador(payload: AmbassadorCreate, _=Depends(require_admin))
     await db.users.insert_one(user_doc)
     await _upsert_promo_for_ambassador(code, payload.customer_discount, active=True)
 
+    # Fire welcome email (async, non-blocking). Failure is logged inside the
+    # email service — never bubbles up to fail the admin's create request.
+    try:
+        from email_service import send_ambassador_welcome
+        await send_ambassador_welcome(user_doc, temp_password=payload.password)
+    except Exception as e:
+        # Belt-and-braces — email_service already swallows its own errors,
+        # but if import itself fails we still don't want to fail the create.
+        logger = logging.getLogger('ghp.ambassador')
+        logger.warning(f'ambassador welcome dispatch errored (non-fatal): {e}')
+
     return {
         'user': doc_to_dict(user_doc),
         'earnings': await _compute_earnings(user_doc['id'], code, payload.commission_rate),
     }
+
+
+@router.post('/admin/{ambassador_id}/resend-welcome')
+async def resend_welcome(ambassador_id: str, _=Depends(require_admin)):
+    """Manually re-fire the welcome email (without a password — we don't
+    store plaintext passwords). Useful for the ones created before the
+    automated flow existed."""
+    from email_service import send_ambassador_welcome
+    d = await db.users.find_one({'id': ambassador_id, 'role': 'ambassador'})
+    if not d:
+        raise HTTPException(404, 'Ambassador not found')
+    msg_id = await send_ambassador_welcome(d, temp_password=None)
+    if not msg_id:
+        raise HTTPException(502, 'Could not send welcome email — check RESEND_API_KEY / logs')
+    return {'ok': True, 'message_id': msg_id, 'sent_to': d.get('email')}
 
 
 @router.get('/admin')
