@@ -33,19 +33,30 @@ logger = logging.getLogger('ghp.square')
 router = APIRouter(prefix='/square', tags=['square'])
 
 
-def _verify_square_signature(*, body: bytes, header_sig: str, signing_key: str, notification_url: str) -> bool:
+def _verify_square_signature(*, body: bytes, header_sig: str, signing_keys: list, notification_urls: list) -> bool:
     """Square's webhook signature is HMAC-SHA256 of (URL + raw body), base64.
 
-    See https://developer.squareup.com/docs/webhooks/step3validate — we do the
-    HMAC ourselves so we don't depend on the SDK helper module path (which has
-    moved between SDK versions).
+    Both the signing key and the notification URL must match what Square
+    registered on the subscription. Since we run the same code across two
+    pods with two subscriptions (preview URL + live URL), the caller passes
+    all candidate keys and URLs — we return True as soon as any pair matches.
+
+    See https://developer.squareup.com/docs/webhooks/step3validate
     """
-    if not header_sig or not signing_key or not notification_url:
+    if not header_sig:
         return False
-    payload = (notification_url + body.decode('utf-8')).encode('utf-8')
-    digest = hmac.new(signing_key.encode('utf-8'), payload, hashlib.sha256).digest()
-    expected = base64.b64encode(digest).decode('utf-8')
-    return hmac.compare_digest(expected, header_sig)
+    for url in notification_urls:
+        if not url:
+            continue
+        payload = (url + body.decode('utf-8')).encode('utf-8')
+        for key in signing_keys:
+            if not key:
+                continue
+            digest = hmac.new(key.encode('utf-8'), payload, hashlib.sha256).digest()
+            expected = base64.b64encode(digest).decode('utf-8')
+            if hmac.compare_digest(expected, header_sig):
+                return True
+    return False
 
 _client: Optional[Square] = None
 _location_id: Optional[str] = None
@@ -196,18 +207,21 @@ async def webhook(request: Request):
 
     raw = await request.body()
     signature = request.headers.get('x-square-hmacsha256-signature', '')
-    # The exact notification URL registered in Square — must match byte-for-byte.
-    notification_url = cfg['webhook_url'] or str(request.url)
+    # Try every URL/key pair — supports two subscriptions (preview + live) on
+    # the same code and defends against any ingress URL rewriting.
+    urls = [u.strip() for u in cfg['webhook_url'].split(',') if u.strip()] or [str(request.url)]
+    urls.append(str(request.url))  # always include the raw request URL as a fallback
+    keys = [k.strip() for k in cfg['signature_key'].split(',') if k.strip()]
 
     valid = _verify_square_signature(
         body=raw,
         header_sig=signature,
-        signing_key=cfg['signature_key'],
-        notification_url=notification_url,
+        signing_keys=keys,
+        notification_urls=urls,
     )
 
     if not valid:
-        logger.warning(f'Rejected Square webhook — bad signature. url={notification_url}')
+        logger.warning(f'Rejected Square webhook — bad signature. tried urls={urls}')
         raise HTTPException(401, 'Invalid signature')
 
     event = await request.json()
