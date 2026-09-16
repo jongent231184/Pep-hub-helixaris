@@ -22,6 +22,7 @@ from routes.admin_routes import router as admin_router  # noqa: E402
 from routes.promo_routes import router as promo_router  # noqa: E402
 from routes.address_routes import router as address_router  # noqa: E402
 from routes.wallid_routes import router as wallid_router  # noqa: E402
+from routes.square_routes import router as square_router  # noqa: E402
 from routes.dose_plan_routes import router as dose_plan_router  # noqa: E402
 from routes.ambassador_routes import router as ambassador_router  # noqa: E402
 from routes.coa_routes import router as coa_router  # noqa: E402
@@ -87,6 +88,7 @@ api_router.include_router(admin_router)
 api_router.include_router(promo_router)
 api_router.include_router(address_router)
 api_router.include_router(wallid_router)
+api_router.include_router(square_router)
 api_router.include_router(dose_plan_router)
 api_router.include_router(ambassador_router)
 api_router.include_router(coa_router)

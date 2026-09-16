@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
 import { useToast } from '../hooks/use-toast';
-import { Lock, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Lock, Loader2, AlertTriangle, RefreshCw, CreditCard } from 'lucide-react';
 import { Checkbox } from '../components/ui/checkbox';
 import BankTrustBadges from '../components/BankTrustBadges';
 import RedirectingOverlay from '../components/RedirectingOverlay';
@@ -33,6 +33,45 @@ const Checkout = () => {
   const [createdOrder, setCreatedOrder] = useState(null);
   const [wallidFailed, setWallidFailed] = useState(false);
   const [complianceConfirmed, setComplianceConfirmed] = useState(false);
+  const [squareConfig, setSquareConfig] = useState(null);
+  const [squareLoading, setSquareLoading] = useState(false);
+
+  // Probe Square config once — controls whether the Pay-by-Card button renders.
+  useEffect(() => {
+    fetch(`${process.env.REACT_APP_BACKEND_URL}/api/square/config`)
+      .then(r => r.ok ? r.json() : null)
+      .then(setSquareConfig)
+      .catch(() => setSquareConfig({ configured: false }));
+  }, []);
+
+  const payWithSquare = async () => {
+    if (!createdOrder) return;
+    setSquareLoading(true);
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/square/create-checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: createdOrder.id }),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail.detail || 'Could not start card payment');
+      }
+      const { url } = await res.json();
+      // Same pending-order stash pattern as Wallid so we survive a redirect back
+      try {
+        localStorage.setItem(PENDING_ORDER_STORAGE_KEY, JSON.stringify({
+          id: createdOrder.id,
+          order_number: createdOrder.order_number,
+          created_at: Date.now(),
+        }));
+      } catch (_) { /* ignore */ }
+      window.location.href = url;
+    } catch (err) {
+      toast({ title: 'Could not start card payment', description: err.message, variant: 'destructive' });
+      setSquareLoading(false);
+    }
+  };
   const [form, setForm] = useState({
     email: '', firstName: '', lastName: '', phone: '',
     address1: '', address2: '', city: '', postcode: '', country: 'United Kingdom',
@@ -531,6 +570,41 @@ const Checkout = () => {
                       Instant secure transfer from your bank · No card details required
                     </p>
                     <BankTrustBadges />
+
+                    {/* Alternative: Pay by Card / Apple Pay / Google Pay via Square */}
+                    {squareConfig?.configured && (
+                      <>
+                        <div className="relative my-6" data-testid="checkout-payment-divider">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-slate-200"></div>
+                          </div>
+                          <div className="relative flex justify-center">
+                            <span className="bg-white px-3 text-[11px] uppercase tracking-widest text-slate-500 font-bold">
+                              or
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={payWithSquare}
+                          disabled={squareLoading || !complianceConfirmed}
+                          variant="outline"
+                          className="w-full h-14 border-2 border-slate-900 bg-white hover:bg-slate-900 hover:text-white text-slate-900 font-bold uppercase tracking-wider text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                          data-testid="square-pay-btn"
+                        >
+                          {squareLoading
+                            ? <Loader2 className="h-5 w-5 animate-spin" />
+                            : (
+                              <>
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Pay by Card · £{Number(createdOrder?.total || 0).toFixed(2)}
+                              </>
+                            )}
+                        </Button>
+                        <p className="text-xs text-slate-500 mt-2 text-center">
+                          Visa · Mastercard · Amex · Apple Pay · Google Pay
+                        </p>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="border border-amber-200 bg-amber-50 rounded p-4 text-sm text-amber-900">
