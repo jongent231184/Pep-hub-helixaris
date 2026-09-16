@@ -280,3 +280,79 @@ async def public_config():
     cfg = _cfg()
     configured = bool(cfg['token'] and cfg['signature_key'])
     return {'configured': configured, 'env': cfg['env']}
+
+
+# ------------------------------------------------------------- RECONCILE
+
+class ReconcileBody(BaseModel):
+    order_id: str
+
+
+@router.post('/reconcile')
+async def reconcile(body: ReconcileBody):
+    """Safety-net poller — called by the order-confirmation page on load if the
+    order still looks unpaid. Fetches the Square order + payment directly and
+    marks the local order paid if Square confirms COMPLETED. Idempotent."""
+    order = await db.orders.find_one({'id': body.order_id})
+    if not order:
+        raise HTTPException(404, 'Order not found')
+    if order.get('payment_status') == 'paid':
+        return {'status': 'paid', 'source': 'already-paid'}
+    sq_order_id = order.get('square_order_id')
+    if not sq_order_id:
+        # No Square link on this order — nothing to reconcile against.
+        return {'status': order.get('payment_status') or 'pending', 'source': 'no-square-link'}
+
+    try:
+        client = _client_singleton()
+        sq_order = client.orders.get(order_id=sq_order_id).order
+    except ApiError as e:
+        logger.warning(f'reconcile: could not fetch Square order {sq_order_id}: {e}')
+        return {'status': 'pending', 'source': 'square-fetch-failed'}
+
+    # tender[0].payment_id is populated once Square has authorised the card.
+    tenders = sq_order.tenders or []
+    if not tenders or not tenders[0].payment_id:
+        return {'status': 'pending', 'source': 'no-tender-yet'}
+
+    payment_id = tenders[0].payment_id
+    try:
+        payment = client.payments.get(payment_id=payment_id).payment
+    except ApiError as e:
+        logger.warning(f'reconcile: could not fetch payment {payment_id}: {e}')
+        return {'status': 'pending', 'source': 'payment-fetch-failed'}
+
+    if payment.status != 'COMPLETED':
+        return {'status': 'pending', 'source': f'square-status={payment.status}'}
+
+    # Amount tamper check — same rule as the webhook path.
+    expected_pence = order.get('square_amount_pence')
+    if expected_pence and payment.amount_money.amount != expected_pence:
+        logger.warning(
+            f'reconcile: amount mismatch — expected {expected_pence}, '
+            f'Square says {payment.amount_money.amount} for order {body.order_id}'
+        )
+        return {'status': 'pending', 'source': 'amount-mismatch'}
+
+    now = datetime.now(timezone.utc)
+    r = await db.orders.update_one(
+        {'id': body.order_id, 'payment_status': {'$ne': 'paid'}},
+        {'$set': {
+            'payment_status': 'paid',
+            'paid_at': now.isoformat(),
+            'square_payment_id': payment_id,
+            'payment_provider': 'square',
+            'updated_at': now,
+            'reconciled_via': 'poll',
+        }},
+    )
+    if r.modified_count:
+        logger.info(f'reconcile: order {body.order_id} marked paid via poll (payment {payment_id})')
+        try:
+            from email_service import send_order_emails
+            fresh = await db.orders.find_one({'id': body.order_id})
+            if fresh:
+                await send_order_emails(fresh)
+        except Exception as e:
+            logger.warning(f'reconcile: post-payment email failed (non-fatal): {e}')
+    return {'status': 'paid', 'source': 'poll-reconciled', 'payment_id': payment_id}

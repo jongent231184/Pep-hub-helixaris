@@ -55,6 +55,50 @@ const OrderConfirmation = () => {
       .finally(() => setLoading(false));
   }, [orderId]);
 
+  // Self-healing (Square): if the order has a Square link but is still
+  // pending on page load, poll /api/square/reconcile. This covers the case
+  // where webhooks haven't landed (e.g. on preview environments where the
+  // edge blocks external POSTs).
+  useEffect(() => {
+    if (!order) return;
+    if (order.payment_status === 'paid') return;
+    if (!order.square_order_id) return;
+
+    setVerifying(true);
+    let attempts = 0;
+    const MAX = 8; // ~32s
+
+    const tick = async () => {
+      attempts += 1;
+      try {
+        const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/square/reconcile`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: order.id }),
+        }).then(r => r.json());
+        if (res.status === 'paid') {
+          const fresh = await Orders.get(order.id);
+          applyOrder(fresh);
+          setVerifying(false);
+          if (pollRef.current) clearInterval(pollRef.current);
+          return;
+        }
+        if (attempts >= MAX) {
+          setVerifying(false);
+          if (pollRef.current) clearInterval(pollRef.current);
+        }
+      } catch (_) {
+        if (attempts >= MAX) {
+          setVerifying(false);
+          if (pollRef.current) clearInterval(pollRef.current);
+        }
+      }
+    };
+    tick();
+    pollRef.current = setInterval(tick, 4000);
+    return () => pollRef.current && clearInterval(pollRef.current);
+  }, [order]);
+
   // Self-healing: if the customer came back from Wallid but the webhook
   // hasn't marked the order paid yet (or the webhook isn't configured),
   // poll /api/wallid/verify-status every 4s for up to 30s.
