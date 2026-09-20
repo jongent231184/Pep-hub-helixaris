@@ -572,6 +572,8 @@ const Checkout = () => {
                     <BankTrustBadges />
 
                     {/* Alternative: Pay by Card / Apple Pay / Google Pay via Square */}
+                    {/* TEMPORARILY DISABLED — waiting on merchant compliance sign-off.
+                        Re-enable by restoring the original <Button onClick={payWithSquare} /> block. */}
                     {squareConfig?.configured && (
                       <>
                         <div className="relative my-6" data-testid="checkout-payment-divider">
@@ -585,23 +587,18 @@ const Checkout = () => {
                           </div>
                         </div>
                         <Button
-                          onClick={payWithSquare}
-                          disabled={squareLoading || !complianceConfirmed}
+                          disabled
                           variant="outline"
-                          className="w-full h-14 border-2 border-slate-900 bg-white hover:bg-slate-900 hover:text-white text-slate-900 font-bold uppercase tracking-wider text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                          data-testid="square-pay-btn"
+                          className="w-full h-14 border-2 border-slate-300 bg-slate-100 text-slate-400 font-bold uppercase tracking-wider text-base cursor-not-allowed"
+                          data-testid="square-pay-btn-disabled"
+                          aria-disabled="true"
+                          title="Card payments are temporarily unavailable"
                         >
-                          {squareLoading
-                            ? <Loader2 className="h-5 w-5 animate-spin" />
-                            : (
-                              <>
-                                <CreditCard className="h-4 w-4 mr-2" />
-                                Pay by Card · £{Number(createdOrder?.total || 0).toFixed(2)}
-                              </>
-                            )}
+                          <CreditCard className="h-4 w-4 mr-2" />
+                          Pay by Card · Coming soon
                         </Button>
-                        <p className="text-xs text-slate-500 mt-2 text-center">
-                          Visa · Mastercard · Amex · Apple Pay · Google Pay
+                        <p className="text-xs text-slate-500 mt-2 text-center" data-testid="square-disabled-note">
+                          Card / Apple Pay / Google Pay temporarily unavailable — please use Pay by Bank above.
                         </p>
                       </>
                     )}
