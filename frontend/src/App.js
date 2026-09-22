@@ -22,6 +22,7 @@ import Bundles from './pages/Bundles';
 import Search from './pages/Search';
 import Wholesale from './pages/Wholesale';
 import Terms from './pages/Terms';
+import ResearchUsePolicy from './pages/ResearchUsePolicy';
 import PeptideCalculator from './pages/PeptideCalculator';
 import Coa from './pages/Coa';
 
@@ -142,6 +143,7 @@ function App() {
               <Route path="/search" element={<Search />} />
               <Route path="/wholesale" element={<Wholesale />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/research-use-policy" element={<ResearchUsePolicy />} />
               <Route path="/peptide-calculator" element={<PeptideCalculator />} />
               <Route path="/coa" element={<Coa />} />
               <Route path="/coas" element={<Coa />} />
