@@ -158,8 +158,9 @@ const AdminProductForm = () => {
             </Select>
           </div>
           <div>
-            <Label>Tagline (optional)</Label>
-            <Input value={form.tagline || ''} onChange={onField('tagline')} className="mt-1" />
+            <Label>Tagline <span className="text-xs text-amber-600 font-normal">(not shown publicly — compliance)</span></Label>
+            <Input value={form.tagline || ''} onChange={onField('tagline')} className="mt-1" placeholder="Internal-only note. Not rendered on the storefront." />
+            <p className="text-[11px] text-slate-500 mt-1">Marketing subtitles have been hidden from the public site to keep product pages inline with our research-use-only positioning. Field kept for admin reference only.</p>
           </div>
         </div>
 

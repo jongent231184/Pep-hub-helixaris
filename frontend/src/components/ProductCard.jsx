@@ -39,9 +39,8 @@ const ProductCard = ({ product }) => {
             {product.name}
           </h3>
         </Link>
-        {product.tagline && (
-          <p className="text-xs text-slate-500 mt-1">{product.tagline}</p>
-        )}
+        {/* Marketing subtitles (tagline) removed from public view — kept in DB/admin only.
+            Do NOT re-render tagline here without a compliance review. */}
         <div className="mt-2 mb-3">
           {hasPrice ? (
             <div className="flex items-baseline gap-2">

@@ -122,9 +122,8 @@ const ProductDetail = () => {
 
           <div>
             <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight">{product.name}</h1>
-            {product.tagline && (
-              <p className="text-sky-600 font-semibold mt-2">{product.tagline}</p>
-            )}
+            {/* Marketing subtitles (tagline) removed from public product page — kept in DB/admin only.
+                Do NOT re-render tagline here without a compliance review. */}
 
             <div className="mt-6">
               {hasPrice ? (
