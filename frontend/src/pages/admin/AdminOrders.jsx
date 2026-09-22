@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Orders, Wallid, Square } from '../../lib/api';
-import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw, CreditCard } from 'lucide-react';
+import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw, CreditCard, FileText } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
@@ -27,6 +27,7 @@ const AdminOrders = () => {
   const [paylinkOpen, setPaylinkOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncingSquare, setSyncingSquare] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
   const { toast } = useToast();
 
   const load = () => Orders.all().then(setOrders).catch(() => setOrders([])).finally(() => setLoading(false));
@@ -98,6 +99,25 @@ const AdminOrders = () => {
       toast({ title: 'Delete failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleDownloadInvoice = async (order) => {
+    setDownloadingId(order.id);
+    try {
+      const blob = await Orders.downloadInvoicePdf(order.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Invoice-${order.order_number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      toast({ title: 'Invoice download failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -210,20 +230,36 @@ const AdminOrders = () => {
                   </td>
                   <td className="p-3"><span className={`px-2 py-1 rounded text-xs font-semibold uppercase ${statusColor(o.status)}`}>{o.status}</span></td>
                   <td className="p-3 text-right">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(o)}
-                      disabled={deletingId === o.id}
-                      title={`Delete order ${o.order_number}`}
-                      data-testid={`delete-order-${o.order_number}`}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8"
-                    >
-                      {deletingId === o.id
-                        ? <Loader2 className="h-4 w-4 animate-spin" />
-                        : <Trash2 className="h-4 w-4" />}
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDownloadInvoice(o)}
+                        disabled={downloadingId === o.id}
+                        title={`Download invoice PDF for ${o.order_number}`}
+                        data-testid={`download-invoice-${o.order_number}`}
+                        className="text-sky-600 hover:text-sky-700 hover:bg-sky-50 h-8 w-8"
+                      >
+                        {downloadingId === o.id
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <FileText className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(o)}
+                        disabled={deletingId === o.id}
+                        title={`Delete order ${o.order_number}`}
+                        data-testid={`delete-order-${o.order_number}`}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8"
+                      >
+                        {deletingId === o.id
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <Trash2 className="h-4 w-4" />}
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}

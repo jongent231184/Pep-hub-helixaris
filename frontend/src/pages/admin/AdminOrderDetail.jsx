@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
-import { ArrowLeft, Loader2, FileText, Trash2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Loader2, FileText, Trash2, RefreshCw, Download } from 'lucide-react';
 import PaymentSourceBadge from '../../components/PaymentSourceBadge';
 import { useToast } from '../../hooks/use-toast';
 
@@ -19,6 +19,7 @@ const AdminOrderDetail = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [status, setStatus] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('');
   const [notes, setNotes] = useState('');
@@ -45,6 +46,23 @@ const AdminOrderDetail = () => {
     } catch (e) {
       toast({ title: 'Update failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
     } finally { setSaving(false); }
+  };
+
+  const downloadInvoicePdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      const blob = await Orders.downloadInvoicePdf(order.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Invoice-${order.order_number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      toast({ title: 'Invoice PDF failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally { setDownloadingPdf(false); }
   };
 
   const syncFromWallid = async () => {
@@ -101,6 +119,17 @@ const AdminOrderDetail = () => {
           <Link to={`/admin/orders/${order.id}/invoice`}>
             <Button variant="outline" className="gap-2"><FileText className="h-4 w-4" /> View invoice</Button>
           </Link>
+          <Button
+            variant="outline"
+            className="gap-2 border-sky-300 text-sky-700 hover:bg-sky-50"
+            onClick={downloadInvoicePdf}
+            disabled={downloadingPdf}
+            data-testid="download-invoice-pdf-btn"
+            title="Download PDF invoice (for merchant / underwriting requests)"
+          >
+            {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            Download PDF
+          </Button>
           {order.wallid_api_payment_id && (
             <Button
               variant="outline"

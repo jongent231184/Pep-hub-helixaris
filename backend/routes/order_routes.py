@@ -1,8 +1,10 @@
 """Order routes."""
+import asyncio
 from datetime import datetime
 import uuid
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import Response
 from db import db
 from models import (
     OrderCreate, OrderOut, OrderStatusUpdate, CounterReset,
@@ -10,6 +12,7 @@ from models import (
 )
 from auth import get_current_user_optional, get_current_user, require_admin
 from utils import doc_to_dict
+from email_service import build_invoice_pdf
 
 router = APIRouter(prefix='/orders', tags=['orders'])
 
@@ -364,3 +367,24 @@ async def delete_order(order_id: str, _=Depends(require_admin)):
     if res.deleted_count == 0:
         raise HTTPException(404, 'Order not found')
     return {'ok': True}
+
+
+@router.get('/admin/{order_id}/invoice.pdf')
+async def admin_download_invoice_pdf(order_id: str, _=Depends(require_admin)):
+    """Admin-only: download the PDF invoice for any order.
+    Used to attach documentation to merchant / underwriting requests (Square, Xoalia)."""
+    doc = await db.orders.find_one({'$or': [{'id': order_id}, {'order_number': order_id}]})
+    if not doc:
+        raise HTTPException(404, 'Order not found')
+    try:
+        pdf_bytes = await asyncio.to_thread(build_invoice_pdf, doc)
+    except Exception as e:
+        raise HTTPException(500, f'Invoice generation failed: {e}')
+    order_number = doc.get('order_number') or order_id
+    return Response(
+        content=pdf_bytes,
+        media_type='application/pdf',
+        headers={
+            'Content-Disposition': f'attachment; filename="Invoice-{order_number}.pdf"',
+        },
+    )
