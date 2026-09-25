@@ -16,7 +16,7 @@ EMERGENT_LLM_KEY = os.environ["EMERGENT_LLM_KEY"]
 MODEL = "gemini-2.5-flash-image"
 
 PRODUCT = "ARA-290"
-STRENGTH = "16MG"
+STRENGTH = "10MG"
 
 
 def prompt():
