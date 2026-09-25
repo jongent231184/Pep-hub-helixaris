@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Layout from '../components/Layout';
+import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Coas, resolveImage } from '../lib/api';
 import { Loader2, FileText, Image as ImageIcon, Download, ExternalLink, Search, ShieldCheck } from 'lucide-react';
@@ -103,6 +104,10 @@ const Coa = () => {
 
   return (
     <Layout>
+      <SEO
+        title="Certificates of Analysis (COAs)"
+        description="Independent third-party Certificates of Analysis for every batch of peptides supplied by GHP Health. Each COA verifies purity by HPLC and mass spectrometry."
+      />
       <div className="max-w-7xl mx-auto px-4 py-10">
         <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Certificates of Analysis' }]} />
 

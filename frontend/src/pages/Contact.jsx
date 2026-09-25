@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Layout from '../components/Layout';
+import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -22,6 +23,10 @@ const Contact = () => {
 
   return (
     <Layout>
+      <SEO
+        title="Contact Us"
+        description="Contact GHP Health for wholesale enquiries, product questions or any other queries. UK-based research peptide supplier."
+      />
       <div className="max-w-5xl mx-auto px-4 py-10">
         <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Contact' }]} />
         <h1 className="text-4xl md:text-5xl font-black uppercase mt-6 mb-8">Contact Us</h1>

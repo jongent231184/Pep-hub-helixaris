@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
+import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Coaching } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -71,6 +72,10 @@ const Coaching_ = () => {
 
   return (
     <Layout>
+      <SEO
+        title="Coaching & Educational Support"
+        description="Educational wellness and lifestyle coaching from GHP Health. Coaches provide research-context education only, not medical or personal-use advice."
+      />
       <div className="max-w-6xl mx-auto px-4 py-10">
         <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Coaching' }]} />
 

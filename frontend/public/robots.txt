@@ -91,3 +91,8 @@ Disallow: /
 
 User-agent: Kangaroo Bot
 Disallow: /
+
+# ------------------------------------------------------------
+# Sitemap
+# ------------------------------------------------------------
+Sitemap: https://ghp-health.com/api/sitemap.xml

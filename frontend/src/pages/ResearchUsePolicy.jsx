@@ -1,5 +1,6 @@
 import React from 'react';
 import Layout from '../components/Layout';
+import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useStore } from '../context/StoreContext';
 import { BRAND } from '../config/brand';
@@ -19,6 +20,10 @@ const ResearchUsePolicy = () => {
 
   return (
     <Layout>
+      <SEO
+        title="Research-Use Policy"
+        description="GHP Health's Research-Use Policy. All products supplied strictly for in-vitro laboratory research and educational use only. Not for human consumption."
+      />
       <div className="max-w-3xl mx-auto px-4 py-10" data-testid="research-use-policy-page">
         <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Research-Use Policy' }]} />
         <h1 className="text-3xl md:text-4xl font-black uppercase mt-6 mb-2">Research-Use Policy</h1>

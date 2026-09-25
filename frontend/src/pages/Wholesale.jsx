@@ -1,9 +1,14 @@
 import React from 'react';
 import Layout from '../components/Layout';
+import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 
 const Wholesale = () => (
   <Layout>
+    <SEO
+      title="Wholesale Enquiries"
+      description="Wholesale enquiries welcome for research-grade peptides. Bulk pricing and bespoke arrangements available for qualified research organisations."
+    />
     <div className="max-w-3xl mx-auto px-4 py-10">
       <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Wholesale' }]} />
       <h1 className="text-4xl md:text-5xl font-black uppercase mt-6 mb-6">Wholesale</h1>

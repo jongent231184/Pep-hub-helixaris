@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Loader2, ShoppingBag } from 'lucide-react';
 import Layout from '../components/Layout';
 import Breadcrumbs from '../components/Breadcrumbs';
+import SEO from '../components/SEO';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Products, resolveImage } from '../lib/api';
@@ -100,6 +101,7 @@ const ProductDetail = () => {
 
   return (
     <Layout>
+      <SEO product={product} />
       <div className="max-w-7xl mx-auto px-4 py-10">
         <Breadcrumbs items={[
           { label: 'Home', to: '/' },

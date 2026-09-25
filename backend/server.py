@@ -33,6 +33,7 @@ from routes.coach_earnings_routes import router as coach_earnings_router  # noqa
 from routes.admin_product_desc_routes import router as admin_product_desc_router  # noqa: E402
 from routes.portal_routes import router as portal_router, ensure_default_portal_user_and_brands  # noqa: E402
 from routes.wallid_routes import start_wallid_poller  # noqa: E402
+from routes.seo_routes import router as seo_router  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s - %(message)s')
 logger = logging.getLogger('ghp')
@@ -50,11 +51,20 @@ app.add_middleware(
 )
 
 
-# Discourage AI training scrapers from consuming our API responses
+# Discourage AI training scrapers from consuming our API responses.
+# We DO want search engines to index public assets (product images, sitemap),
+# so allow-list those paths past this header.
+_INDEXABLE_PATH_PREFIXES = ('/api/sitemap.xml', '/api/uploads/')
+
 @app.middleware('http')
 async def _add_noai_header(request, call_next):
     response = await call_next(request)
-    response.headers['X-Robots-Tag'] = 'noindex, nofollow, noai, noimageai'
+    path = request.url.path or ''
+    if any(path.startswith(p) for p in _INDEXABLE_PATH_PREFIXES):
+        # Public SEO asset — do NOT block indexing, only opt out of AI training.
+        response.headers['X-Robots-Tag'] = 'noai, noimageai'
+    else:
+        response.headers['X-Robots-Tag'] = 'noindex, nofollow, noai, noimageai'
     return response
 
 # Static uploads are now served from Emergent Object Storage via the
@@ -98,6 +108,7 @@ api_router.include_router(admin_sales_router)
 api_router.include_router(coach_earnings_router)
 api_router.include_router(admin_product_desc_router)
 api_router.include_router(portal_router)
+api_router.include_router(seo_router)
 
 app.include_router(api_router)
 

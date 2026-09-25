@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, FlaskConical, BadgeCheck, Truck, ArrowRight, Loader2 } from 'lucide-react';
 import Layout from '../components/Layout';
+import SEO from '../components/SEO';
 import CategoryCard from '../components/CategoryCard';
 import ProductCard from '../components/ProductCard';
 import { useStore } from '../context/StoreContext';
@@ -19,6 +20,10 @@ const Home = () => {
 
   return (
     <Layout>
+      <SEO
+        title="Premium-Grade Research Peptides — Fast UK Dispatch"
+        description="GHP Health is a UK-based supplier of premium research-grade peptides, laboratory reagents, pens and vials. Every batch is HPLC + MS verified with an independent Certificate of Analysis. For laboratory research and educational use only."
+      />
       <section className="relative overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center"

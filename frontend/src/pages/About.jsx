@@ -1,10 +1,15 @@
 import React from 'react';
 import Layout from '../components/Layout';
+import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { FlaskConical, ShieldAlert, Scale } from 'lucide-react';
 
 const About = () => (
   <Layout>
+    <SEO
+      title="About GHP Health — UK Research Peptide Supplier"
+      description="UK-based supplier of premium research-grade peptides, laboratory reagents and consumables. Independent COAs on every batch. Supplied strictly for in-vitro research and educational use only."
+    />
     <div className="max-w-5xl mx-auto px-4 py-10">
       <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'About Us' }]} />
       <h1 className="text-4xl md:text-5xl font-black uppercase mt-6 mb-8">About Us</h1>

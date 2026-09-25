@@ -1,9 +1,14 @@
 import React from 'react';
 import Layout from '../components/Layout';
+import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 
 const Terms = () => (
   <Layout>
+    <SEO
+      title="Terms & Conditions"
+      description="Terms and conditions for GHP Health. All products supplied strictly for laboratory research and educational use only."
+    />
     <div className="max-w-3xl mx-auto px-4 py-10">
       <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Terms & Conditions' }]} />
       <h1 className="text-3xl md:text-4xl font-black uppercase mt-6 mb-6">Terms &amp; Conditions</h1>

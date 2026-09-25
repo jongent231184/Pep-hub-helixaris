@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Layout from '../components/Layout';
+import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -304,6 +305,10 @@ const PeptideCalculator = () => {
 
   return (
     <Layout>
+      <SEO
+        title="Peptide Reconstitution Calculator"
+        description="Free educational reconstitution & dilution calculator for researchers working with lyophilised peptides. Converts vial mass and reconstitution volume into a per-draw research volume."
+      />
       <div className="max-w-5xl mx-auto px-4 py-10">
         <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Peptide Calculator' }]} />
         <div className="mt-4 mb-6">

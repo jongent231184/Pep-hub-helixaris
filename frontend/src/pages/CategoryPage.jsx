@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import Layout from '../components/Layout';
+import SEO from '../components/SEO';
 import ProductCard from '../components/ProductCard';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useStore } from '../context/StoreContext';
@@ -53,6 +54,10 @@ const CategoryPage = () => {
 
   return (
     <Layout>
+      <SEO
+        title={`${cat.name} — Research Peptides`}
+        description={`Browse research-grade ${cat.name.toLowerCase()} at GHP Health. Every batch is HPLC + MS verified with an independent Certificate of Analysis. Supplied strictly for laboratory research and educational use only. Fast UK dispatch.`}
+      />
       <div className="max-w-7xl mx-auto px-4 py-10">
         <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: cat.name }]} />
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-6 mb-4 border-b pb-6">
