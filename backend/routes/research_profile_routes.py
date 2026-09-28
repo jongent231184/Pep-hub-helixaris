@@ -38,11 +38,11 @@ CLAUDE_MODEL = 'claude-sonnet-4-5-20250929'
 # phrasing. Instead we deterministically overwrite whatever the AI returns
 # with this line to guarantee a uniform statement across all product pages.
 CANONICAL_STORAGE_HANDLING = (
-    "Supplied as a lyophilised powder. Store sealed at -20 °C in a desiccated "
-    "environment prior to reconstitution. Reconstitute with sterile "
-    "bacteriostatic water under aseptic laboratory technique; store the "
-    "reconstituted solution at 2-8 °C and use within 30 days. For in-vitro "
-    "laboratory research only."
+    "Supplied as a lyophilised powder. Store sealed at 2-8 °C (standard "
+    "laboratory refrigeration) and use within 30 days of receipt. "
+    "Reconstitute with sterile bacteriostatic water under aseptic "
+    "laboratory technique; store the reconstituted solution at 2-8 °C "
+    "and use within 30 to 60 days. For in-vitro laboratory research only."
 )
 SYSTEM_MSG = (
     "You are a scientific writer for a UK research-peptide supplier. Every response must "
