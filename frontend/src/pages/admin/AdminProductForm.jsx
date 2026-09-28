@@ -18,7 +18,7 @@ const empty = {
   slug: '', name: '', category: '', price: 0, was_price: null, price_label: '',
   image: '', images: [], description: '', tagline: '', badge: '',
   options: [], variants: [], stock: 999, visible: true, featured: false,
-  research_profile: null,
+  research_profile: null, research_name: '',
 };
 
 const AdminProductForm = () => {
@@ -142,6 +142,21 @@ const AdminProductForm = () => {
         <div>
           <Label>Name</Label>
           <Input required value={form.name} onChange={handleNameChange} className="mt-1" />
+        </div>
+        <div>
+          <Label>
+            Scientific name <span className="text-xs text-slate-500 font-normal">(optional — for AI generation only, not shown publicly)</span>
+          </Label>
+          <Input
+            value={form.research_name || ''}
+            onChange={onField('research_name')}
+            className="mt-1"
+            placeholder="e.g. Cagrilintide, Tirzepatide, Retatrutide"
+            data-testid="research-name-input"
+          />
+          <p className="text-[11px] text-slate-500 mt-1">
+            Fill this in if the public name is obfuscated for SEO (e.g. <code>C4AGRI</code> → <code>Cagrilintide</code>). The AI Research-Profile generator uses this real name to find published literature.
+          </p>
         </div>
         <div>
           <Label>Slug</Label>

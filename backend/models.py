@@ -118,6 +118,11 @@ class ProductBase(BaseModel):
     visible: bool = True
     featured: bool = False
     research_profile: Optional[ResearchProfile] = None
+    # Optional real / scientific peptide name. Used only for AI research-profile
+    # generation when the storefront `name` is intentionally obfuscated for SEO
+    # (e.g. "C4AGRI" -> Cagrilintide, "Tirz3patide" -> Tirzepatide). Not shown
+    # publicly. Leave blank if the storefront name is already the real name.
+    research_name: Optional[str] = ''
 
 
 class ProductCreate(ProductBase):
@@ -142,6 +147,7 @@ class ProductUpdate(BaseModel):
     visible: Optional[bool] = None
     featured: Optional[bool] = None
     research_profile: Optional[ResearchProfile] = None
+    research_name: Optional[str] = None
 
 
 class ProductOut(ProductBase):

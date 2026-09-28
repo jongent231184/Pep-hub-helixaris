@@ -138,7 +138,8 @@ async def generate_profile_for_product(product_id: str, _=Depends(require_admin)
     doc = await db.products.find_one({'$or': [{'id': product_id}, {'slug': product_id}]})
     if not doc:
         raise HTTPException(404, 'Product not found')
-    name = doc.get('name') or doc.get('slug')
+    # Prefer the admin-supplied scientific name; fall back to storefront name / slug.
+    name = (doc.get('research_name') or '').strip() or doc.get('name') or doc.get('slug')
     data = await _generate_one(name)
     return GenerateResponse(ok=True, research_profile=data)
 
@@ -189,7 +190,7 @@ async def _run_bulk(overwrite: bool):
         for prod in products:
             pid = prod.get('id')
             slug = prod.get('slug')
-            name = prod.get('name')
+            name = (prod.get('research_name') or '').strip() or prod.get('name') or slug
             _BULK_JOB['last_slug'] = slug
             existing = prod.get('research_profile') or {}
             if not overwrite and isinstance(existing, dict) and (existing.get('overview') or '').strip():
