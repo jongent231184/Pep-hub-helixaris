@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { ArrowLeft, Loader2, Upload, X, Plus } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useStore } from '../../context/StoreContext';
+import ResearchProfileEditor, { EMPTY_PROFILE } from './ResearchProfileEditor';
 
 const slugify = (s) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
@@ -17,6 +18,7 @@ const empty = {
   slug: '', name: '', category: '', price: 0, was_price: null, price_label: '',
   image: '', images: [], description: '', tagline: '', badge: '',
   options: [], variants: [], stock: 999, visible: true, featured: false,
+  research_profile: null,
 };
 
 const AdminProductForm = () => {
@@ -193,6 +195,12 @@ const AdminProductForm = () => {
           <Label>Description</Label>
           <Textarea value={form.description || ''} onChange={onField('description')} rows={5} className="mt-1" />
         </div>
+
+        <ResearchProfileEditor
+          productId={form.id || productId}
+          value={form.research_profile}
+          onChange={(rp) => setForm((f) => ({ ...f, research_profile: rp }))}
+        />
 
         <div>
           <div className="flex items-center justify-between mb-2">

@@ -73,6 +73,33 @@ class ProductVariant(BaseModel):
     vial_strength_mg: Optional[float] = None  # for peptides — mg per vial (drives coach vial calculator)
 
 
+class ResearchReference(BaseModel):
+    citation: str
+    url: Optional[str] = None
+
+
+class ResearchProfile(BaseModel):
+    """Peptiology-style Research Profile — enriches the product page with
+    literature-grounded scientific content for SEO and educational depth.
+    All fields optional so any product can carry as much detail as it has."""
+    overview: Optional[str] = ''
+    molecular_class: Optional[str] = ''
+    molecular_formula: Optional[str] = ''
+    molecular_weight: Optional[str] = ''
+    sequence: Optional[str] = ''
+    receptor_target: Optional[str] = ''
+    signalling: Optional[str] = ''
+    study_systems: List[str] = Field(default_factory=list)
+    areas_of_research: List[str] = Field(default_factory=list)
+    key_finding: Optional[str] = ''
+    mechanism: Optional[str] = ''
+    limitations: Optional[str] = ''
+    open_questions: Optional[str] = ''
+    storage_handling: Optional[str] = ''
+    references: List[ResearchReference] = Field(default_factory=list)
+    pubmed_query: Optional[str] = ''  # phrase used for the PubMed deep-link
+
+
 class ProductBase(BaseModel):
     slug: str
     name: str
@@ -90,6 +117,7 @@ class ProductBase(BaseModel):
     stock: int = 999
     visible: bool = True
     featured: bool = False
+    research_profile: Optional[ResearchProfile] = None
 
 
 class ProductCreate(ProductBase):
@@ -113,6 +141,7 @@ class ProductUpdate(BaseModel):
     stock: Optional[int] = None
     visible: Optional[bool] = None
     featured: Optional[bool] = None
+    research_profile: Optional[ResearchProfile] = None
 
 
 class ProductOut(ProductBase):

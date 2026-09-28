@@ -34,6 +34,7 @@ from routes.admin_product_desc_routes import router as admin_product_desc_router
 from routes.portal_routes import router as portal_router, ensure_default_portal_user_and_brands  # noqa: E402
 from routes.wallid_routes import start_wallid_poller  # noqa: E402
 from routes.seo_routes import router as seo_router  # noqa: E402
+from routes.research_profile_routes import router as research_profile_router  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s - %(message)s')
 logger = logging.getLogger('ghp')
@@ -109,6 +110,7 @@ api_router.include_router(coach_earnings_router)
 api_router.include_router(admin_product_desc_router)
 api_router.include_router(portal_router)
 api_router.include_router(seo_router)
+api_router.include_router(research_profile_router)
 
 app.include_router(api_router)
 

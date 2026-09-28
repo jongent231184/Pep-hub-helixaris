@@ -48,6 +48,15 @@ export const Products = {
   create: (data) => api.post('/products', data).then(r => r.data),
   update: (id, data) => api.put(`/products/${id}`, data).then(r => r.data),
   remove: (id) => api.delete(`/products/${id}`).then(r => r.data),
+  // Admin: AI-generate Peptiology-style Research Profile for one product
+  generateResearchProfile: (id) =>
+    api.post(`/admin/products/${id}/research-profile:generate`).then(r => r.data),
+  // Admin: bulk-generate profiles (background job — returns immediately, poll status)
+  bulkGenerateResearchProfiles: (overwrite = false) =>
+    api.post(`/admin/products/research-profile:generate-all`, null, { params: { overwrite } }).then(r => r.data),
+  // Admin: poll status of the bulk research-profile job
+  bulkGenerateResearchStatus: () =>
+    api.get(`/admin/products/research-profile:job-status`).then(r => r.data),
 };
 
 export const Orders = {

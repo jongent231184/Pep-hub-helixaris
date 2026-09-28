@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Products, resolveImage } from '../../lib/api';
-import { Plus, Pencil, Trash2, Loader2, Eye, EyeOff, Check } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Eye, EyeOff, Check, Sparkles } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useToast } from '../../hooks/use-toast';
@@ -106,6 +106,44 @@ const AdminProducts = () => {
     refresh();
   };
 
+  const [bulkGenerating, setBulkGenerating] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState(null);
+
+  // Poll job status while a bulk run is active (and once on mount to reflect
+  // a run started from another admin tab).
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const s = await Products.bulkGenerateResearchStatus();
+        if (cancelled) return;
+        setBulkStatus(s);
+        setBulkGenerating(!!s.running);
+      } catch {
+        /* ignore */
+      }
+    };
+    tick();
+    const iv = setInterval(tick, 4000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, []);
+
+  const runBulkGenerate = async () => {
+    if (!window.confirm(
+      'This will use AI (Claude via Emergent LLM key) to generate a scientific Research Profile for every product that does not already have one.\n\n' +
+      'Products with an existing profile are skipped.\n\n' +
+      'The job runs in the background — you can leave this page and it will keep going. Continue?'
+    )) return;
+    setBulkGenerating(true);
+    try {
+      await Products.bulkGenerateResearchProfiles(false);
+      toast({ title: 'Bulk generation started', description: 'Runs in the background — refresh occasionally to see progress.' });
+    } catch (e) {
+      setBulkGenerating(false);
+      toast({ title: 'Could not start job', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    }
+  };
+
   const filtered = items
     .filter(p =>
       !query || p.name.toLowerCase().includes(query.toLowerCase()) || p.slug.includes(query.toLowerCase())
@@ -115,12 +153,49 @@ const AdminProducts = () => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight">Products</h1>
-        <Link to="/admin/products/new">
-          <Button className="bg-sky-500 hover:bg-sky-600 text-white gap-2"><Plus className="h-4 w-4" /> New Product</Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={runBulkGenerate}
+            disabled={bulkGenerating}
+            data-testid="bulk-generate-research-profiles"
+            className="gap-2 border-purple-300 text-purple-700 hover:bg-purple-50"
+          >
+            {bulkGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {bulkGenerating ? 'Generating…' : 'AI-fill research profiles'}
+          </Button>
+          <Link to="/admin/products/new">
+            <Button className="bg-sky-500 hover:bg-sky-600 text-white gap-2"><Plus className="h-4 w-4" /> New Product</Button>
+          </Link>
+        </div>
       </div>
+
+      {bulkStatus && (bulkStatus.running || bulkStatus.updated > 0 || bulkStatus.failed > 0) && (
+        <div
+          data-testid="bulk-generate-status"
+          className={`mb-4 rounded-lg px-4 py-3 border text-sm flex items-center gap-3 ${
+            bulkStatus.running
+              ? 'bg-purple-50 border-purple-200 text-purple-800'
+              : bulkStatus.failed > 0
+                ? 'bg-amber-50 border-amber-200 text-amber-900'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+          }`}
+        >
+          {bulkStatus.running && <Loader2 className="h-4 w-4 animate-spin shrink-0" />}
+          <div className="flex-1">
+            <p className="font-bold">
+              {bulkStatus.running ? 'Research-profile job running…' : 'Research-profile job complete'}
+            </p>
+            <p className="text-xs">
+              Updated <strong>{bulkStatus.updated}</strong> · Skipped <strong>{bulkStatus.skipped}</strong> · Failed <strong>{bulkStatus.failed}</strong> · Total <strong>{bulkStatus.total}</strong>
+              {bulkStatus.last_slug && <> · Latest: <code>{bulkStatus.last_slug}</code></>}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="mb-4">
         <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by name or slug…" className="max-w-md" />

@@ -4,6 +4,7 @@ import { Loader2, ShoppingBag } from 'lucide-react';
 import Layout from '../components/Layout';
 import Breadcrumbs from '../components/Breadcrumbs';
 import SEO from '../components/SEO';
+import ResearchProfileBlock from '../components/ResearchProfileBlock';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Products, resolveImage } from '../lib/api';
@@ -215,6 +216,8 @@ const ProductDetail = () => {
           <p className="text-slate-700 leading-relaxed whitespace-pre-line">{product.description}</p>
           <p className="text-xs text-slate-500 italic mt-6">For laboratory research use only. Not for human consumption.</p>
         </div>
+
+        <ResearchProfileBlock product={product} />
       </div>
     </Layout>
   );
