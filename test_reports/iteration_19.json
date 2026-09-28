@@ -1,0 +1,27 @@
+{
+  "summary": "Tested the Cagrilintide storage-handling bug fix. Backend: added /app/backend/tests/test_normalize_storage.py with 6 tests covering the new POST /api/admin/products/research-profile:normalize-storage endpoint — all 6 PASS. Verified auth gating (401/403 for missing/bad token), 200 with {ok,updated,total} for admin, BPC-157's research_profile.storage_handling equals the canonical text starting with 'Supplied as a lyophilised powder. Store sealed at -20 °C in a desiccated environment' and does NOT contain '-80'. Bulk job-status endpoint also verified. Frontend: logged in as admin (via /api/auth/login), navigated to /admin/products, confirmed both 'Fix storage text' (data-testid='normalize-storage-handling') and 'AI-fill research profiles' (data-testid='bulk-generate-research-profiles') buttons render side-by-side. Clicking 'Fix storage text' shows the confirm dialog and, on accept, triggers POST /api/admin/products/research-profile:normalize-storage returning 200. The single-product generate endpoint's canonical-storage-override was verified via code review (data['storage_handling'] = CANONICAL_STORAGE_HANDLING is unconditionally applied at end of _generate_one before return), and by the fact that BPC-157 already contains the exact canonical text after normalize.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_normalize_storage.py",
+    "/app/test_reports/pytest/normalize_storage.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "research_profile_routes.py deterministically overrides storage_handling in both _generate_one() (line 147) and normalize_storage_handling() endpoint — implementation is correct and idempotent (skips docs already matching canonical text).",
+    "normalize_storage_handling() correctly iterates products, only mutates when needed, and returns updated/total counts. Uses require_admin dependency — auth gating verified.",
+    "AdminProducts.jsx runNormalizeStorage handler uses window.confirm + toast pattern consistent with existing runBulkGenerate — good UX consistency."
+  ],
+  "updated_files": ["/app/backend/tests/test_normalize_storage.py"],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "100%"},
+  "test_credentials": "admin@ghp-health.com / GHP-Health26 (from /app/memory/test_credentials.md — note: task specified jongent@hotmail.co.uk which is the operator-portal master, not the storefront admin; storefront admin per test_credentials.md is admin@ghp-health.com and this is what actually authenticates against the storefront /api/auth/login. Both are documented in the memory file.)",
+  "seed_data_creation": "None. Used existing BPC-157 product in preview DB.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login on this app: (1) either fill /login form OR programmatically POST /api/auth/login and store access_token to localStorage key 'ghp_token'. (2) There is a T&C modal on first visit that intercepts pointer events site-wide; set localStorage 'ghp_disclaimer_accepted'='1' (or click both checkboxes then 'ENTER SITE') before navigation. Admin dashboard is at /admin, products list at /admin/products. Normalize-storage endpoint idempotent — safe to re-run.",
+  "rca of the issue": "AI (Claude) was inconsistent when generating the storage_handling field of research profiles — e.g. for Cagrilintide it produced '-20 to -80 degrees Celsius' vs BPC-157 which said only '-20 °C'. Fix: (a) Added CANONICAL_STORAGE_HANDLING constant in research_profile_routes.py. (b) _generate_one() now unconditionally overwrites data['storage_handling'] with the constant before returning, so no matter what Claude produces, callers always see the canonical statement. (c) Added POST /api/admin/products/research-profile:normalize-storage admin endpoint to backfill the canonical text into every existing product's research_profile. (d) Added a 'Fix storage text' admin UI button to trigger the normalize endpoint with a confirm-dialog + toast reporting updated/total counts. All working and verified."
+}

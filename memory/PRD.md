@@ -23,6 +23,7 @@ See `/app/memory/test_credentials.md`.
 ## What's live now (chronological)
 
 ### September 2026
+- ✅ **Canonical Storage & Handling text**: Storage line is now deterministic across all Research Profiles (fixes Cagrilintide "-20 to -80 °C" drift). Backend forces canonical text in AI generator, plus new admin "Fix storage text" button + endpoint to backfill existing profiles.
 - ✅ Helixaris oral peptides category DB fix
 - ✅ Local uploads → Object Storage with lazy DB hydration
 - ✅ Dual-repo mirror script
