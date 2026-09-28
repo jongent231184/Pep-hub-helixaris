@@ -57,6 +57,9 @@ export const Products = {
   // Admin: poll status of the bulk research-profile job
   bulkGenerateResearchStatus: () =>
     api.get(`/admin/products/research-profile:job-status`).then(r => r.data),
+  // Admin: rewrite storage_handling to the canonical text on every product
+  normalizeResearchStorage: () =>
+    api.post(`/admin/products/research-profile:normalize-storage`).then(r => r.data),
 };
 
 export const Orders = {

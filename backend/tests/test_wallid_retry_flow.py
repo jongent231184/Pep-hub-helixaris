@@ -16,7 +16,7 @@ import os
 import pytest
 import requests
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://ghp-ecommerce-pay.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://research-profile-seo.preview.emergentagent.com').rstrip('/')
 ADMIN_EMAIL = 'admin@ghp-health.com'
 ADMIN_PASSWORD = 'GHP-Health26'
 

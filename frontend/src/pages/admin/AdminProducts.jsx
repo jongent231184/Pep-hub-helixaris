@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Products, resolveImage } from '../../lib/api';
-import { Plus, Pencil, Trash2, Loader2, Eye, EyeOff, Check, Sparkles } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Eye, EyeOff, Check, Sparkles, Thermometer } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useToast } from '../../hooks/use-toast';
@@ -128,6 +128,23 @@ const AdminProducts = () => {
     return () => { cancelled = true; clearInterval(iv); };
   }, []);
 
+  const [normalizingStorage, setNormalizingStorage] = useState(false);
+  const runNormalizeStorage = async () => {
+    if (!window.confirm(
+      'Rewrite the "Storage & handling" text on every product to the canonical -20 °C statement?\n\n' +
+      'This does NOT touch any other Research Profile field. It only fixes inconsistent storage lines produced by earlier AI runs.'
+    )) return;
+    setNormalizingStorage(true);
+    try {
+      const res = await Products.normalizeResearchStorage();
+      toast({ title: 'Storage text normalized', description: `Updated ${res.updated} of ${res.total} products.` });
+    } catch (e) {
+      toast({ title: 'Normalize failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally {
+      setNormalizingStorage(false);
+    }
+  };
+
   const runBulkGenerate = async () => {
     if (!window.confirm(
       'This will use AI (Claude via Emergent LLM key) to generate a scientific Research Profile for every product that does not already have one.\n\n' +
@@ -156,6 +173,17 @@ const AdminProducts = () => {
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight">Products</h1>
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={runNormalizeStorage}
+            disabled={normalizingStorage}
+            data-testid="normalize-storage-handling"
+            className="gap-2 border-sky-300 text-sky-700 hover:bg-sky-50"
+          >
+            {normalizingStorage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Thermometer className="h-4 w-4" />}
+            {normalizingStorage ? 'Fixing…' : 'Fix storage text'}
+          </Button>
           <Button
             type="button"
             variant="outline"

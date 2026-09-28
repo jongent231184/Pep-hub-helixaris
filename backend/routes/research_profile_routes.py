@@ -31,6 +31,19 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 router = APIRouter(prefix='/admin/products', tags=['admin-research-profile'])
 
 CLAUDE_MODEL = 'claude-sonnet-4-5-20250929'
+
+# Canonical storage & handling text. This is the same for every research
+# peptide we supply, so we never trust the AI to generate it — the model has
+# been observed to drift (e.g. "-20 to -80 °C") and produce inconsistent
+# phrasing. Instead we deterministically overwrite whatever the AI returns
+# with this line to guarantee a uniform statement across all product pages.
+CANONICAL_STORAGE_HANDLING = (
+    "Supplied as a lyophilised powder. Store sealed at -20 °C in a desiccated "
+    "environment prior to reconstitution. Reconstitute with sterile "
+    "bacteriostatic water under aseptic laboratory technique; store the "
+    "reconstituted solution at 2-8 °C and use within 30 days. For in-vitro "
+    "laboratory research only."
+)
 SYSTEM_MSG = (
     "You are a scientific writer for a UK research-peptide supplier. Every response must "
     "describe the peptide as a laboratory research chemical only — never for human use, "
@@ -130,6 +143,8 @@ async def _generate_one(product_name: str) -> dict:
             for r in refs
             if isinstance(r, dict) and r.get('citation')
         ]
+    # Force canonical storage text — never trust the AI for this boilerplate.
+    data['storage_handling'] = CANONICAL_STORAGE_HANDLING
     return data
 
 
@@ -228,3 +243,32 @@ async def bulk_generate_profiles(background_tasks: BackgroundTasks, overwrite: b
 @router.get('/research-profile:job-status', response_model=JobStatus)
 async def bulk_generate_status(_=Depends(require_admin)):
     return JobStatus(**_BULK_JOB)
+
+
+class NormalizeStorageResponse(BaseModel):
+    ok: bool
+    updated: int
+    total: int
+
+
+@router.post('/research-profile:normalize-storage', response_model=NormalizeStorageResponse)
+async def normalize_storage_handling(_=Depends(require_admin)):
+    """Overwrite the storage_handling field on every product's research_profile
+    with the canonical text. Cheap, no AI cost — safe to run any time.
+    """
+    total = 0
+    updated = 0
+    async for prod in db.products.find({}):
+        total += 1
+        rp = prod.get('research_profile') or {}
+        if not isinstance(rp, dict) or not rp:
+            continue
+        if rp.get('storage_handling') == CANONICAL_STORAGE_HANDLING:
+            continue
+        rp['storage_handling'] = CANONICAL_STORAGE_HANDLING
+        await db.products.update_one(
+            {'id': prod.get('id')},
+            {'$set': {'research_profile': rp, 'updated_at': datetime.now(timezone.utc)}},
+        )
+        updated += 1
+    return NormalizeStorageResponse(ok=True, updated=updated, total=total)
