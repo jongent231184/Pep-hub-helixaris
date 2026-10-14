@@ -1,0 +1,23 @@
+{
+  "summary": "Full regression of the new Admin Customer Blocklist feature. Backend: 15/15 pytest cases pass covering auth gates, create/validate (postcode-only rejected, all-empty rejected), listing, enforcement on POST /api/orders via email/postcode+addr1/billing match (case & punctuation insensitive), neighbour-allowed scenario, hits/last_hit_at increment, create-from-order copying shipping + source_order_number, matching-orders inclusion, 404 on delete-unknown, and the paylink flow (POST /api/orders/paylink then PUT /api/orders/pay/{id}/address blocked->403 then clean->200). Frontend: /admin/orders renders both tabs (orders-tab-list, orders-tab-blocklist); Blocklist panel info box + form fields + table + unblock flow all work (toast 'Customer blocked', row appears, confirm-dialog delete removes the row and backend entry). Orders tab per-row ShieldBan icon opens prompt (handled via page.on('dialog')), submits reason, backend creates a from-order entry with source_order_number, UI then shows blocked-badge-{order_number} and the ban icon disappears. Order detail page correctly renders order-blocked-badge for blocked orders. Cleanup performed: all test blocklist entries deleted, all test orders deleted, counter reset so highest existing order GHP-043 is followed by GHP-044 (no gap).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": { "ui_bugs": [], "integration_issues": [], "design_issues": [] },
+  "test_report_links": [
+    "/app/backend/tests/test_blocklist.py",
+    "/app/test_reports/pytest/blocklist_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "blocklist.record_hit only records the shipping address even when the billing_address triggered the match — the last_hit_details therefore shows the clean shipping details, not the billing data that actually matched. Low priority but misleading when auditing hits.",
+    "find_block_match loads up to 2000 entries into memory on every checkout; fine today but worth paging/indexing (email, postcode) if the list grows."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_blocklist.py"
+  ],
+  "success_rate": { "backend": "100%", "frontend": "100%" },
+  "test_credentials": "admin@ghp-health.com / GHP-Health26 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "All created during tests (block entries + test orders) were cleaned up and the order counter was reset to next_seq=44 so numbering stays contiguous after GHP-043.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Blocklist feature end-to-end validated. Reusable backend regression lives in /app/backend/tests/test_blocklist.py — it self-aligns the order counter at the start (reset-counter to baseline+1) to avoid duplicate order_number collisions when the counter has drifted below existing orders, and it resets the counter back at the end. If re-running, prompt-dialog on the Orders tab requires page.on('dialog') to be registered BEFORE clicking the ban icon."
+}
