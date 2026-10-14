@@ -310,7 +310,7 @@ async def set_paylink_address(order_id: str, payload: PaylinkAddress):
     addr = payload.model_dump()
     blocked = await find_block_match([addr])
     if blocked:
-        await record_hit(blocked, addr)
+        await record_hit(blocked, addr, channel='paylink')
         raise HTTPException(403, BLOCKED_MESSAGE)
     res = await db.orders.find_one_and_update(
         {'id': order_id, 'source': 'paylink', 'payment_status': {'$ne': 'paid'}},

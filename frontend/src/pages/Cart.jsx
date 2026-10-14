@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { resolveImage } from '../lib/api';
+import BacWaterUpsell from '../components/BacWaterUpsell';
 
 const Cart = () => {
   const { items, updateQty, removeItem, subtotal } = useCart();
@@ -54,6 +55,7 @@ const Cart = () => {
                   </div>
                 </div>
               ))}
+              <BacWaterUpsell />
             </div>
 
             <div className="border rounded-lg p-6 bg-slate-50 h-fit sticky top-32">

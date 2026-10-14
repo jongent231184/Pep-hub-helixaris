@@ -593,6 +593,63 @@ async def send_coaching_request_email(req: dict) -> None:
         logger.error(f'coaching notify failed: {e}')
 
 
+# --------------------------------------------------------- BLOCKED ATTEMPT
+
+async def send_blocked_attempt_email(entry: dict, addr: dict, channel: str, hits: int) -> None:
+    """Alert the admin that a blocklisted customer tried to order again."""
+    if not _init_resend() or not ADMIN_NOTIFY_EMAIL:
+        logger.warning('blocked-attempt alert skipped: Resend not configured')
+        return
+
+    used_name = f"{addr.get('first_name', '')} {addr.get('last_name', '')}".strip() or '—'
+    block_name = f"{entry.get('first_name', '')} {entry.get('last_name', '')}".strip() or '—'
+    block_addr = ' · '.join(x for x in (entry.get('address1'), entry.get('postcode')) if x) or '—'
+    used_addr = ', '.join(x for x in (addr.get('address1'), addr.get('address2'), addr.get('city'), addr.get('postcode'), addr.get('country')) if x) or '—'
+    channel_label = 'Pay link' if channel == 'paylink' else 'Website checkout'
+
+    def row(label, value):
+        return f'<tr><td style="padding:6px 0;color:#64748b;width:130px;vertical-align:top">{label}</td><td><strong>{value}</strong></td></tr>'
+
+    html = f"""
+    <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#0f172a">
+      <div style="border-bottom:3px solid #dc2626;padding-bottom:16px;margin-bottom:20px">
+        <p style="font-size:11px;letter-spacing:2px;color:#dc2626;font-weight:700;text-transform:uppercase;margin:0">{BUSINESS_NAME} · Blocked order attempt</p>
+        <h1 style="font-size:22px;font-weight:900;margin:6px 0 0">A blocked customer tried to order</h1>
+        <p style="margin:6px 0 0;font-size:13px;color:#64748b">The order was refused automatically — nothing was created. This is attempt #{hits} against this block.</p>
+      </div>
+      <p style="margin:0 0 6px;color:#64748b;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700">Details they used</p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;margin-bottom:18px">
+        {row('Name', used_name)}
+        {row('Email', addr.get('email') or '—')}
+        {row('Phone', addr.get('phone') or '—')}
+        {row('Address', used_addr)}
+        {row('Channel', channel_label)}
+        {row('Time', datetime.utcnow().strftime('%d %b %Y, %H:%M UTC'))}
+      </table>
+      <p style="margin:0 0 6px;color:#64748b;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700">Matched block</p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;background:#fef2f2;border-radius:8px;padding:8px">
+        {row('Name', block_name)}
+        {row('Email', entry.get('email') or '—')}
+        {row('Address', block_addr)}
+        {row('Reason', entry.get('reason') or '—')}
+        {row('Original order', entry.get('source_order_number') or '—')}
+      </table>
+      <p style="margin-top:24px;font-size:12px;color:#64748b">Manage blocks at <a href="https://www.ghp-health.com/admin/orders">Admin → Orders → Blocked customers</a>.</p>
+    </div>
+    """
+    try:
+        params = {
+            'from': f'{BUSINESS_NAME} <{FROM_EMAIL}>',
+            'to': [ADMIN_NOTIFY_EMAIL],
+            'subject': f'Blocked order attempt · {used_name} · {addr.get("postcode") or addr.get("email") or ""}'.strip(' ·'),
+            'html': html,
+        }
+        res = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f'blocked-attempt alert sent: {res.get("id")}')
+    except Exception as e:
+        logger.error(f'blocked-attempt alert failed: {e}')
+
+
 # --------------------------------------------------------- AMBASSADOR WELCOME
 
 async def send_ambassador_welcome(user: dict, temp_password: Optional[str] = None) -> Optional[str]:

@@ -1,8 +1,10 @@
 """Customer blocklist matching — shared by checkout + paylink + admin routes."""
+import asyncio
 import re
 from datetime import datetime
 from typing import Optional
 from db import db
+from email_service import send_blocked_attempt_email
 
 BLOCKED_MESSAGE = (
     "We're unable to accept orders for these customer details. "
@@ -60,8 +62,8 @@ async def find_block_match(addresses: list[dict]) -> Optional[dict]:
     return None
 
 
-async def record_hit(entry: dict, addr: dict) -> None:
-    await db.blocklist.update_one(
+async def record_hit(entry: dict, addr: dict, channel: str = 'checkout') -> None:
+    updated = await db.blocklist.find_one_and_update(
         {'id': entry['id']},
         {'$inc': {'hits': 1}, '$set': {
             'last_hit_at': datetime.utcnow(),
@@ -71,4 +73,7 @@ async def record_hit(entry: dict, addr: dict) -> None:
                 'postcode': addr.get('postcode', ''),
             },
         }},
+        return_document=True,
     )
+    hits = int((updated or entry).get('hits', 1))
+    asyncio.create_task(send_blocked_attempt_email(entry, addr, channel, hits))

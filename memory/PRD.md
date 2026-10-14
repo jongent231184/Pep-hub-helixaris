@@ -23,6 +23,9 @@ See `/app/memory/test_credentials.md`.
 ## What's live now (chronological)
 
 ### October 2026
+- ✅ **Bac Water basket upsell**: `components/BacWaterUpsell.jsx` in Cart — shows when any `vials` item is in the basket without `bac-water`; one-click add at live price, "No thanks" dismisses for the session.
+- ✅ **Blocked-attempt email alerts**: `email_service.send_blocked_attempt_email` fired from `blocklist.record_hit` (fire-and-forget) to `ADMIN_NOTIFY_EMAIL` with the details the customer used, channel (checkout / pay link), attempt count and the matched block.
+- ⚠️ Known pre-existing: Cart page rows overflow horizontally at 390px (price column clipped) — not yet fixed.
 - ✅ **Customer Blocklist (Orders tab → "Blocked customers")**: admin bans by name / email / address line 1 + postcode. Enforced server-side on `POST /api/orders` and paylink `PUT /api/orders/pay/{id}/address` (403, friendly message; checks shipping *and* billing). Matching is case/space/punctuation-insensitive: email, OR postcode+address1, OR postcode+full name, OR name-only entries. Entries record `hits` + `last_hit_at`. Per-row "ban" icon + "Block customer" on order detail (`/api/admin/blocklist/from-order/{id}`); orders list shows a BLOCKED badge via `/api/admin/blocklist/matching-orders`. Files: `backend/blocklist.py`, `backend/routes/blocklist_routes.py`, `frontend/src/pages/admin/CustomerBlocklist.jsx`. Tests: `backend/tests/test_blocklist.py`, `test_reports/iteration_20.json`.
 
 ### September 2026
