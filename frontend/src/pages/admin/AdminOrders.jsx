@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Orders, Wallid, Square } from '../../lib/api';
-import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw, CreditCard, FileText } from 'lucide-react';
+import { Orders, Wallid, Square, Blocklist } from '../../lib/api';
+import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw, CreditCard, FileText, ShieldBan } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
 import CreatePaylinkModal from './CreatePaylinkModal';
 import PaymentSourceBadge from '../../components/PaymentSourceBadge';
+import CustomerBlocklist from './CustomerBlocklist';
 
 const statusColor = (s) => ({
   pending: 'bg-amber-100 text-amber-800',
@@ -28,11 +29,34 @@ const AdminOrders = () => {
   const [syncing, setSyncing] = useState(false);
   const [syncingSquare, setSyncingSquare] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
+  const [tab, setTab] = useState('orders');
+  const [blockedIds, setBlockedIds] = useState(new Set());
+  const [blockingId, setBlockingId] = useState(null);
   const { toast } = useToast();
 
-  const load = () => Orders.all().then(setOrders).catch(() => setOrders([])).finally(() => setLoading(false));
+  const loadBlocked = () => Blocklist.matchingOrders().then(r => setBlockedIds(new Set(r.order_ids || []))).catch(() => {});
+  const load = () => {
+    loadBlocked();
+    return Orders.all().then(setOrders).catch(() => setOrders([])).finally(() => setLoading(false));
+  };
 
   useEffect(() => { load(); }, []);
+
+  const handleBlock = async (order) => {
+    const name = `${order.shipping_address?.first_name || ''} ${order.shipping_address?.last_name || ''}`.trim();
+    const reason = window.prompt(`Block ${name} (${order.shipping_address?.email}) from ordering again?\n\nReason (internal, optional):`, '');
+    if (reason === null) return;
+    setBlockingId(order.id);
+    try {
+      await Blocklist.fromOrder(order.id, reason);
+      toast({ title: 'Customer blocked', description: `${name} — name, email and address from ${order.order_number} added to the blocklist.` });
+      loadBlocked();
+    } catch (e) {
+      toast({ title: 'Block failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally {
+      setBlockingId(null);
+    }
+  };
 
   const handleSyncFromWallid = async () => {
     setSyncing(true);
@@ -192,9 +216,32 @@ const AdminOrders = () => {
         onClose={() => setPaylinkOpen(false)}
         onCreated={() => load()}
       />
-      <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by order #, name or email…" className="max-w-md mb-4" />
+      <div className="flex gap-1 border-b mb-4" data-testid="orders-tabs">
+        <button
+          type="button"
+          onClick={() => setTab('orders')}
+          data-testid="orders-tab-list"
+          className={`px-4 py-2 text-sm font-semibold uppercase tracking-wide border-b-2 -mb-px transition-colors ${tab === 'orders' ? 'border-sky-500 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+        >
+          Orders
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('blocklist')}
+          data-testid="orders-tab-blocklist"
+          className={`px-4 py-2 text-sm font-semibold uppercase tracking-wide border-b-2 -mb-px transition-colors flex items-center gap-2 ${tab === 'blocklist' ? 'border-red-500 text-red-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+        >
+          <ShieldBan className="h-4 w-4" /> Blocked customers
+        </button>
+      </div>
 
-      {loading ? (
+      {tab === 'blocklist' && <CustomerBlocklist onChange={loadBlocked} />}
+
+      {tab === 'orders' && (
+        <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by order #, name or email…" className="max-w-md mb-4" />
+      )}
+
+      {tab !== 'orders' ? null : loading ? (
         <div className="grid place-items-center py-20"><Loader2 className="h-8 w-8 animate-spin text-sky-500" /></div>
       ) : (
         <div className="bg-white border rounded-lg overflow-x-auto">
@@ -217,7 +264,12 @@ const AdminOrders = () => {
                   <td className="p-3"><Link to={`/admin/orders/${o.id}`} className="text-sky-600 hover:underline font-mono text-xs">{o.order_number}</Link></td>
                   <td className="p-3 text-xs">{new Date(o.created_at).toLocaleString()}</td>
                   <td className="p-3">
-                    <p className="font-semibold">{o.shipping_address?.first_name} {o.shipping_address?.last_name}</p>
+                    <p className="font-semibold flex items-center gap-2">
+                      {o.shipping_address?.first_name} {o.shipping_address?.last_name}
+                      {blockedIds.has(o.id) && (
+                        <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-800 text-[10px] font-bold uppercase" data-testid={`blocked-badge-${o.order_number}`}>Blocked</span>
+                      )}
+                    </p>
                     <p className="text-xs text-slate-500">{o.shipping_address?.email}</p>
                   </td>
                   <td className="p-3 text-xs">{o.items?.length} item{o.items?.length !== 1 ? 's' : ''}</td>
@@ -245,6 +297,22 @@ const AdminOrders = () => {
                           ? <Loader2 className="h-4 w-4 animate-spin" />
                           : <FileText className="h-4 w-4" />}
                       </Button>
+                      {!blockedIds.has(o.id) && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleBlock(o)}
+                          disabled={blockingId === o.id}
+                          title={`Block this customer from ordering again`}
+                          data-testid={`block-customer-${o.order_number}`}
+                          className="text-slate-500 hover:text-red-700 hover:bg-red-50 h-8 w-8"
+                        >
+                          {blockingId === o.id
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <ShieldBan className="h-4 w-4" />}
+                        </Button>
+                      )}
                       <Button
                         type="button"
                         variant="ghost"

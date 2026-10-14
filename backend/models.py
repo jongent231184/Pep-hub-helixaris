@@ -256,6 +256,24 @@ class CounterReset(BaseModel):
     next_seq: int  # next order will be GHP-{seq:03d}
 
 
+class BlocklistEntryCreate(BaseModel):
+    first_name: Optional[str] = ''
+    last_name: Optional[str] = ''
+    email: Optional[str] = ''
+    address1: Optional[str] = ''
+    postcode: Optional[str] = ''
+    reason: Optional[str] = ''
+
+
+class BlocklistEntryOut(BlocklistEntryCreate):
+    id: str
+    source_order_number: Optional[str] = None
+    hits: int = 0
+    last_hit_at: Optional[datetime] = None
+    last_hit_details: Optional[dict] = None
+    created_at: datetime
+
+
 # ---------- SETTINGS ----------
 class Settings(BaseModel):
     site_name: str = 'GHP-Health'

@@ -13,6 +13,7 @@ from models import (
 from auth import get_current_user_optional, get_current_user, require_admin
 from utils import doc_to_dict
 from email_service import build_invoice_pdf
+from blocklist import find_block_match, record_hit, BLOCKED_MESSAGE
 
 router = APIRouter(prefix='/orders', tags=['orders'])
 
@@ -37,6 +38,13 @@ async def _next_order_number() -> str:
 @router.post('', response_model=OrderOut)
 async def create_order(payload: OrderCreate, user: Optional[dict] = Depends(get_current_user_optional)):
     now = datetime.utcnow()
+
+    ship = payload.shipping_address.model_dump()
+    bill = payload.billing_address.model_dump() if payload.billing_address else None
+    blocked = await find_block_match([ship, bill])
+    if blocked:
+        await record_hit(blocked, ship)
+        raise HTTPException(403, BLOCKED_MESSAGE)
 
     # Server-side price re-computation from the catalog so a client can't
     # fabricate an item price by editing the payload. For each item we use
@@ -299,6 +307,11 @@ async def set_paylink_address(order_id: str, payload: PaylinkAddress):
         raise HTTPException(404, 'Pay link not found')
     if doc.get('payment_status') == 'paid':
         raise HTTPException(409, 'This order has already been paid')
+    addr = payload.model_dump()
+    blocked = await find_block_match([addr])
+    if blocked:
+        await record_hit(blocked, addr)
+        raise HTTPException(403, BLOCKED_MESSAGE)
     res = await db.orders.find_one_and_update(
         {'id': order_id, 'source': 'paylink', 'payment_status': {'$ne': 'paid'}},
         {'$set': {

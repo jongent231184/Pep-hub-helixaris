@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Orders, Wallid, Square, resolveImage } from '../../lib/api';
+import { Orders, Wallid, Square, Blocklist, resolveImage } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
-import { ArrowLeft, Loader2, FileText, Trash2, RefreshCw, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, FileText, Trash2, RefreshCw, Download, ShieldBan } from 'lucide-react';
 import PaymentSourceBadge from '../../components/PaymentSourceBadge';
 import { useToast } from '../../hooks/use-toast';
 
@@ -23,7 +23,27 @@ const AdminOrderDetail = () => {
   const [status, setStatus] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('');
   const [notes, setNotes] = useState('');
+  const [blocking, setBlocking] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    Blocklist.matchingOrders().then(r => setIsBlocked((r.order_ids || []).includes(orderId))).catch(() => {});
+  }, [orderId]);
+
+  const blockCustomer = async () => {
+    const name = `${order.shipping_address?.first_name || ''} ${order.shipping_address?.last_name || ''}`.trim();
+    const reason = window.prompt(`Block ${name} from ordering again?\n\nReason (internal, optional):`, '');
+    if (reason === null) return;
+    setBlocking(true);
+    try {
+      await Blocklist.fromOrder(order.id, reason);
+      setIsBlocked(true);
+      toast({ title: 'Customer blocked', description: 'Name, email and address from this order are now on the blocklist.' });
+    } catch (e) {
+      toast({ title: 'Block failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally { setBlocking(false); }
+  };
 
   const load = () => {
     setLoading(true);
@@ -152,6 +172,23 @@ const AdminOrderDetail = () => {
             >
               {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Sync from Square
+            </Button>
+          )}
+          {isBlocked ? (
+            <span className="px-3 py-2 rounded bg-red-100 text-red-800 text-xs font-bold uppercase flex items-center gap-2" data-testid="order-blocked-badge">
+              <ShieldBan className="h-4 w-4" /> Customer blocked
+            </span>
+          ) : (
+            <Button
+              variant="outline"
+              className="gap-2 text-red-700 hover:bg-red-50 border-red-300"
+              onClick={blockCustomer}
+              disabled={blocking}
+              data-testid="block-customer-btn"
+              title="Add this customer's name, email and address to the blocklist"
+            >
+              {blocking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldBan className="h-4 w-4" />}
+              Block customer
             </Button>
           )}
           <Button

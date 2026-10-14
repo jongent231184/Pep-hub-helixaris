@@ -302,7 +302,12 @@ const Checkout = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       const detail = err.response?.data?.detail;
-      toast({ title: 'Failed to create order', description: detail ? JSON.stringify(detail) : err.message, variant: 'destructive' });
+      const isBlocked = err.response?.status === 403;
+      toast({
+        title: isBlocked ? 'Order not accepted' : 'Failed to create order',
+        description: typeof detail === 'string' ? detail : (detail ? JSON.stringify(detail) : err.message),
+        variant: 'destructive',
+      });
     } finally {
       setProcessing(false);
     }

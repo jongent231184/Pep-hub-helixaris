@@ -78,6 +78,14 @@ export const Orders = {
   setPaylinkAddress: (id, addr) => api.put(`/orders/pay/${id}/address`, addr).then(r => r.data),
 };
 
+export const Blocklist = {
+  list: () => api.get('/admin/blocklist').then(r => r.data),
+  create: (data) => api.post('/admin/blocklist', data).then(r => r.data),
+  fromOrder: (orderId, reason) => api.post(`/admin/blocklist/from-order/${orderId}`, { reason }).then(r => r.data),
+  remove: (id) => api.delete(`/admin/blocklist/${id}`).then(r => r.data),
+  matchingOrders: () => api.get('/admin/blocklist/matching-orders').then(r => r.data),
+};
+
 export const Sales = {
   summary: () => api.get('/admin/sales/summary').then(r => r.data),
   products: () => api.get('/admin/sales/products').then(r => r.data),

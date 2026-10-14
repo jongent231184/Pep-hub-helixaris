@@ -93,7 +93,7 @@ const PayLinkPage = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       const detail = err.response?.data?.detail;
-      toast({ title: 'Could not save details', description: detail ? JSON.stringify(detail) : err.message, variant: 'destructive' });
+      toast({ title: 'Could not save details', description: typeof detail === 'string' ? detail : (detail ? JSON.stringify(detail) : err.message), variant: 'destructive' });
     } finally {
       setProcessing(false);
     }
