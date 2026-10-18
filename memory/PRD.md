@@ -23,6 +23,7 @@ See `/app/memory/test_credentials.md`.
 ## What's live now (chronological)
 
 ### October 2026
+- ✅ **Built-in Traffic analytics (Admin → Traffic)**: cookie-free first-party tracker (`components/PageViewTracker.jsx` → `POST /api/analytics/pv`). Server hashes salted daily IP+UA for unique visitors (no cookies/consent needed), drops bots and admin/portal paths, classifies referrers (Google, Instagram, TikTok…) and device by viewport. `GET /api/admin/analytics/summary?days=7|30|90` returns daily series, totals vs previous period, top pages, sources, devices. Page: `pages/admin/AdminTraffic.jsx` (recharts area chart). Collection: `page_views` (indexed on `ts`, `date+visitor`). Env (optional): `ANALYTICS_SALT` (falls back to JWT_SECRET).
 - ✅ **Bac Water basket upsell**: `components/BacWaterUpsell.jsx` in Cart — shows when any `vials` item is in the basket without `bac-water`; one-click add at live price, "No thanks" dismisses for the session.
 - ✅ **Blocked-attempt email alerts**: `email_service.send_blocked_attempt_email` fired from `blocklist.record_hit` (fire-and-forget) to `ADMIN_NOTIFY_EMAIL` with the details the customer used, channel (checkout / pay link), attempt count and the matched block.
 - ⚠️ Known pre-existing: Cart page rows overflow horizontally at 390px (price column clipped) — not yet fixed.

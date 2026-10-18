@@ -24,3 +24,5 @@ async def init_indexes():
     await db.addresses.create_index('user_id')
     await db.wallid_events.create_index('event_id', unique=True)
     await db.dose_plans.create_index('user_id')
+    await db.page_views.create_index('ts')
+    await db.page_views.create_index([('date', 1), ('visitor', 1)])

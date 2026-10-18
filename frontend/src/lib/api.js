@@ -78,6 +78,10 @@ export const Orders = {
   setPaylinkAddress: (id, addr) => api.put(`/orders/pay/${id}/address`, addr).then(r => r.data),
 };
 
+export const Analytics = {
+  summary: (days = 30) => api.get('/admin/analytics/summary', { params: { days } }).then(r => r.data),
+};
+
 export const Blocklist = {
   list: () => api.get('/admin/blocklist').then(r => r.data),
   create: (data) => api.post('/admin/blocklist', data).then(r => r.data),

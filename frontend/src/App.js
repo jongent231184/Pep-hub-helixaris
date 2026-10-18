@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import { StoreProvider } from './context/StoreContext';
 import { Toaster } from './components/ui/toaster';
 import ScrollToTop from './components/ScrollToTop';
+import PageViewTracker from './components/PageViewTracker';
 import SitePasswordGate from './components/SitePasswordGate';
 
 import Home from './pages/Home';
@@ -32,6 +33,7 @@ import AdminProducts from './pages/admin/AdminProducts';
 import AdminProductForm from './pages/admin/AdminProductForm';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminTraffic from './pages/admin/AdminTraffic';
 import AdminOrderDetail from './pages/admin/AdminOrderDetail';
 import AdminOrderInvoice from './pages/admin/AdminOrderInvoice';
 import AdminCustomers from './pages/admin/AdminCustomers';
@@ -87,6 +89,7 @@ function App() {
         <CartProvider>
           <BrowserRouter>
             <ScrollToTop />
+            <PageViewTracker />
             <SitePasswordGate>
               <Routes>
               {/* Admin */}
@@ -100,6 +103,7 @@ function App() {
                 <Route path="orders/:orderId" element={<AdminOrderDetail />} />
                 <Route path="orders/:orderId/invoice" element={<AdminOrderInvoice />} />
                 <Route path="sales" element={<AdminSales />} />
+                <Route path="traffic" element={<AdminTraffic />} />
                 <Route path="promos" element={<AdminPromos />} />
                 <Route path="paylinks" element={<AdminPaylinks />} />
                 <Route path="ambassadors" element={<AdminAmbassadors />} />
