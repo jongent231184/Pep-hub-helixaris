@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Analytics } from '../../lib/api';
-import { Loader2, Users, Eye, TrendingUp, TrendingDown, Monitor, Smartphone, Tablet } from 'lucide-react';
+import { Loader2, Users, Eye, TrendingUp, TrendingDown, Monitor, Smartphone, Tablet, Building2, Landmark } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 const RANGES = [{ days: 7, label: '7 days' }, { days: 30, label: '30 days' }, { days: 90, label: '90 days' }];
@@ -54,6 +54,50 @@ const RankTable = ({ title, rows, total, labelFor = (k) => k, testId }) => (
     )}
   </div>
 );
+
+const OrganisationsPanel = ({ rows, kinds }) => {
+  const consumer = (kinds.consumer || 0) + (kinds.hosting || 0);
+  const total = Object.values(kinds).reduce((s, v) => s + v, 0);
+  return (
+    <div className="bg-white rounded-lg border p-5" data-testid="traffic-organisations">
+      <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+        <div>
+          <h2 className="font-bold uppercase text-sm tracking-wide flex items-center gap-2"><Building2 className="h-4 w-4 text-slate-500" /> Organisations viewing the site</h2>
+          <p className="text-xs text-slate-500 mt-1">Network owner behind each visit. Consumer mobile &amp; broadband (O2, EE, BT, Sky…) and cloud/hosting are hidden{total ? ` — ${Math.round((consumer / total) * 100)}% of views` : ''}. Staff working from home or on 4G show as their ISP, not their employer.</p>
+        </div>
+        <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-amber-100 text-amber-800 flex items-center gap-1"><Landmark className="h-3 w-3" /> = public sector</span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-sm text-slate-500" data-testid="traffic-organisations-empty">No corporate, government or institutional networks seen in this period.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[640px]">
+            <thead className="text-slate-500 uppercase text-xs">
+              <tr><th className="text-left py-2">Organisation</th><th className="text-left py-2">Visitors</th><th className="text-left py-2">Views</th><th className="text-left py-2">Pages looked at</th><th className="text-left py-2">Last seen</th></tr>
+            </thead>
+            <tbody className="divide-y">
+              {rows.map(r => (
+                <tr key={r.key} data-testid={`traffic-org-${r.asn}`}>
+                  <td className="py-2 pr-3">
+                    <p className="font-semibold flex items-center gap-2">
+                      {r.kind === 'public' && <Landmark className="h-4 w-4 text-amber-600" />}
+                      {r.key}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-mono">AS{r.asn}</p>
+                  </td>
+                  <td className="py-2 pr-3">{r.visitors}</td>
+                  <td className="py-2 pr-3">{r.views}</td>
+                  <td className="py-2 pr-3 text-xs text-slate-600">{r.pages.join(', ')}</td>
+                  <td className="py-2 text-xs text-slate-500">{new Date(r.last_seen).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const AdminTraffic = () => {
   const [days, setDays] = useState(30);
@@ -112,6 +156,8 @@ const AdminTraffic = () => {
               </ResponsiveContainer>
             </div>
           </div>
+
+          <OrganisationsPanel rows={data.organisations || []} kinds={data.network_kinds || {}} />
 
           <div className="grid lg:grid-cols-3 gap-4">
             <RankTable title="Top pages" rows={data.top_pages} total={data.totals.views} testId="traffic-top-pages" />

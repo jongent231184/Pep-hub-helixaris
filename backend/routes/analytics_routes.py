@@ -1,4 +1,5 @@
 """Cookie-free first-party traffic analytics."""
+import asyncio
 import hashlib
 import os
 import re
@@ -9,6 +10,7 @@ from fastapi import APIRouter, Request, Depends, Query
 from pydantic import BaseModel
 from db import db
 from auth import require_admin
+from ip_org import enrich_pageview
 
 router = APIRouter(tags=['analytics'])
 
@@ -81,7 +83,7 @@ async def record_pageview(payload: PageView, request: Request):
     own_host = (request.headers.get('origin') or request.headers.get('host') or '')
     own_host = (urlparse(own_host).hostname if '://' in own_host else own_host.split(':')[0]).lower()
     ref_host, source = _source(payload.referrer or '', own_host)
-    await db.page_views.insert_one({
+    res = await db.page_views.insert_one({
         'ts': now,
         'date': now.strftime('%Y-%m-%d'),
         'path': path,
@@ -90,6 +92,7 @@ async def record_pageview(payload: PageView, request: Request):
         'device': _device(payload.screen_w, ua),
         'visitor': visitor,
     })
+    asyncio.create_task(enrich_pageview(res.inserted_id, _client_ip(request)))
     return {'ok': True}
 
 
@@ -134,6 +137,25 @@ async def analytics_summary(days: int = Query(30, ge=1, le=365), _=Depends(requi
 
     current = await _period_stats(start, end)
     previous = await _period_stats(prev_start, start)
+
+    org_rows = await db.page_views.aggregate([
+        {'$match': {'ts': {'$gte': start, '$lt': end}, 'org_kind': {'$in': ['org', 'public']}}},
+        {'$group': {
+            '_id': '$org', 'asn': {'$first': '$asn'}, 'kind': {'$first': '$org_kind'},
+            'views': {'$sum': 1}, 'visitors': {'$addToSet': '$visitor'},
+            'last_seen': {'$max': '$ts'}, 'pages': {'$addToSet': '$path'},
+        }},
+        {'$sort': {'views': -1}},
+        {'$limit': 25},
+    ]).to_list(25)
+    organisations = [{
+        'key': r['_id'], 'asn': r['asn'], 'kind': r['kind'], 'views': r['views'],
+        'visitors': len(r['visitors']), 'last_seen': r['last_seen'], 'pages': sorted(r['pages'])[:6],
+    } for r in org_rows]
+    kinds = await db.page_views.aggregate([
+        match, {'$group': {'_id': '$org_kind', 'views': {'$sum': 1}}},
+    ]).to_list(10)
+
     return {
         'range': {'days': days, 'start': start.strftime('%Y-%m-%d'), 'end': (end - timedelta(days=1)).strftime('%Y-%m-%d')},
         'totals': current,
@@ -142,4 +164,6 @@ async def analytics_summary(days: int = Query(30, ge=1, le=365), _=Depends(requi
         'top_pages': await top('path'),
         'sources': await top('source'),
         'devices': await top('device', 5),
+        'organisations': organisations,
+        'network_kinds': {(k['_id'] or 'unknown'): k['views'] for k in kinds},
     }

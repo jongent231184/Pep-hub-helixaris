@@ -26,3 +26,5 @@ async def init_indexes():
     await db.dose_plans.create_index('user_id')
     await db.page_views.create_index('ts')
     await db.page_views.create_index([('date', 1), ('visitor', 1)])
+    await db.ip_orgs.create_index('ip', unique=True)
+    await db.ip_orgs.create_index('looked_up_at', expireAfterSeconds=60 * 60 * 24 * 30)
