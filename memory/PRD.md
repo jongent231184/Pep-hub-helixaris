@@ -75,6 +75,16 @@ See `/app/memory/test_credentials.md`.
 - **#9 Blog engine** — admin-editable posts, category taxonomy, related-product embed.
 - **#10 Peptide Index / Library page** — Peptiology-style directory.
 
+### 🔵 PLANNING — White-label Hub (user said "planning only, don't build yet")
+User choices: clients sell their OWN stock + ship own orders; Hub calculates monthly sales and invoices a % commission (clients use their own merchant accounts — never route through ours); goal = shared engine; 1–5 clients in year 1.
+Platform constraint (support_agent, unverified): ONE custom domain per Emergent deployment → true single-deployment multi-domain needs a proxy (e.g. Cloudflare Worker) proof-of-concept first.
+Phased plan:
+- Phase 1: Move brand.js config into DB "Store Settings" (admin-editable logo/colours/legal/emails/payment keys); new store = fork + deploy + fill form, no code edits.
+- Phase 2: Hub "Sales Reporting" API per store (signed key) → Hub pulls monthly net sales.
+- Phase 3: Hub commission engine — % per client, monthly statement + PDF invoice emailed via Resend, paid/unpaid status.
+- Phase 4: Client onboarding checklist in Hub + white-label SaaS agreement (client owns compliance).
+- Phase 5 (optional): Cloudflare-proxy PoC to run all stores on one deployment; migrate only if PoC passes.
+
 ### 🟢 P2 — nice-to-have
 - Low-stock dashboard alert (banner when any variant ≤ 1 unit).
 - Blood-testing affiliate partner page.
