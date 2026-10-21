@@ -1,0 +1,26 @@
+{
+  "summary": "READ-ONLY verification of LIVE production https://www.ghp-health.com after the DB re-point. The restore is CONFIRMED. Backend: GET /api/products returns 66 products with varied prices (only 4 at £37.50), 40 variants in total, and r3t4trut1d3 has all 7 expected variants with the exact prices (37.5/67.5/85/105/115/130/150) and non-zero stock (7/10/15/12/8/4/9). GET /api/categories returns 6 categories. Admin login returns 200 with an access_token and role=admin. GET /api/orders/all returns 1000 rows (the cap) and the latest is GHP-1921 at 2026-10-20T08:23:08. The 7 orders dated 2026-10-20 are GHP-1915..1921. No GHP-054/GHP-055 is dated 2026-10-20, so the stray orders are absent. Frontend: the age gate was shown and confirmed (no password gate appeared). The homepage loads. The /vials listing shows 17 different prices and no 'out of stock' text. The R3T4TRUT1D3 page shows a 7-option size selector and the price updates for each size; the 50mg option shows 'only 4 left'. Add to basket worked and the cart shows the item plus the Bac Water upsell. Checkout was NOT started. Admin: the Orders list shows GHP-1921 first and 1000 orders. The Blocked Customers tab loads (1 entry). Products shows real prices and 'Per variant' markers. Traffic loads with charts and the organisations table. Nothing was edited, saved, deleted or created.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "BacWaterUpsell (cart)", "issue": "The upsell button says 'Add for £0.00' because it uses the base product.price. BAC WATER has base price 0 and is priced only through its variants (3ml £2.50, 10ml £5.00). This existed before and is not caused by the restore, but customers see a misleading £0.00.", "selector": "/app/frontend/src/components/BacWaterUpsell.jsx line 50", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/tests/prod_readonly_verify.py"],
+  "action_items": [
+    "Optional (not related to the restore): in BacWaterUpsell, show and add the lowest variant price (e.g. 3ml £2.50) when product.price is 0 or variants exist, instead of £0.00"
+  ],
+  "critical_code_review_comments": [
+    "BacWaterUpsell.jsx uses product.price for products that are priced through variants, so it shows £0.00. Check what price or variant gets added to the cart.",
+    "GET /api/orders/all is hard-capped at 1000 rows with no pagination, so older orders (e.g. the early GHP-054/055) can't be reached from this endpoint or the admin list. Consider server-side pagination."
+  ],
+  "updated_files": ["/app/tests/prod_readonly_verify.py (new, read-only GET script plus admin login only)"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None. No writes were made. Side effects: two admin logins and a few storefront page views were recorded in production traffic analytics. One item was added to a cart in a throwaway browser session (client-side only, no order).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "test_credentials": "admin@ghp-health.com / GHP-Health26 (from /app/memory/test_credentials.md). The preview gate password was not needed; only the age gate was shown.",
+  "context_for_next_testing_agent": "Production restore verified on 2026-10-21. /app/tests/prod_readonly_verify.py is a safe read-only regression check (GETs plus login). Note: the Playwright admin login needs a wait after the age gate before typing, otherwise the inputs stay empty."
+}

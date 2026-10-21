@@ -75,7 +75,8 @@ See `/app/memory/test_credentials.md`.
 - **#9 Blog engine** — admin-editable posts, category taxonomy, related-product embed.
 - **#10 Peptide Index / Library page** — Peptiology-style directory.
 
-### 🚨 INCIDENT 2026-10-20 — GHP live bound to WRONG DB (awaiting Emergent support)
+### ✅ INCIDENT RESOLVED 2026-10-21 — Emergent support re-bound GHP live to `ghp-ecommerce-pay-test_database`. Verified read-only (iteration_21.json, 100%): orders up to GHP-1921, 66 products / 40 variants. User chose NOT to import stray GHP-054/055. History below kept for reference.
+### 🚨 INCIDENT 2026-10-20 — GHP live bound to WRONG DB (history)
 - Fork job 411a925d (this chat, preview dual-brand-store) published as "replace" on deployment eed29dfe (ghp-ecommerce-pay) → live now uses `dual-brand-store-test_database` (45 orders, GHP-055, £37.50 stale products). Real DB `ghp-ecommerce-pay-test_database` INTACT (1896 orders, latest GHP-1921, counters.seq 1921). RCAs in /app/deployer-agent-docs/.
 - Rollback + republish from original job ca026de8 did NOT fix (system secrets regenerated from bad prod state). Only Emergent support can re-bind MONGO_URL+DB_NAME. Support disputes account ownership (user acct jongent84@gmail.com). Site set PRIVATE.
 - After re-bind: verify live orders → GHP-1921; merge Clare Ballinger's GHP-054 (failed) & GHP-055 (pending) from dual-brand DB as GHP-1922/1923, bump counters.seq.
