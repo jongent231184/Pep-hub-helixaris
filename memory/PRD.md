@@ -75,6 +75,13 @@ See `/app/memory/test_credentials.md`.
 - **#9 Blog engine** — admin-editable posts, category taxonomy, related-product embed.
 - **#10 Peptide Index / Library page** — Peptiology-style directory.
 
+### 🚨 INCIDENT 2026-10-20 — GHP live bound to WRONG DB (awaiting Emergent support)
+- Fork job 411a925d (this chat, preview dual-brand-store) published as "replace" on deployment eed29dfe (ghp-ecommerce-pay) → live now uses `dual-brand-store-test_database` (45 orders, GHP-055, £37.50 stale products). Real DB `ghp-ecommerce-pay-test_database` INTACT (1896 orders, latest GHP-1921, counters.seq 1921). RCAs in /app/deployer-agent-docs/.
+- Rollback + republish from original job ca026de8 did NOT fix (system secrets regenerated from bad prod state). Only Emergent support can re-bind MONGO_URL+DB_NAME. Support disputes account ownership (user acct jongent84@gmail.com). Site set PRIVATE.
+- After re-bind: verify live orders → GHP-1921; merge Clare Ballinger's GHP-054 (failed) & GHP-055 (pending) from dual-brand DB as GHP-1922/1923, bump counters.seq.
+- Fallback (only if support can't help, user decides end of day): copy prices/variants from helixaris.com API, set counter to GHP-2000; orders/ambassadors/coaching data would be lost.
+- NEVER publish a forked chat as Replace on GHP again; update Helixaris only from its own chat.
+
 ### 🔵 PLANNING — White-label Hub (user said "planning only, don't build yet")
 User choices: clients sell their OWN stock + ship own orders; Hub calculates monthly sales and invoices a % commission (clients use their own merchant accounts — never route through ours); goal = shared engine; 1–5 clients in year 1.
 Platform constraint (support_agent, unverified): ONE custom domain per Emergent deployment → true single-deployment multi-domain needs a proxy (e.g. Cloudflare Worker) proof-of-concept first.
