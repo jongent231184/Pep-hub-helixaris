@@ -408,6 +408,8 @@ async def update_order_status(order_id: str, payload: OrderStatusUpdate, _=Depen
                 payment_source='manual',
             )
             updates.pop('payment_status')
+            if updates.get('status') == 'pending':
+                updates.pop('status')
     updates['updated_at'] = datetime.utcnow()
     res = await db.orders.find_one_and_update(
         {'id': order_id}, {'$set': updates}, return_document=True

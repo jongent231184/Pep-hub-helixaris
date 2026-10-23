@@ -27,6 +27,7 @@ const CopyRow = ({ label, value, testId }) => {
 };
 
 export const BankTransferDetails = ({ order, settings }) => {
+  const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
   const download = async () => {
     setDownloading(true);
@@ -38,6 +39,8 @@ export const BankTransferDetails = ({ order, settings }) => {
       a.download = `invoice-${order.order_number}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
+    } catch (err) {
+      toast({ title: 'Could not download invoice', description: 'Please try again or contact us.', variant: 'destructive' });
     } finally {
       setDownloading(false);
     }

@@ -620,7 +620,7 @@ const Checkout = () => {
                           Pay by Card · Coming soon
                         </Button>
                         <p className="text-xs text-slate-500 mt-2 text-center" data-testid="square-disabled-note">
-                          Card / Apple Pay / Google Pay temporarily unavailable — please use Pay by Bank above.
+                          Card / Apple Pay / Google Pay temporarily unavailable — please use Pay by Bank or bank transfer.
                         </p>
                       </>
                     )}

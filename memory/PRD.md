@@ -75,6 +75,13 @@ See `/app/memory/test_credentials.md`.
 - **#9 Blog engine** — admin-editable posts, category taxonomy, related-product embed.
 - **#10 Peptide Index / Library page** — Peptiology-style directory.
 
+### ✅ 2026-10-23 — Manual bank transfer payment option (preview only, NOT yet live)
+- Admin Settings → "Bank transfer" (account name / sort code / account number). Option hidden while account number is blank.
+- Checkout: "Pay by bank transfer" button under Wallid (needs compliance tick) → shows details + reference = order number + amount, clears cart, customer can download the PDF invoice (GET /api/orders/{id}/invoice.pdf). POST /api/orders/{id}/bank-transfer sets payment_provider=bank_transfer.
+- Unpaid PDF + admin printable invoice show the bank block; admin list shows an "Awaiting transfer" badge. Stock is NOT held until paid.
+- Admin PATCH payment_status→paid now runs mark_order_paid (stock decrement once, promo usage, confirmation email + paid invoice, source=manual, status=processing). Tests: iteration_22 + backend/tests/test_bank_transfer.py (6/6).
+- ⚠️ This chat is the FORK job 411a925d (preview dual-brand-store). NEVER publish it as Replace on GHP. Ship via GitHub → pull into the original GHP chat (ca026de8) → republish there.
+
 ### ✅ INCIDENT RESOLVED 2026-10-21 — Emergent support re-bound GHP live to `ghp-ecommerce-pay-test_database`. Verified read-only (iteration_21.json, 100%): orders up to GHP-1921, 66 products / 40 variants. User chose NOT to import stray GHP-054/055. History below kept for reference.
 ### 🚨 INCIDENT 2026-10-20 — GHP live bound to WRONG DB (history)
 - Fork job 411a925d (this chat, preview dual-brand-store) published as "replace" on deployment eed29dfe (ghp-ecommerce-pay) → live now uses `dual-brand-store-test_database` (45 orders, GHP-055, £37.50 stale products). Real DB `ghp-ecommerce-pay-test_database` INTACT (1896 orders, latest GHP-1921, counters.seq 1921). RCAs in /app/deployer-agent-docs/.

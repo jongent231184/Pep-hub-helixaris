@@ -160,11 +160,12 @@ const AdminOrderInvoice = () => {
         {!paid && s.bank_account_number && (
           <div className="mt-6 pt-4 border-t" data-testid="invoice-bank-details">
             <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">Pay by bank transfer</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
               <div><p className="text-slate-500 text-xs">Account name</p><p className="font-semibold">{s.bank_account_name}</p></div>
               <div><p className="text-slate-500 text-xs">Sort code</p><p className="font-mono font-semibold">{s.bank_sort_code}</p></div>
               <div><p className="text-slate-500 text-xs">Account number</p><p className="font-mono font-semibold">{s.bank_account_number}</p></div>
               <div><p className="text-slate-500 text-xs">Reference</p><p className="font-mono font-semibold">{order.order_number}</p></div>
+              <div><p className="text-slate-500 text-xs">Amount</p><p className="font-semibold">£{Number(order.total).toFixed(2)}</p></div>
             </div>
             <p className="text-xs text-slate-500 mt-2">Please use {order.order_number} as the payment reference. Orders are dispatched once payment is received.</p>
           </div>
