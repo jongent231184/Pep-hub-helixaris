@@ -241,6 +241,8 @@ class OrderOut(BaseModel):
     status: Literal['pending', 'processing', 'shipped', 'delivered', 'cancelled'] = 'pending'
     source: Optional[str] = None  # 'web' | 'paylink'
     notes: Optional[str] = ''
+    invoice_resent_at: Optional[datetime] = None
+    invoice_resend_count: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 

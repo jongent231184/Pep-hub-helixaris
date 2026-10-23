@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Orders, Wallid, Square, Blocklist } from '../../lib/api';
-import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw, CreditCard, FileText, ShieldBan } from 'lucide-react';
+import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw, CreditCard, FileText, ShieldBan, Send } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
@@ -32,6 +32,8 @@ const AdminOrders = () => {
   const [tab, setTab] = useState('orders');
   const [blockedIds, setBlockedIds] = useState(new Set());
   const [blockingId, setBlockingId] = useState(null);
+  const [resendingId, setResendingId] = useState(null);
+  const [bulkSending, setBulkSending] = useState(false);
   const { toast } = useToast();
 
   const loadBlocked = () => Blocklist.matchingOrders().then(r => setBlockedIds(new Set(r.order_ids || []))).catch(() => {});
@@ -153,6 +155,47 @@ const AdminOrders = () => {
       `${o.shipping_address?.first_name} ${o.shipping_address?.last_name}`.toLowerCase().includes(q);
   });
 
+  const hasEmail = (o) => o.shipping_address?.email && o.shipping_address.email !== 'pending@ghp-health.com';
+  const unpaidWithEmail = filtered.filter(o => o.payment_status !== 'paid' && hasEmail(o));
+
+  const handleResendInvoice = async (order) => {
+    setResendingId(order.id);
+    try {
+      const r = await Orders.resendInvoice(order.id);
+      toast({
+        title: 'Invoice emailed',
+        description: r.mode === 'bank_transfer'
+          ? `${order.order_number} sent to ${r.sent_to} with bank-transfer details.`
+          : `${order.order_number} sent to ${r.sent_to}.`,
+      });
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, invoice_resent_at: new Date().toISOString() } : o));
+    } catch (e) {
+      toast({ title: 'Could not send', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally {
+      setResendingId(null);
+    }
+  };
+
+  const handleResendAllUnpaid = async () => {
+    const n = unpaidWithEmail.length;
+    if (!n) return;
+    if (!window.confirm(`Email a fresh invoice to ${n} unpaid order${n === 1 ? '' : 's'}? Unpaid orders will include your bank-transfer details as a new payment option.`)) return;
+    setBulkSending(true);
+    try {
+      const r = await Orders.resendInvoices(unpaidWithEmail.map(o => o.id));
+      toast({
+        title: `${r.sent.length} invoice${r.sent.length === 1 ? '' : 's'} emailed`,
+        description: r.failed.length ? `${r.failed.length} failed: ${r.failed.map(f => f.error).slice(0, 2).join('; ')}` : 'All sent successfully.',
+        variant: r.failed.length ? 'destructive' : undefined,
+      });
+      load();
+    } catch (e) {
+      toast({ title: 'Bulk send failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally {
+      setBulkSending(false);
+    }
+  };
+
   const exportCSV = () => {
     const rows = [
       ['Order', 'Date', 'Customer', 'Email', 'Total', 'Payment', 'Status'],
@@ -209,6 +252,19 @@ const AdminOrders = () => {
             <LinkIcon className="h-4 w-4" /> Create pay link
           </Button>
           <Button onClick={exportCSV} variant="outline" className="gap-2"><Download className="h-4 w-4" /> Export CSV</Button>
+          {tab === 'orders' && unpaidWithEmail.length > 0 && (
+            <Button
+              onClick={handleResendAllUnpaid}
+              disabled={bulkSending}
+              variant="outline"
+              className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              data-testid="resend-all-unpaid-btn"
+              title="Email every unpaid order a fresh invoice with your bank-transfer details"
+            >
+              {bulkSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Email invoices to unpaid ({unpaidWithEmail.length})
+            </Button>
+          )}
         </div>
       </div>
       <CreatePaylinkModal
@@ -271,6 +327,9 @@ const AdminOrders = () => {
                       )}
                     </p>
                     <p className="text-xs text-slate-500">{o.shipping_address?.email}</p>
+                    {o.invoice_resent_at && (
+                      <p className="text-[10px] text-emerald-700" data-testid={`invoice-resent-${o.order_number}`}>Invoice emailed {new Date(o.invoice_resent_at).toLocaleDateString()}</p>
+                    )}
                   </td>
                   <td className="p-3 text-xs">{o.items?.length} item{o.items?.length !== 1 ? 's' : ''}</td>
                   <td className="p-3 font-bold">£{Number(o.total).toFixed(2)}</td>
@@ -299,6 +358,20 @@ const AdminOrders = () => {
                         {downloadingId === o.id
                           ? <Loader2 className="h-4 w-4 animate-spin" />
                           : <FileText className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleResendInvoice(o)}
+                        disabled={resendingId === o.id || !hasEmail(o)}
+                        title={o.payment_status !== 'paid' ? 'Email invoice with bank-transfer details' : 'Email a copy of the invoice'}
+                        data-testid={`resend-invoice-${o.order_number}`}
+                        className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 h-8 w-8"
+                      >
+                        {resendingId === o.id
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <Send className="h-4 w-4" />}
                       </Button>
                       {!blockedIds.has(o.id) && (
                         <Button

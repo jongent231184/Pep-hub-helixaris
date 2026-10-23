@@ -350,7 +350,8 @@ def _whatsapp_invite_html(settings: Optional[dict]) -> str:
 """.strip()
 
 
-def _order_summary_html(order: dict, settings: Optional[dict] = None) -> str:
+def _order_summary_html(order: dict, settings: Optional[dict] = None, heading: str = 'Thank you for your order!',
+                        intro: str = "We've received your payment and are preparing your order.", extra_html: str = '') -> str:
     items_html = ''
     for it in order.get('items', []):
         opt = f" ({it['option']})" if it.get('option') else ''
@@ -395,13 +396,14 @@ def _order_summary_html(order: dict, settings: Optional[dict] = None) -> str:
       </tr>
       <tr>
         <td style="padding:32px;">
-          <h1 style="margin:0 0 8px 0;font-size:22px;color:#0f172a;">Thank you for your order!</h1>
+          <h1 style="margin:0 0 8px 0;font-size:22px;color:#0f172a;">{heading}</h1>
           <p style="margin:0 0 16px 0;color:#475569;font-size:14px;">
-            We've received your payment and are preparing your order.
+            {intro}
           </p>
           <p style="margin:0 0 8px 0;font-size:13px;color:#334155;">
             Order number: <strong style="font-family:'Courier New',monospace;color:#0284c7;">{order.get('order_number','')}</strong>
           </p>
+          {extra_html}
           {addresses_html}
           <table role="presentation" width="100%" style="border-collapse:collapse;font-size:14px;color:#334155;">
             {items_html}
@@ -567,6 +569,73 @@ async def send_order_emails(order: dict) -> None:
             logger.info(f'admin notify sent for {order_number}: {res.get("id")}')
         except Exception as e:
             logger.error(f'admin notify failed for {order_number}: {e}')
+
+
+def _bank_details_html(order: dict, settings: dict) -> str:
+    def row(label, value):
+        return (f'<tr><td style="padding:6px 0;color:#64748b;font-size:13px;width:140px;">{label}</td>'
+                f'<td style="padding:6px 0;font-weight:700;font-size:14px;font-family:\'Courier New\',monospace;">{value}</td></tr>')
+    return f"""
+          <div style="margin:0 0 20px 0;padding:16px 20px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;">
+            <p style="margin:0 0 4px 0;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;color:#0284c7;">Pay by bank transfer</p>
+            <table role="presentation" style="border-collapse:collapse;">
+              {row('Account name', settings.get('bank_account_name', ''))}
+              {row('Sort code', settings.get('bank_sort_code', ''))}
+              {row('Account number', settings.get('bank_account_number', ''))}
+              {row('Reference', order.get('order_number', ''))}
+              {row('Amount', f"£{float(order.get('total', 0)):.2f}")}
+            </table>
+            <p style="margin:10px 0 0 0;font-size:12px;color:#475569;line-height:1.5;">
+              Please use your order number as the payment reference so we can match it quickly. We'll confirm by email as soon as the transfer arrives and your order will then be dispatched.
+            </p>
+          </div>
+    """
+
+
+async def send_invoice_email(order: dict, settings: Optional[dict] = None) -> dict:
+    """Re-send the invoice to the customer. Unpaid + bank details configured →
+    'new payment option' framing with transfer details; otherwise a plain copy."""
+    if not _init_resend():
+        raise RuntimeError('Email is not configured (RESEND_API_KEY missing)')
+    settings = settings or {}
+    order_number = order.get('order_number', '?')
+    customer_email = (order.get('shipping_address') or {}).get('email', '')
+    if not customer_email or customer_email == 'pending@ghp-health.com':
+        raise ValueError('This order has no customer email address')
+
+    unpaid = order.get('payment_status') != 'paid'
+    bank_ready = bool(settings.get('bank_account_number'))
+    if unpaid and bank_ready:
+        mode = 'bank_transfer'
+        subject = f'New payment option for your order {order_number} — pay by bank transfer'
+        heading = 'New payment option: pay by bank transfer'
+        intro = (f'Your order <strong>{order_number}</strong> is still awaiting payment. You can now settle it by bank transfer '
+                 'using the details below — the same details are on the attached invoice.')
+        extra = _bank_details_html(order, settings)
+    elif unpaid:
+        mode = 'unpaid'
+        subject = f'Your invoice for order {order_number}'
+        heading = 'Your invoice'
+        intro = f'Here is a fresh copy of the invoice for order <strong>{order_number}</strong>, which is still awaiting payment.'
+        extra = ''
+    else:
+        mode = 'paid'
+        subject = f'Your invoice for order {order_number}'
+        heading = 'Your invoice'
+        intro = f'Here is a copy of the paid invoice for order <strong>{order_number}</strong>, for your records.'
+        extra = ''
+
+    pdf_bytes = await asyncio.to_thread(build_invoice_pdf, order, settings)
+    params = {
+        'from': f'{BUSINESS_NAME} <{FROM_EMAIL}>',
+        'to': [customer_email],
+        'subject': subject,
+        'html': _order_summary_html(order, settings, heading=heading, intro=intro, extra_html=extra),
+        'attachments': [{'filename': f'Invoice-{order_number}.pdf', 'content': list(pdf_bytes)}],
+    }
+    res = await asyncio.to_thread(resend.Emails.send, params)
+    logger.info(f'invoice re-sent for {order_number} ({mode}): {res.get("id")}')
+    return {'sent_to': customer_email, 'mode': mode}
 
 
 AREA_LABELS = {

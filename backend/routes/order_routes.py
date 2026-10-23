@@ -12,7 +12,7 @@ from models import (
 )
 from auth import get_current_user_optional, get_current_user, require_admin
 from utils import doc_to_dict
-from email_service import build_invoice_pdf
+from email_service import build_invoice_pdf, send_invoice_email
 from order_helpers import mark_order_paid
 from blocklist import find_block_match, record_hit, BLOCKED_MESSAGE
 
@@ -385,6 +385,44 @@ async def customer_invoice_pdf(order_id: str, user: Optional[dict] = Depends(get
         media_type='application/pdf',
         headers={'Content-Disposition': f'attachment; filename="invoice-{doc.get("order_number", order_id)}.pdf"'},
     )
+
+
+async def _resend_one(order_id: str, settings: dict) -> dict:
+    doc = await db.orders.find_one({'$or': [{'id': order_id}, {'order_number': order_id}]})
+    if not doc:
+        raise HTTPException(404, 'Order not found')
+    try:
+        result = await send_invoice_email(doc, settings)
+    except (ValueError, RuntimeError) as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(502, f'Email provider error: {e}')
+    await db.orders.update_one({'id': doc['id']}, {
+        '$set': {'invoice_resent_at': datetime.utcnow()},
+        '$inc': {'invoice_resend_count': 1},
+    })
+    return {'order_id': doc['id'], 'order_number': doc.get('order_number'), **result}
+
+
+@router.post('/admin/{order_id}/resend-invoice')
+async def resend_invoice(order_id: str, _=Depends(require_admin)):
+    settings = await db.settings.find_one({'_singleton': True}) or {}
+    return await _resend_one(order_id, settings)
+
+
+@router.post('/admin/resend-invoices')
+async def resend_invoices_bulk(payload: dict, _=Depends(require_admin)):
+    ids = [str(i) for i in (payload.get('order_ids') or [])][:200]
+    if not ids:
+        raise HTTPException(400, 'order_ids is required')
+    settings = await db.settings.find_one({'_singleton': True}) or {}
+    sent, failed = [], []
+    for oid in ids:
+        try:
+            sent.append(await _resend_one(oid, settings))
+        except HTTPException as e:
+            failed.append({'order_id': oid, 'error': e.detail})
+    return {'sent': sent, 'failed': failed}
 
 
 @router.patch('/{order_id}', response_model=OrderOut)

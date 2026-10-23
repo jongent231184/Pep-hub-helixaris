@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
-import { ArrowLeft, Loader2, FileText, Trash2, RefreshCw, Download, ShieldBan } from 'lucide-react';
+import { ArrowLeft, Loader2, FileText, Trash2, RefreshCw, Download, ShieldBan, Send } from 'lucide-react';
 import PaymentSourceBadge from '../../components/PaymentSourceBadge';
 import { useToast } from '../../hooks/use-toast';
 
@@ -24,6 +24,17 @@ const AdminOrderDetail = () => {
   const [paymentStatus, setPaymentStatus] = useState('');
   const [notes, setNotes] = useState('');
   const [blocking, setBlocking] = useState(false);
+  const [resending, setResending] = useState(false);
+
+  const resendInvoice = async () => {
+    setResending(true);
+    try {
+      const r = await Orders.resendInvoice(order.id);
+      toast({ title: 'Invoice emailed', description: `Sent to ${r.sent_to}${r.mode === 'bank_transfer' ? ' with bank-transfer details' : ''}.` });
+    } catch (e) {
+      toast({ title: 'Could not send', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally { setResending(false); }
+  };
   const [isBlocked, setIsBlocked] = useState(false);
   const { toast } = useToast();
 
@@ -149,6 +160,17 @@ const AdminOrderDetail = () => {
           >
             {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             Download PDF
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            onClick={resendInvoice}
+            disabled={resending}
+            data-testid="resend-invoice-btn"
+            title={order.payment_status !== 'paid' ? 'Email the customer a fresh invoice with bank-transfer details' : 'Email the customer a copy of the invoice'}
+          >
+            {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Email invoice
           </Button>
           {order.wallid_api_payment_id && (
             <Button
