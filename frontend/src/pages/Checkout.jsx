@@ -13,6 +13,7 @@ import { Lock, Loader2, AlertTriangle, RefreshCw, CreditCard } from 'lucide-reac
 import { Checkbox } from '../components/ui/checkbox';
 import BankTrustBadges from '../components/BankTrustBadges';
 import RedirectingOverlay from '../components/RedirectingOverlay';
+import BankTransferPanel, { BankTransferDetails } from '../components/BankTransferPanel';
 import { useAuth } from '../context/AuthContext';
 import { Orders, Promos, Addresses, Wallid, resolveImage } from '../lib/api';
 
@@ -35,6 +36,7 @@ const Checkout = () => {
   const [complianceConfirmed, setComplianceConfirmed] = useState(false);
   const [squareConfig, setSquareConfig] = useState(null);
   const [squareLoading, setSquareLoading] = useState(false);
+  const [bankChosen, setBankChosen] = useState(false);
 
   // Probe Square config once — controls whether the Pay-by-Card button renders.
   useEffect(() => {
@@ -512,7 +514,15 @@ const Checkout = () => {
               </form>
             )}
 
-            {step === 'payment' && (
+            {step === 'payment' && bankChosen && (
+              <section className="border rounded-lg p-6 bg-white">
+                <h2 className="text-lg font-bold uppercase mb-4">Payment</h2>
+                <BankTransferDetails order={createdOrder} settings={settings} />
+                <Link to="/" className="block mt-6 text-sm text-sky-600 hover:text-sky-700" data-testid="bank-transfer-continue-link">Continue shopping →</Link>
+              </section>
+            )}
+
+            {step === 'payment' && !bankChosen && (
               <section className="border rounded-lg p-6 bg-white">
                 <h2 className="text-lg font-bold uppercase mb-4">Payment</h2>
 
@@ -576,6 +586,13 @@ const Checkout = () => {
                     </p>
                     <BankTrustBadges />
 
+                    <BankTransferPanel
+                      order={createdOrder}
+                      settings={settings}
+                      disabled={!complianceConfirmed}
+                      onChosen={(o) => { setCreatedOrder(o); setBankChosen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    />
+
                     {/* Alternative: Pay by Card / Apple Pay / Google Pay via Square */}
                     {/* TEMPORARILY DISABLED — waiting on merchant compliance sign-off.
                         Re-enable by restoring the original <Button onClick={payWithSquare} /> block. */}
@@ -603,7 +620,7 @@ const Checkout = () => {
                           Pay by Card · Coming soon
                         </Button>
                         <p className="text-xs text-slate-500 mt-2 text-center" data-testid="square-disabled-note">
-                          Card / Apple Pay / Google Pay temporarily unavailable — please use Pay by Bank above.
+                          Card / Apple Pay / Google Pay temporarily unavailable — please use Pay by Bank or bank transfer.
                         </p>
                       </>
                     )}
@@ -613,6 +630,14 @@ const Checkout = () => {
                     <p className="font-semibold mb-1">Payment temporarily unavailable.</p>
                     <p>Your order <span className="font-mono">{createdOrder?.order_number}</span> has been saved. Please contact us at <a href={`mailto:${settings?.contact_email || 'GHP-Health@outlook.com'}`} className="underline">{settings?.contact_email || 'GHP-Health@outlook.com'}</a> for an invoice link.</p>
                   </div>
+                )}
+                {!wallidConfig?.configured && (
+                  <BankTransferPanel
+                    order={createdOrder}
+                    settings={settings}
+                    disabled={false}
+                    onChosen={(o) => { setCreatedOrder(o); setBankChosen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  />
                 )}
 
                 <button onClick={() => setStep('details')} className="mt-6 text-sm text-sky-600 hover:text-sky-700">← Edit details</button>

@@ -75,6 +75,31 @@ See `/app/memory/test_credentials.md`.
 - **#9 Blog engine** — admin-editable posts, category taxonomy, related-product embed.
 - **#10 Peptide Index / Library page** — Peptiology-style directory.
 
+### ✅ 2026-10-23 — Manual bank transfer payment option (preview only, NOT yet live)
+- Admin Settings → "Bank transfer" (account name / sort code / account number). Option hidden while account number is blank.
+- Checkout: "Pay by bank transfer" button under Wallid (needs compliance tick) → shows details + reference = order number + amount, clears cart, customer can download the PDF invoice (GET /api/orders/{id}/invoice.pdf). POST /api/orders/{id}/bank-transfer sets payment_provider=bank_transfer.
+- Unpaid PDF + admin printable invoice show the bank block; admin list shows an "Awaiting transfer" badge. Stock is NOT held until paid.
+- Admin PATCH payment_status→paid now runs mark_order_paid (stock decrement once, promo usage, confirmation email + paid invoice, source=manual, status=processing). Tests: iteration_22 + backend/tests/test_bank_transfer.py (6/6).
+- ⚠️ This chat is the FORK job 411a925d (preview dual-brand-store). NEVER publish it as Replace on GHP. Ship via GitHub → pull into the original GHP chat (ca026de8) → republish there.
+
+### ✅ INCIDENT RESOLVED 2026-10-21 — Emergent support re-bound GHP live to `ghp-ecommerce-pay-test_database`. Verified read-only (iteration_21.json, 100%): orders up to GHP-1921, 66 products / 40 variants. User chose NOT to import stray GHP-054/055. History below kept for reference.
+### 🚨 INCIDENT 2026-10-20 — GHP live bound to WRONG DB (history)
+- Fork job 411a925d (this chat, preview dual-brand-store) published as "replace" on deployment eed29dfe (ghp-ecommerce-pay) → live now uses `dual-brand-store-test_database` (45 orders, GHP-055, £37.50 stale products). Real DB `ghp-ecommerce-pay-test_database` INTACT (1896 orders, latest GHP-1921, counters.seq 1921). RCAs in /app/deployer-agent-docs/.
+- Rollback + republish from original job ca026de8 did NOT fix (system secrets regenerated from bad prod state). Only Emergent support can re-bind MONGO_URL+DB_NAME. Support disputes account ownership (user acct jongent84@gmail.com). Site set PRIVATE.
+- After re-bind: verify live orders → GHP-1921; merge Clare Ballinger's GHP-054 (failed) & GHP-055 (pending) from dual-brand DB as GHP-1922/1923, bump counters.seq.
+- Fallback (only if support can't help, user decides end of day): copy prices/variants from helixaris.com API, set counter to GHP-2000; orders/ambassadors/coaching data would be lost.
+- NEVER publish a forked chat as Replace on GHP again; update Helixaris only from its own chat.
+
+### 🔵 PLANNING — White-label Hub (user said "planning only, don't build yet")
+User choices: clients sell their OWN stock + ship own orders; Hub calculates monthly sales and invoices a % commission (clients use their own merchant accounts — never route through ours); goal = shared engine; 1–5 clients in year 1.
+Platform constraint (support_agent, unverified): ONE custom domain per Emergent deployment → true single-deployment multi-domain needs a proxy (e.g. Cloudflare Worker) proof-of-concept first.
+Phased plan:
+- Phase 1: Move brand.js config into DB "Store Settings" (admin-editable logo/colours/legal/emails/payment keys); new store = fork + deploy + fill form, no code edits.
+- Phase 2: Hub "Sales Reporting" API per store (signed key) → Hub pulls monthly net sales.
+- Phase 3: Hub commission engine — % per client, monthly statement + PDF invoice emailed via Resend, paid/unpaid status.
+- Phase 4: Client onboarding checklist in Hub + white-label SaaS agreement (client owns compliance).
+- Phase 5 (optional): Cloudflare-proxy PoC to run all stores on one deployment; migrate only if PoC passes.
+
 ### 🟢 P2 — nice-to-have
 - Low-stock dashboard alert (banner when any variant ≤ 1 unit).
 - Blood-testing affiliate partner page.

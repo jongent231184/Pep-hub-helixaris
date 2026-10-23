@@ -1,0 +1,40 @@
+{
+  "summary": "Tested the manual 'Pay by bank transfer' feature end-to-end on the preview URL only. Backend: 6 pytest tests (5 pass, 1 fails). The one failure is a real bug in the admin UI mark-paid path. Frontend checkout works: the Wallid button, the 'or' divider and bank-transfer-btn all show; the button stays disabled until the compliance box is ticked. After clicking it, bank-transfer-details shows GHP Health LTD / 12-34-56 / 12345678, the reference GHP-061 and the amount £44.99, each with a copy button. The cart empties and the invoice PDF (invoice-GHP-061.pdf) downloads. The admin 'Awaiting transfer' badge, the printable invoice bank block, 'Payment method: Bank transfer', the Settings save, and hiding the option when the account number is blank all work. Marking paid via the PATCH API sets paid/manual/processing. Stock drops once and a repeat PATCH does not drop it again. The paid PDF and printable invoice have no bank block. BUG: marking paid from the admin order detail UI leaves fulfilment status 'pending' instead of 'processing'. The Wallid button was never clicked.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "PATCH /api/orders/{id} (from AdminOrderDetail 'Save changes')", "issue": "The admin UI always sends {status, payment_status, notes}. When the admin changes payment_status to 'paid', mark_order_paid sets status=processing, but the endpoint then writes the 'status':'pending' sent by the form over it. Result after a UI mark-paid: payment_status=paid, payment_source=manual, status=pending (reproduced on GHP-061). Older orders GHP-052 and GHP-043 show the same PAID/PENDING mismatch. Stock decrement and the email still run.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/orders/{id}/bank-transfer", "issue": "Anonymous orders can be switched to bank_transfer by anyone who has the order UUID. Low risk because UUIDs are hard to guess; noted only."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Admin order detail -> mark Paid", "issue": "The Fulfilment status select still holds the old value 'pending' and is sent with the PATCH, so the order never moves to processing.", "affected_selectors": ["AdminOrderDetail Status card Selects (no data-testid)"]}
+    ],
+    "design_issues": [
+      {"screen": "Admin printable invoice (/admin/orders/{id}/invoice)", "issues": ["The invoice-bank-details block has no Amount field. The customer PDF and the checkout panel both include the amount."]},
+      {"screen": "Checkout payment step", "issues": ["The disabled card note says 'please use Pay by Bank above' and does not mention the bank-transfer option (cosmetic)."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_bank_transfer.py", "/app/test_reports/pytest/pytest_bank_transfer.xml"],
+  "action_items": [
+    "Fix the mark-paid status override in update_order_status (order_routes.py). When payment_status transitions to paid via mark_order_paid, drop updates['status'] if it is 'pending' or equals the existing status. Alternatively, have AdminOrderDetail send only the fields that changed. Then re-run tests/test_bank_transfer.py::TestBankTransferFlow::test_mark_paid_with_status_in_same_patch.",
+    "Optional: add Amount to the invoice-bank-details block in AdminOrderInvoice.jsx",
+    "Add data-testids: checkout form inputs and the 'Continue to payment' button, the AdminOrderDetail payment/fulfilment selects and Save button, and the AdminSettings 'Save settings' button"
+  ],
+  "critical_code_review_comments": [
+    "order_routes.update_order_status: after mark_order_paid, a 'status' value in the same payload overwrites 'processing'. This is the root cause of the bug above.",
+    "PUT /api/settings replaces the whole Settings object. Clients must send the full form; the UI does this correctly.",
+    "BankTransferPanel.download has no catch/toast on failure; the error is swallowed after `finally`."
+  ],
+  "updated_files": ["/app/backend/tests/test_bank_transfer.py"],
+  "success_rate": {"backend": "83% (5/6)", "frontend": "95% (all requested flows work; the only failure is the admin UI mark-paid status)"},
+  "test_credentials": "admin@ghp-health.com / GHP-Health26 (from /app/memory/test_credentials.md). Site is published, so no preview gate; the age gate was confirmed.",
+  "seed_data_creation": "Created GHP-061 (banktest+20@example.com) through the UI and marked it paid through the admin UI; kept as a reproduction of the status bug. Deleted GHP-062 and GHP-063. Pytest orders are deleted in teardown. ahkcu-100mg stock was restored to 5. Bank settings were restored to GHP Health LTD / 12-34-56 / 12345678.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest /app/backend/tests/test_bank_transfer.py; it uses pymongo to restore product stock and decodes the ReportLab PDF streams (ASCII85+Flate) to check the text. Checkout inputs have no testids: fill #email, then the 7 inputs in form#details-form in order, then click button[form=details-form]. The settings save button is get_by_role('button', name='Save settings'); the page has a second form (change password). Never click wallid-pay-btn.",
+  "rca of the issue": "Repro: create a bank-transfer order, open /admin/orders/{id}, set Payment status=paid, click Save changes. The frontend sends {status:'pending', payment_status:'paid'}. The backend runs mark_order_paid (status->processing), pops only payment_status, then runs $set with status='pending'. Fix: in the backend, ignore an unchanged or 'pending' status during the paid transition."
+}

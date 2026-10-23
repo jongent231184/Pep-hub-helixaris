@@ -278,6 +278,9 @@ const AdminOrders = () => {
                     <div className="flex flex-col items-start gap-1">
                       <span className={`px-2 py-1 rounded text-xs font-semibold uppercase ${statusColor(o.payment_status)}`}>{o.payment_status}</span>
                       {o.payment_status === 'paid' && <PaymentSourceBadge source={o.payment_source} />}
+                      {o.payment_status !== 'paid' && o.payment_provider === 'bank_transfer' && (
+                        <span className="px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 text-[10px] font-bold uppercase" data-testid={`bank-transfer-badge-${o.order_number}`}>Awaiting transfer</span>
+                      )}
                     </div>
                   </td>
                   <td className="p-3"><span className={`px-2 py-1 rounded text-xs font-semibold uppercase ${statusColor(o.status)}`}>{o.status}</span></td>

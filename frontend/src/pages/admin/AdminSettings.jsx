@@ -137,6 +137,30 @@ const AdminSettings = () => {
           </div>
         </section>
 
+        {/* --- BANK TRANSFER --- */}
+        <section className="bg-white border rounded-lg p-6 space-y-4" data-testid="settings-bank-section">
+          <h2 className="text-base font-bold uppercase tracking-wide">Bank transfer</h2>
+          <p className="text-xs text-slate-500 -mt-2">
+            Shown at checkout as a "Pay by bank transfer" option and printed on
+            unpaid invoices, with the order number as the payment reference.
+            Leave the account number blank to hide the option.
+          </p>
+          <div>
+            <Label>Account name</Label>
+            <Input value={form.bank_account_name || ''} onChange={update('bank_account_name')} placeholder="e.g. GHP Health LTD" className="mt-1" data-testid="settings-bank-account-name" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Sort code</Label>
+              <Input value={form.bank_sort_code || ''} onChange={update('bank_sort_code')} placeholder="e.g. 12-34-56" className="mt-1" data-testid="settings-bank-sort-code" />
+            </div>
+            <div>
+              <Label>Account number</Label>
+              <Input value={form.bank_account_number || ''} onChange={update('bank_account_number')} placeholder="e.g. 12345678" className="mt-1" data-testid="settings-bank-account-number" />
+            </div>
+          </div>
+        </section>
+
         {/* --- LEGAL / COMPLIANCE --- */}
         <section className="bg-white border rounded-lg p-6 space-y-4">
           <h2 className="text-base font-bold uppercase tracking-wide">Legal &amp; compliance</h2>

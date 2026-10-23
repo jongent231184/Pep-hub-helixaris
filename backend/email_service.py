@@ -94,7 +94,7 @@ def _init_resend() -> bool:
 
 
 # ---------------- PDF INVOICE ----------------
-def build_invoice_pdf(order: dict) -> bytes:
+def build_invoice_pdf(order: dict, settings: Optional[dict] = None) -> bytes:
     """Generate a simple branded PDF invoice from an order document."""
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -241,6 +241,36 @@ def build_invoice_pdf(order: dict) -> bytes:
     ]))
     elems.append(tot_tbl)
     elems.append(Spacer(1, 8 * mm))
+
+    bank = settings or {}
+    if order.get('payment_status') != 'paid' and bank.get('bank_account_number'):
+        elems.append(Paragraph('<b>PAY BY BANK TRANSFER</b>', body))
+        elems.append(Spacer(1, 2 * mm))
+        bank_rows = [
+            ['Account name', bank.get('bank_account_name', '')],
+            ['Sort code', bank.get('bank_sort_code', '')],
+            ['Account number', bank.get('bank_account_number', '')],
+            ['Reference', order.get('order_number', '')],
+            ['Amount', f"£{total:.2f}"],
+        ]
+        bank_tbl = Table(bank_rows, colWidths=[45 * mm, 125 * mm])
+        bank_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
+            ('BOX', (0, 0), (-1, -1), 0.75, colors.HexColor('#334155')),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#64748b')),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ]))
+        elems.append(bank_tbl)
+        elems.append(Spacer(1, 2 * mm))
+        elems.append(Paragraph(
+            f"Please use <b>{order.get('order_number', '')}</b> as the payment reference. "
+            "Your order is dispatched once the transfer has been received.",
+            small,
+        ))
+        elems.append(Spacer(1, 8 * mm))
 
     # Footer
     elems.append(Paragraph(

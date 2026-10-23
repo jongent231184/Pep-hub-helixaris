@@ -71,6 +71,8 @@ export const Orders = {
   remove: (id) => api.delete(`/orders/${id}`).then(r => r.data),
   // Admin: download PDF invoice for an order — returns a Blob so we can trigger a browser download.
   downloadInvoicePdf: (id) => api.get(`/orders/admin/${id}/invoice.pdf`, { responseType: 'blob' }).then(r => r.data),
+  chooseBankTransfer: (id) => api.post(`/orders/${id}/bank-transfer`).then(r => r.data),
+  downloadMyInvoicePdf: (id) => api.get(`/orders/${id}/invoice.pdf`, { responseType: 'blob' }).then(r => r.data),
   // Paylinks
   createPaylink: (data) => api.post('/orders/paylink', data).then(r => r.data),
   listPaylinks: () => api.get('/orders/paylinks').then(r => r.data),
