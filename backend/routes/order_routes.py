@@ -13,6 +13,7 @@ from models import (
 from auth import get_current_user_optional, get_current_user, require_admin
 from utils import doc_to_dict
 from email_service import build_invoice_pdf
+from order_helpers import mark_order_paid
 from blocklist import find_block_match, record_hit, BLOCKED_MESSAGE
 
 router = APIRouter(prefix='/orders', tags=['orders'])
@@ -349,6 +350,43 @@ async def get_order(order_id: str, user: Optional[dict] = Depends(get_current_us
     return OrderOut(**doc_to_dict(doc))
 
 
+async def _owned_order_or_404(order_id: str, user: Optional[dict]) -> dict:
+    doc = await db.orders.find_one({'id': order_id})
+    if not doc:
+        raise HTTPException(404, 'Order not found')
+    if doc.get('user_id') and (not user or (user.get('role') != 'admin' and user['id'] != doc['user_id'])):
+        raise HTTPException(403, 'Forbidden')
+    return doc
+
+
+@router.post('/{order_id}/bank-transfer', response_model=OrderOut)
+async def choose_bank_transfer(order_id: str, user: Optional[dict] = Depends(get_current_user_optional)):
+    doc = await _owned_order_or_404(order_id, user)
+    if doc.get('payment_status') == 'paid':
+        raise HTTPException(400, 'Order is already paid')
+    settings = await db.settings.find_one({'_singleton': True}) or {}
+    if not settings.get('bank_account_number'):
+        raise HTTPException(400, 'Bank transfer is not available')
+    res = await db.orders.find_one_and_update(
+        {'id': order_id},
+        {'$set': {'payment_provider': 'bank_transfer', 'payment_status': 'pending', 'updated_at': datetime.utcnow()}},
+        return_document=True,
+    )
+    return OrderOut(**doc_to_dict(res))
+
+
+@router.get('/{order_id}/invoice.pdf')
+async def customer_invoice_pdf(order_id: str, user: Optional[dict] = Depends(get_current_user_optional)):
+    doc = await _owned_order_or_404(order_id, user)
+    settings = await db.settings.find_one({'_singleton': True}) or {}
+    pdf_bytes = await asyncio.to_thread(build_invoice_pdf, doc, settings)
+    return Response(
+        content=pdf_bytes,
+        media_type='application/pdf',
+        headers={'Content-Disposition': f'attachment; filename="invoice-{doc.get("order_number", order_id)}.pdf"'},
+    )
+
+
 @router.patch('/{order_id}', response_model=OrderOut)
 async def update_order_status(order_id: str, payload: OrderStatusUpdate, _=Depends(require_admin)):
     updates = {k: v for k, v in payload.model_dump().items() if v is not None}
@@ -358,13 +396,18 @@ async def update_order_status(order_id: str, payload: OrderStatusUpdate, _=Depen
         clash = await db.orders.find_one({'order_number': updates['order_number'], 'id': {'$ne': order_id}})
         if clash:
             raise HTTPException(409, f"Order number {updates['order_number']} already exists")
-    # If an admin is flipping payment_status to paid via the dashboard, stamp
-    # the source so it visibly reads "MANUAL" (rather than auto-verified).
+    # Admin marking an unpaid order as paid → full paid transition (stock,
+    # promo usage, confirmation email + paid invoice), stamped MANUAL.
     if updates.get('payment_status') == 'paid':
-        existing = await db.orders.find_one({'id': order_id}, {'payment_status': 1})
+        existing = await db.orders.find_one({'id': order_id}, {'payment_status': 1, 'payment_id': 1, 'payment_provider': 1})
         if existing and existing.get('payment_status') != 'paid':
-            updates.setdefault('payment_source', 'manual')
-            updates.setdefault('paid_at', datetime.utcnow())
+            await mark_order_paid(
+                order_id,
+                payment_id=existing.get('payment_id') or '',
+                payment_provider=existing.get('payment_provider') or 'manual',
+                payment_source='manual',
+            )
+            updates.pop('payment_status')
     updates['updated_at'] = datetime.utcnow()
     res = await db.orders.find_one_and_update(
         {'id': order_id}, {'$set': updates}, return_document=True
@@ -390,7 +433,8 @@ async def admin_download_invoice_pdf(order_id: str, _=Depends(require_admin)):
     if not doc:
         raise HTTPException(404, 'Order not found')
     try:
-        pdf_bytes = await asyncio.to_thread(build_invoice_pdf, doc)
+        settings = await db.settings.find_one({'_singleton': True}) or {}
+        pdf_bytes = await asyncio.to_thread(build_invoice_pdf, doc, settings)
     except Exception as e:
         raise HTTPException(500, f'Invoice generation failed: {e}')
     order_number = doc.get('order_number') or order_id

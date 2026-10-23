@@ -98,7 +98,7 @@ const AdminOrderInvoice = () => {
             <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">Details</p>
             <p className="text-sm"><span className="text-slate-500">Order number:</span> <span className="font-mono">{order.order_number}</span></p>
             <p className="text-sm"><span className="text-slate-500">Order date:</span> {created.toLocaleString('en-GB')}</p>
-            <p className="text-sm"><span className="text-slate-500">Payment method:</span> {order.payment_provider === 'wallid' ? 'Pay by Bank (Wallid)' : (order.payment_provider === 'paypal' ? 'PayPal' : 'Manual')}</p>
+            <p className="text-sm"><span className="text-slate-500">Payment method:</span> {order.payment_provider === 'wallid' ? 'Pay by Bank (Wallid)' : (order.payment_provider === 'bank_transfer' ? 'Bank transfer' : (order.payment_provider === 'paypal' ? 'PayPal' : 'Manual'))}</p>
             <p className="text-sm"><span className="text-slate-500">Payment status:</span> <span className={`font-bold uppercase ${paid ? 'text-emerald-700' : 'text-amber-700'}`}>{order.payment_status}</span></p>
             <p className="text-sm"><span className="text-slate-500">Fulfilment:</span> <span className="capitalize font-semibold">{order.status}</span></p>
             {order.payment_id && <p className="text-[10px] font-mono text-slate-500 mt-1 break-all">PayPal ID: {order.payment_id}</p>}
@@ -156,6 +156,19 @@ const AdminOrderInvoice = () => {
             </tr>
           </tfoot>
         </table>
+
+        {!paid && s.bank_account_number && (
+          <div className="mt-6 pt-4 border-t" data-testid="invoice-bank-details">
+            <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">Pay by bank transfer</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <div><p className="text-slate-500 text-xs">Account name</p><p className="font-semibold">{s.bank_account_name}</p></div>
+              <div><p className="text-slate-500 text-xs">Sort code</p><p className="font-mono font-semibold">{s.bank_sort_code}</p></div>
+              <div><p className="text-slate-500 text-xs">Account number</p><p className="font-mono font-semibold">{s.bank_account_number}</p></div>
+              <div><p className="text-slate-500 text-xs">Reference</p><p className="font-mono font-semibold">{order.order_number}</p></div>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">Please use {order.order_number} as the payment reference. Orders are dispatched once payment is received.</p>
+          </div>
+        )}
 
         {order.notes && (
           <div className="mt-6 pt-4 border-t">

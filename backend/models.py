@@ -299,6 +299,10 @@ class Settings(BaseModel):
     whatsapp_invite_url: str = ''
     whatsapp_invite_headline: str = 'Join our WhatsApp community'
     whatsapp_invite_body: str = 'Get first-look drops, batch updates, restock alerts and peer discussion — direct from the team.'
+    # Manual bank transfer — option is hidden at checkout until account number is set.
+    bank_account_name: str = ''
+    bank_sort_code: str = ''
+    bank_account_number: str = ''
 
 
 # ---------- PROMO CODES ----------
