@@ -1,0 +1,561 @@
+{
+ "cerebrolysin-60mg": {
+  "overview": "Cerebrolysin is a porcine brain-derived peptide mixture composed of low-molecular-weight neuropeptides and free amino acids. It is extensively studied for its multimodal neurotrophic and neuroprotective properties in experimental models of neurodegeneration, ischaemia, and traumatic brain injury. The heterogeneous composition mimics endogenous neurotrophic factors, making it a valuable tool for investigating mechanisms of neuronal survival and plasticity.",
+  "molecular_class": "Porcine brain-derived neuropeptide mixture",
+  "molecular_formula": "",
+  "molecular_weight": "",
+  "sequence": "",
+  "receptor_target": "Multimodal neurotrophic activity; mimics NGF, BDNF, CNTF, and GDNF signalling pathways",
+  "signalling": "Cerebrolysin activates multiple neurotrophic receptor cascades including TrkA, TrkB, and CNTFR, leading to downstream PI3K/Akt and MAPK/ERK1/2 phosphorylation. These pathways promote neuronal survival, synaptic plasticity, and inhibition of apoptotic signalling cascades.",
+  "study_systems": [
+   "Primary cortical and hippocampal neurone cultures",
+   "Rat and mouse ischaemic stroke models",
+   "Traumatic brain injury rodent models",
+   "In vitro neurodegeneration assays"
+  ],
+  "areas_of_research": [
+   "Neurotrophic factor signalling",
+   "Ischaemic stroke neuroprotection",
+   "Traumatic brain injury recovery mechanisms",
+   "Alzheimer disease experimental models",
+   "Synaptic plasticity and neurogenesis",
+   "Apoptosis and oxidative stress"
+  ],
+  "key_finding": "Cerebrolysin administration in rodent models of focal cerebral ischaemia significantly reduces infarct volume and improves neurological deficit scores when administered in early post-stroke windows. Mechanistic studies demonstrate upregulation of endogenous BDNF expression and enhanced hippocampal neurogenesis in treated animals. The peptide mixture also attenuates oxidative stress markers and caspase-3 activation in neuronal injury models.",
+  "mechanism": "Cerebrolysin's neuroprotective mechanism involves mimicry of multiple neurotrophic factors through activation of Trk receptor families. The peptide mixture penetrates the blood-brain barrier and enhances endogenous BDNF and NGF expression via transcriptional upregulation. This leads to sustained Akt and ERK1/2 phosphorylation, promoting neuronal survival signalling and inhibition of pro-apoptotic BAD and caspase cascades. Additionally, Cerebrolysin modulates glutamate excitotoxicity by stabilising intracellular calcium homeostasis and reducing oxidative stress through antioxidant enzyme upregulation. The preparation also stimulates neurogenesis in the dentate gyrus and subventricular zone through promotion of neural progenitor proliferation and differentiation.",
+  "limitations": "The heterogeneous composition of Cerebrolysin makes isolation of individual active components difficult, limiting mechanistic precision. Neurotrophic activity in controlled laboratory models does not by itself establish clinical efficacy or optimal therapeutic windows.",
+  "open_questions": "The specific peptide fractions responsible for distinct neurotrophic activities remain incompletely characterised. The relative contributions of direct receptor activation versus endogenous neurotrophic factor upregulation require further elucidation in time-course studies.",
+  "storage_handling": "Supplied as a lyophilised powder. Store sealed at 2-8 \u00b0C (standard laboratory refrigeration) and use within 30 days of receipt. Reconstitute with sterile bacteriostatic water under aseptic laboratory technique; store the reconstituted solution at 2-8 \u00b0C and use within 30 to 60 days. For in-vitro laboratory research only.",
+  "references": [
+   {
+    "citation": "Alvarez XA et al. Cerebrolysin reduces microglial activation in vivo and in vitro: a potential mechanism of neuroprotection. J Neural Transm Suppl 2000.",
+    "url": ""
+   },
+   {
+    "citation": "Masliah E et al. Neurotrophic effects of Cerebrolysin in animal models of excitotoxicity. J Neural Transm 2012.",
+    "url": ""
+   },
+   {
+    "citation": "Zhang L et al. Cerebrolysin reduces astrogliosis and axonal damage and enhances neurogenesis in focal cerebral ischemia. Restor Neurol Neurosci 2010.",
+    "url": ""
+   },
+   {
+    "citation": "Rockenstein E et al. Cerebrolysin decreases amyloid-beta production by regulating amyloid protein precursor maturation in a transgenic model of Alzheimer's disease. J Neurosci Res 2006.",
+    "url": ""
+   }
+  ],
+  "pubmed_query": "\"Cerebrolysin\" AND (neuroprotection OR neurotrophic OR stroke OR traumatic brain injury)"
+ },
+ "ace-031-10mg": {
+  "overview": "ACE-031 is a recombinant fusion protein combining the extracellular domain of human activin receptor type IIB (ActRIIB) with the Fc region of human immunoglobulin G (IgG). It functions as a soluble decoy receptor that binds and sequesters multiple members of the transforming growth factor-\u03b2 superfamily, notably myostatin (GDF-8), activin A, and related ligands. Researchers study ACE-031 in models of muscle wasting, muscular dystrophy, and myostatin signalling to investigate the endogenous regulation of skeletal muscle mass and the pharmacological potential of myostatin pathway inhibition.",
+  "molecular_class": "Recombinant fusion protein / Soluble activin receptor IIB decoy receptor",
+  "molecular_formula": "",
+  "molecular_weight": "~115 kDa",
+  "sequence": "",
+  "receptor_target": "Soluble decoy receptor binding myostatin (GDF-8), activin A, and related TGF-\u03b2 superfamily ligands",
+  "signalling": "ACE-031 binds circulating myostatin, activin A, and GDF-11, preventing their engagement with endogenous cell-surface ActRIIB receptors on muscle fibres and satellite cells. By sequestering these ligands, the fusion protein blocks downstream Smad2/3 phosphorylation, thereby relieving constitutive negative regulation of muscle growth and permitting increased protein synthesis, satellite cell activation, and hypertrophy.",
+  "study_systems": [
+   "Murine models of muscular dystrophy (mdx mice)",
+   "Primary human myoblast cultures",
+   "Rat skeletal muscle hypertrophy models",
+   "Preclinical pharmacokinetics and biodistribution assays",
+   "In vitro ligand-binding affinity assays (myostatin, activin A)"
+  ],
+  "areas_of_research": [
+   "Myostatin pathway inhibition",
+   "Skeletal muscle hypertrophy mechanisms",
+   "Muscular dystrophy models (Duchenne)",
+   "Activin A and GDF-11 signalling",
+   "Smad2/3 pathway pharmacology",
+   "Soluble decoy receptor design and pharmacokinetics"
+  ],
+  "key_finding": "Preclinical studies in mdx mice demonstrated that administration of ActRIIB-Fc fusion proteins produced substantial increases in skeletal muscle mass (up to 25\u201335% over controls) and improvements in grip strength and histopathological markers of dystrophic muscle. These gains were accompanied by reduced fibrosis and central nucleation, indicating enhanced muscle regeneration and reduced degenerative burden in the dystrophic phenotype. Mechanistic investigations confirmed high-affinity binding to myostatin and activin A, with neutralisation of ligand-receptor signalling as the principal mode of action.",
+  "mechanism": "ACE-031 exerts its biological activity by functioning as a high-affinity soluble trap for myostatin, activin A, and related TGF-\u03b2 superfamily ligands. By sequestering these ligands in the circulation and interstitial compartments, the fusion protein prevents their binding to endogenous ActRIIB receptors on the surface of skeletal muscle cells. This inhibition blocks ligand-induced heterodimerisation of type I and type II serine/threonine kinase receptors, thereby preventing phosphorylation of receptor-activated Smad2 and Smad3 transcription factors. Reduced Smad2/3 signalling relieves the inhibition of myogenic differentiation and protein synthesis programmes, permitting enhanced muscle fibre hypertrophy, satellite cell proliferation, and overall lean mass accretion in preclinical systems.",
+  "limitations": "While robust muscle hypertrophy has been documented in preclinical models, ActRIIB-Fc treatment also influences haematopoiesis, vascular remodelling, and reproductive endocrine pathways due to the broad ligand specificity of the ActRIIB ectodomain. The translational relevance of preclinical muscle-function gains to human neuromuscular disease remains an area of active investigation, and pharmacodynamic variability across species complicates direct extrapolation.",
+  "open_questions": "Key questions include the optimal selectivity profile for myostatin inhibitors\u2014whether pan-ligand sequestration or myostatin-selective blockade yields superior muscle outcomes with fewer off-target effects. Additionally, the long-term consequences of chronic activin A neutralisation on bone density, erythropoiesis, and metabolic homeostasis remain incompletely characterised in multi-month experimental paradigms.",
+  "storage_handling": "Supplied as a lyophilised powder. Store sealed at 2-8 \u00b0C (standard laboratory refrigeration) and use within 30 days of receipt. Reconstitute with sterile bacteriostatic water under aseptic laboratory technique; store the reconstituted solution at 2-8 \u00b0C and use within 30 to 60 days. For in-vitro laboratory research only.",
+  "references": [
+   {
+    "citation": "Lee S-J et al. Regulation of muscle growth by multiple ligands signaling through activin type II receptors. Proc Natl Acad Sci USA 2005;102(50):18117\u201322.",
+    "url": "https://www.pnas.org/doi/10.1073/pnas.0505996102"
+   },
+   {
+    "citation": "Cadena SM et al. Administration of a soluble activin type IIB receptor promotes skeletal muscle growth independent of fiber type. J Appl Physiol 2010;109(3):635\u201342.",
+    "url": "https://journals.physiology.org/doi/full/10.1152/japplphysiol.00866.2009"
+   },
+   {
+    "citation": "Attie KM et al. A single ascending-dose study of muscle regulator ACE-031 in healthy volunteers. Muscle Nerve 2013;47(3):416\u201323.",
+    "url": "https://onlinelibrary.wiley.com/doi/10.1002/mus.23539"
+   },
+   {
+    "citation": "Pistilli EE et al. Targeting the activin type IIB receptor to improve muscle mass and function in the mdx mouse model of Duchenne muscular dystrophy. Am J Pathol 2011;178(3):1287\u201397.",
+    "url": "https://www.sciencedirect.com/science/article/pii/S0002944010006665"
+   }
+  ],
+  "pubmed_query": "\"ACE-031\" OR \"ActRIIB-Fc\" OR \"activin receptor IIB Fc fusion\""
+ },
+ "pinealon-10mg": {
+  "overview": "Pinealon (Glu-Asp-Arg) is a synthetic tripeptide cytomedine originally isolated from pineal gland extracts in the Russian peptide bioregulator programme. It is studied as a short peptide with proposed modulatory effects on neuronal gene expression and cellular ageing processes. Research explores its interaction with DNA regulatory elements and influence on gene transcription in neuronal and retinal cell systems.",
+  "molecular_class": "Tripeptide cytomedine / geroprotector",
+  "molecular_formula": "C16H28N8O8",
+  "molecular_weight": "460.44 g/mol",
+  "sequence": "Glu-Asp-Arg",
+  "receptor_target": "Proposed interaction with DNA regulatory elements and chromatin structure; specific receptor not characterised",
+  "signalling": "Proposed mechanism involves direct interaction with DNA or chromatin, modulating transcriptional activity of specific genes involved in neuronal differentiation, synaptic plasticity, and oxidative defence. The precise signalling cascade and receptor-mediated pathway remain under investigation.",
+  "study_systems": [
+   "Cultured rat cortical neurons",
+   "Human retinal pigment epithelial cells",
+   "In vivo rodent ageing models",
+   "Neuroblastoma cell lines"
+  ],
+  "areas_of_research": [
+   "Neuronal gene expression modulation",
+   "Retinal cell viability and function",
+   "Peptide bioregulator mechanisms",
+   "Ageing and oxidative stress in CNS tissues",
+   "Chromatin interaction and epigenetic regulation"
+  ],
+  "key_finding": "Studies from the St. Petersburg Institute of Bioregulation and Gerontology reported that Pinealon modulates expression of genes associated with neuronal differentiation and synaptic function in cultured cortical neurons, and demonstrated protective effects on retinal cells under oxidative stress. In vivo rodent experiments showed influences on markers of cerebral ageing, though the precise molecular target remains incompletely defined.",
+  "mechanism": "Pinealon is hypothesised to penetrate cell membranes and interact with DNA or associated regulatory proteins, influencing the transcriptional activity of genes involved in neuronal maintenance and oxidative defence. Research suggests the tripeptide may bind to specific regulatory sequences, modulating chromatin accessibility and gene expression profiles in neuronal tissues. The peptide appears to enhance expression of proteins related to synaptic plasticity and neuroprotection, although the full mechanistic pathway\u2014including receptor identification and downstream signalling intermediates\u2014requires further elucidation in independent studies.",
+  "limitations": "The proposed direct DNA-binding mechanism has not been exhaustively characterised by high-resolution structural methods, and independent replication of transcriptional effects in diverse model systems is limited. Effects observed in cell culture and rodent ageing models do not establish therapeutic efficacy or translate directly to human neurological outcomes.",
+  "open_questions": "Key open questions include the precise molecular target (receptor or DNA-binding site), the sequence specificity of any chromatin interaction, the structural determinants of cellular uptake, and whether observed effects generalise across neuronal subtypes and species. Independent validation of gene expression changes and mechanistic pathway mapping remain priorities.",
+  "storage_handling": "Supplied as a lyophilised powder. Store sealed at 2-8 \u00b0C (standard laboratory refrigeration) and use within 30 days of receipt. Reconstitute with sterile bacteriostatic water under aseptic laboratory technique; store the reconstituted solution at 2-8 \u00b0C and use within 30 to 60 days. For in-vitro laboratory research only.",
+  "references": [
+   {
+    "citation": "Khavinson VKh et al. Peptide regulation of gene expression: a study on Pinealon and neuronal differentiation. Bulletin of Experimental Biology and Medicine 2012.",
+    "url": ""
+   },
+   {
+    "citation": "Khavinson VKh, Linkova NS, Dyatlova AS, Kuznik BI, Umnov RS. Peptides: Prospects for Use in the Treatment of COVID-19. Molecules 2020; 25(19):4389.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/32992684/"
+   },
+   {
+    "citation": "Khavinson VKh, Bondarev IE, Butyugov AA. Peptide regulates expression of alpha-crystallin in retinal cells. Bulletin of Experimental Biology and Medicine 2014.",
+    "url": ""
+   },
+   {
+    "citation": "Linkova NS, Drobintseva AO, Orlova OA, Khavinson VKh. Peptide Regulation of Senescence: A Review. Current Drug Targets 2016; 17(13):1513-1523.",
+    "url": ""
+   }
+  ],
+  "pubmed_query": "\"Pinealon\" OR \"Glu-Asp-Arg\" OR (\"EDR peptide\" AND Khavinson)"
+ },
+ "pe-22-28-10mg": {
+  "overview": "PE-22-28 is a synthetic heptapeptide analogue of spadin, designed as a pharmacological tool to investigate TREK-1 potassium channel modulation. Spadin, derived from sortilin propeptide cleavage, is an endogenous TREK-1 channel blocker implicated in neuronal excitability and mood regulation. PE-22-28 represents a structurally optimised variant studied in preclinical neuropsychopharmacology research to examine antidepressant-like mechanisms mediated by TREK-1 inhibition in cellular and animal models.",
+  "molecular_class": "TREK-1 potassium channel antagonist peptide",
+  "molecular_formula": "",
+  "molecular_weight": "",
+  "sequence": "",
+  "receptor_target": "TREK-1 (KCNK2) background potassium channel blocker",
+  "signalling": "PE-22-28 blocks TREK-1 two-pore-domain potassium channels, leading to membrane depolarisation and increased neuronal excitability. TREK-1 inhibition reduces outward potassium currents, thereby enhancing action potential firing in hippocampal and cortical neurons.",
+  "study_systems": [
+   "Primary hippocampal neuron cultures",
+   "HEK293 cells expressing TREK-1",
+   "Rodent behavioural models",
+   "Brain slice electrophysiology"
+  ],
+  "areas_of_research": [
+   "TREK-1 channel pharmacology",
+   "Neuronal excitability regulation",
+   "Antidepressant mechanism discovery",
+   "Potassium channel structural biology",
+   "Mood-related neurobiology",
+   "Peptide channel modulators"
+  ],
+  "key_finding": "Spadin and its analogues, including PE-22-28, block TREK-1 channels with nanomolar affinity and produce rapid antidepressant-like effects in forced-swim and learned-helplessness rodent paradigms. Electrophysiological recordings confirm dose-dependent inhibition of TREK-1 currents in transfected cells and native neurons. These findings establish TREK-1 as a molecular target for peptide-based modulation of neuronal firing patterns.",
+  "mechanism": "PE-22-28 binds to extracellular or pore-forming domains of TREK-1 channels, physically occluding potassium ion flux and reducing background leak conductance. This shift in resting membrane potential toward depolarisation enhances the probability of action potential generation in excitable cells. TREK-1 is mechanosensitive and polymodal, integrating inputs from temperature, pH, and mechanical stretch; peptide blockade selectively removes tonic inhibition of firing. The resultant increase in hippocampal and prefrontal cortical activity is hypothesised to underlie behavioural phenotypes observed in stress models.",
+  "limitations": "Pharmacokinetic and blood-brain-barrier permeability data for PE-22-28 remain limited, and structural modifications distinguishing it from parent spadin are not fully characterised in the public domain. In vitro channel-blocking activity does not directly establish mechanisms of behavioural change in complex organisms.",
+  "open_questions": "The precise binding epitope on TREK-1 and the comparative selectivity profile across other KCNK family members require further structural and electrophysiological resolution. Whether peptide-based TREK-1 inhibitors offer advantages over small-molecule antagonists in research models remains under investigation.",
+  "storage_handling": "Supplied as a lyophilised powder. Store sealed at 2-8 \u00b0C (standard laboratory refrigeration) and use within 30 days of receipt. Reconstitute with sterile bacteriostatic water under aseptic laboratory technique; store the reconstituted solution at 2-8 \u00b0C and use within 30 to 60 days. For in-vitro laboratory research only.",
+  "references": [
+   {
+    "citation": "Mazella J et al. Spadin, a sortilin-derived peptide, targeting rodent TREK-1 channels: a new concept in the antidepressant drug design. PLoS Biol. 2010.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/20957185/"
+   },
+   {
+    "citation": "Moha Ou Maati H et al. Spadin as a new antidepressant: targeting TREK-1 potassium channels in a mouse model of depression. Neuropharmacology. 2011.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/21182851/"
+   },
+   {
+    "citation": "Djillani A et al. Role of TREK-1 in health and disease, focus on the central nervous system. Front Pharmacol. 2019.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/31333462/"
+   },
+   {
+    "citation": "Heurteaux C et al. TREK-1, a K+ channel involved in neuroprotection and general anesthesia. EMBO J. 2004.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/15549134/"
+   }
+  ],
+  "pubmed_query": "\"spadin\" OR \"PE-22-28\" OR \"TREK-1 peptide\""
+ },
+ "peg-mgf-2mg": {
+  "overview": "PEG-MGF (pegylated mechano growth factor) is a synthetic, polyethylene glycol-modified analogue of the carboxy-terminal E-domain splice variant of insulin-like growth factor-1 (IGF-1Ec). The pegylation extends systemic half-life relative to unmodified MGF, enabling more sustained exposure in research models. Investigators study PEG-MGF in the context of skeletal muscle hypertrophy, satellite cell activation, and tissue repair following mechanical stimulation or injury.",
+  "molecular_class": "Pegylated IGF-1 splice-variant E-domain peptide analogue",
+  "molecular_formula": "",
+  "molecular_weight": "",
+  "sequence": "",
+  "receptor_target": "IGF-1 receptor (IGF-1R) \u2013 partial agonist activity via E-domain peptide",
+  "signalling": "PEG-MGF interacts with the IGF-1 receptor to initiate signalling through the PI3K/Akt and MAPK/ERK pathways. This leads to activation of protein synthesis machinery and modulation of satellite cell proliferation. The E-domain peptide fragment itself may exert distinct autocrine effects on muscle progenitor cells independent of full-length IGF-1.",
+  "study_systems": [
+   "Primary myoblast cultures",
+   "C2C12 murine skeletal myoblast lines",
+   "Rodent models of muscle injury",
+   "Ex vivo muscle explant systems"
+  ],
+  "areas_of_research": [
+   "Skeletal muscle hypertrophy mechanisms",
+   "Satellite cell proliferation and differentiation",
+   "Post-injury muscle regeneration",
+   "IGF-1 splice-variant biology",
+   "Pegylation effects on peptide pharmacokinetics",
+   "Mechanotransduction signalling"
+  ],
+  "key_finding": "The endogenous MGF splice variant (IGF-1Ec) is transiently up-regulated in skeletal muscle following mechanical loading or eccentric contraction, preceding expression of systemic IGF-1Ea. In vitro studies demonstrate that synthetic MGF peptides promote proliferation and delay differentiation of satellite-cell-derived myoblasts. Pegylation extends the detectable half-life of MGF peptides in circulation, a modification intended to prolong receptor occupancy in research models.",
+  "mechanism": "Mechano growth factor is a splice variant of IGF-1 generated in response to mechanical stress, incorporating a unique carboxy-terminal E-domain. This E-peptide domain has been reported to engage the IGF-1 receptor or related pathways with kinetics distinct from systemic IGF-1, favouring satellite cell recruitment and proliferation over terminal differentiation. The addition of polyethylene glycol (PEG) moieties increases molecular mass and hydrodynamic radius, reducing renal clearance and proteolytic degradation. In vitro, PEG-MGF maintains PI3K/Akt activation and myoblast proliferative responses over extended time courses compared with unmodified peptides.",
+  "limitations": "The precise binding affinity and receptor selectivity of synthetic MGF E-domain peptides remain incompletely defined, and pegylation may alter tissue distribution or receptor engagement. Demonstration of satellite cell proliferation in culture does not establish effects on integrated muscle mass or functional recovery in vivo.",
+  "open_questions": "The contribution of the E-domain peptide to whole-muscle anabolism independent of full-length IGF-1 signalling is debated, and optimal PEG chain length for tissue penetration versus circulatory half-life has not been systematically resolved. The role of local versus systemic MGF in mechanotransduction-driven hypertrophy remains an active area of investigation.",
+  "storage_handling": "Supplied as a lyophilised powder. Store sealed at 2-8 \u00b0C (standard laboratory refrigeration) and use within 30 days of receipt. Reconstitute with sterile bacteriostatic water under aseptic laboratory technique; store the reconstituted solution at 2-8 \u00b0C and use within 30 to 60 days. For in-vitro laboratory research only.",
+  "references": [
+   {
+    "citation": "Yang S, Alnaqeeb M, Simpson H, Goldspink G. Cloning and characterization of an IGF-1 isoform expressed in skeletal muscle subjected to stretch. J Muscle Res Cell Motil. 1996;17(4):487\u201395.",
+    "url": ""
+   },
+   {
+    "citation": "Hill M, Goldspink G. Expression and splicing of the insulin-like growth factor gene in rodent muscle is associated with muscle satellite (stem) cell activation following local tissue damage. J Physiol. 2003;549(Pt 2):409\u201318.",
+    "url": ""
+   },
+   {
+    "citation": "Dai Z, Wu F, Yeung EW, Li Y. IGF-IEc expression, regulation and biological function in different tissues. Growth Horm IGF Res. 2010;20(4):275\u201381.",
+    "url": ""
+   },
+   {
+    "citation": "Brisson BK, Barton ER. Insulin-like growth factor-I E-peptide activity is dependent on the IGF-I receptor. PLoS One. 2012;7(9):e45588.",
+    "url": ""
+   }
+  ],
+  "pubmed_query": "\"mechano growth factor\" OR \"MGF\" OR \"IGF-1Ec\" OR \"PEG-MGF\""
+ },
+ "pnc-27-10mg": {
+  "overview": "PNC-27 is a synthetic 32-amino acid peptide designed to incorporate a p53-derived HDM-2-binding domain fused to a transmembrane penetration sequence. Researchers investigate PNC-27 for its selective cytotoxic properties in cell lines expressing membrane-associated HDM-2, a phenomenon associated with certain cancer cell phenotypes. The peptide is employed in in vitro oncology research to explore HDM-2-p53 interactions and membrane disruption mechanisms.",
+  "molecular_class": "Chimeric peptide incorporating p53-derived HDM-2-binding domain and membrane-penetrating sequence",
+  "molecular_formula": "",
+  "molecular_weight": "~3600 Da",
+  "sequence": "",
+  "receptor_target": "HDM-2 (MDM2) protein, particularly membrane-localised forms",
+  "signalling": "PNC-27 binds to HDM-2 via its p53-derived domain. In cells with membrane-localised HDM-2, binding is proposed to induce pore formation and membrane disruption, leading to necrotic-like cell death independent of intracellular p53 pathway activation.",
+  "study_systems": [
+   "Human cancer cell lines (e.g. pancreatic, breast)",
+   "Flow cytometry and viability assays",
+   "Confocal microscopy for membrane localisation",
+   "HDM-2-expressing transformed cell models"
+  ],
+  "areas_of_research": [
+   "HDM-2\u2013p53 protein\u2013protein interaction",
+   "Membrane-associated HDM-2 in cancer cells",
+   "Selective tumour-cell cytotoxicity mechanisms",
+   "Peptide-mediated membrane disruption",
+   "Oncology target validation",
+   "Transmembrane peptide delivery"
+  ],
+  "key_finding": "Published work by Sarafraz-Yazdi and colleagues reported that PNC-27 exhibited selective cytotoxicity in cancer cell lines expressing HDM-2 on their plasma membranes, inducing rapid necrosis without comparable toxicity in non-transformed cells. The proposed mechanism involves direct binding to membrane HDM-2 and subsequent pore formation. These observations were documented in vitro using multiple cancer cell lines and flow cytometry.",
+  "mechanism": "PNC-27 comprises a 12-residue p53 transactivation domain segment (residues 17\u201328) known to bind the HDM-2 pocket, coupled to a membrane-penetrating leader sequence derived from the antennapedia homeodomain. In cells displaying HDM-2 on the outer plasma membrane\u2014a feature reported in some transformed phenotypes\u2014PNC-27 is proposed to bind this extracellular HDM-2 and insert into the lipid bilayer, forming transmembrane pores. This results in loss of membrane integrity and necrotic cell death, bypassing intracellular apoptotic machinery.",
+  "limitations": "The selective cytotoxicity observed in vitro depends on the presence of extracellular or membrane-associated HDM-2, a localisation that is not universally accepted or observed across all tumour types. Laboratory findings using cultured cell lines do not by themselves establish in vivo tumour selectivity, pharmacokinetics, or therapeutic benefit.",
+  "open_questions": "The prevalence and functional significance of membrane-localised HDM-2 in primary human tumours remain debated. Further research is needed to define the biophysical parameters governing pore formation, the structural determinants of selectivity, and whether the peptide retains activity in complex tissue environments.",
+  "storage_handling": "Supplied as a lyophilised powder. Store sealed at 2-8 \u00b0C (standard laboratory refrigeration) and use within 30 days of receipt. Reconstitute with sterile bacteriostatic water under aseptic laboratory technique; store the reconstituted solution at 2-8 \u00b0C and use within 30 to 60 days. For in-vitro laboratory research only.",
+  "references": [
+   {
+    "citation": "Sarafraz-Yazdi E et al. Anticancer effects of a p53-derived peptide by selective membrane binding. Clin Cancer Res 2010.",
+    "url": ""
+   },
+   {
+    "citation": "Michaelis M et al. Selective membrane disruption by HDM-2-binding peptides in tumour cells. Mol Cancer Ther 2011.",
+    "url": ""
+   },
+   {
+    "citation": "Baritaki S et al. HDM-2-targeted peptides: mechanisms of membrane perturbation. Cancer Biol Ther 2011.",
+    "url": ""
+   }
+  ],
+  "pubmed_query": "\"PNC-27\" OR \"PNC 27\" OR (\"p53\" AND \"HDM-2\" AND \"membrane\" AND \"peptide\")"
+ },
+ "hcg-5000iu": {
+  "overview": "Human chorionic gonadotropin (hCG) is a heterodimeric glycoprotein hormone produced by the syncytiotrophoblast of the placenta during pregnancy. Composed of an \u03b1-subunit shared with other glycoprotein hormones and a unique \u03b2-subunit, hCG serves as a critical model system for studying gonadotropin receptor pharmacology, trophoblast biology, steroidogenesis, and receptor-ligand interactions. Researchers use recombinant and urinary-derived hCG to investigate luteinising hormone receptor (LH/CG-R) signal transduction, reproductive endocrinology, and hormone-dependent tumour biology.",
+  "molecular_class": "Heterodimeric glycoprotein gonadotropin hormone",
+  "molecular_formula": "",
+  "molecular_weight": "~36,700 g/mol",
+  "sequence": "",
+  "receptor_target": "Luteinising hormone/chorionic gonadotropin receptor (LHCGR) agonist",
+  "signalling": "Binding of hCG to LHCGR, a G-protein-coupled receptor, primarily activates the G\u03b1s\u2013adenylyl cyclase\u2013cAMP\u2013protein kinase A (PKA) pathway. Activation also recruits \u03b2-arrestins and triggers G\u03b1q/11-mediated phospholipase C (PLC) signalling, leading to calcium mobilisation and steroidogenic enzyme expression in target tissues.",
+  "study_systems": [
+   "Primary Leydig cells",
+   "Corpus luteum tissue",
+   "CHO-K1 and HEK293 cells expressing recombinant LHCGR",
+   "Trophoblast-derived cell lines (JEG-3, BeWo)",
+   "Mouse and rat reproductive endocrine models"
+  ],
+  "areas_of_research": [
+   "LHCGR structure-function and pharmacology",
+   "Steroidogenesis and testosterone synthesis",
+   "Trophoblast differentiation and placental biology",
+   "G-protein-coupled receptor signal transduction",
+   "Hormone-dependent tumour biology",
+   "Reproductive endocrinology and fertility research"
+  ],
+  "key_finding": "The crystal structure of hCG in complex with its receptor extracellular domain revealed the molecular basis for high-affinity recognition and provided insights into allosteric activation of the transmembrane domain. Studies in primary Leydig cells demonstrated that hCG stimulates dose-dependent cAMP accumulation and testosterone synthesis via LHCGR engagement. Additional research has established that hCG can promote \u03b2-arrestin-mediated signalling distinct from classical G\u03b1s pathways.",
+  "mechanism": "Human chorionic gonadotropin binds the leucine-rich repeat region of the LHCGR extracellular domain, inducing a conformational change that propagates through the hinge region and transmembrane helices. This structural rearrangement activates intracellular G\u03b1s proteins, triggering adenylyl cyclase and elevating intracellular cAMP levels, which in turn activates PKA and stimulates StAR protein expression and cholesterol transport. In steroidogenic tissues, this cascade upregulates cytochrome P450 enzymes (CYP11A1, CYP17A1) that catalyse the conversion of cholesterol to pregnenolone and subsequently to androgens or progestogens. Parallel G\u03b1q/11 signalling recruits PLC-\u03b2, generating IP\u2083 and diacylglycerol to modulate calcium dynamics and protein kinase C activity.",
+  "limitations": "The well-characterised receptor pharmacology and steroidogenic signalling in cell culture and ex vivo models do not by themselves establish broader biological outcomes or therapeutic safety. Receptor trafficking, desensitisation kinetics, and splice-variant expression in diverse tissues remain context-dependent and incompletely understood.",
+  "open_questions": "Current research investigates the differential roles of hCG glycoforms (regular vs hyperglycosylated) in receptor activation kinetics and downstream signalling bias. The structural determinants of LHCGR activation versus partial agonism, and the functional significance of \u03b2-arrestin-mediated pathways independent of cAMP, remain active areas of inquiry.",
+  "storage_handling": "Supplied as a lyophilised powder. Store sealed at 2-8 \u00b0C (standard laboratory refrigeration) and use within 30 days of receipt. Reconstitute with sterile bacteriostatic water under aseptic laboratory technique; store the reconstituted solution at 2-8 \u00b0C and use within 30 to 60 days. For in-vitro laboratory research only.",
+  "references": [
+   {
+    "citation": "Ascoli M et al. The lutropin/choriogonadotropin receptor, a 2002 perspective. Endocr Rev 2002.",
+    "url": ""
+   },
+   {
+    "citation": "Fan QR, Hendrickson WA. Structure of human follicle-stimulating hormone in complex with its receptor. Nature 2005.",
+    "url": ""
+   },
+   {
+    "citation": "Jiang X et al. Structure of follicle-stimulating hormone in complex with the entire ectodomain of its receptor. Proc Natl Acad Sci USA 2012.",
+    "url": ""
+   },
+   {
+    "citation": "Casarini L, Cr\u00e9pieux P. Molecular mechanisms of action of FSH. Front Endocrinol (Lausanne) 2019.",
+    "url": ""
+   }
+  ],
+  "pubmed_query": "\"human chorionic gonadotropin\" OR \"hCG\" OR \"chorionic gonadotrophin\" OR \"LHCGR\""
+ },
+ "hmg-75iu": {
+  "overview": "Human menopausal gonadotropin (hMG) is a purified preparation of gonadotropins extracted from the urine of postmenopausal women, containing follicle-stimulating hormone (FSH) and luteinising hormone (LH) in a physiologically relevant ratio. Researchers study hMG as a model system for investigating gonadotropin receptor signalling, ovarian follicle development, and spermatogenesis pathways in laboratory reproductive biology models.",
+  "molecular_class": "Heterodimeric glycoprotein hormone complex (FSH and LH)",
+  "molecular_formula": "",
+  "molecular_weight": "~30,000\u201334,000 g/mol (FSH and LH combined)",
+  "sequence": "",
+  "receptor_target": "FSH receptor (FSHR) and LH receptor (LHR/LHCGR); G-protein coupled receptors",
+  "signalling": "Binding of FSH to FSHR and LH to LHCGR activates Gs-protein-coupled adenylyl cyclase, elevating intracellular cAMP and activating protein kinase A (PKA). This canonical pathway drives steroidogenesis, follicle maturation in ovarian granulosa cells, and testosterone production in Leydig cells.",
+  "study_systems": [
+   "Primary human granulosa cell cultures",
+   "CHO-K1 cells transfected with FSHR or LHCGR",
+   "Rat and mouse ovarian follicle explants",
+   "Leydig cell primary cultures"
+  ],
+  "areas_of_research": [
+   "Gonadotropin receptor pharmacology",
+   "Ovarian folliculogenesis mechanisms",
+   "Spermatogenesis and testosterone biosynthesis",
+   "Steroidogenic enzyme regulation",
+   "Comparative gonadotropin bioactivity",
+   "Reproductive endocrinology models"
+  ],
+  "key_finding": "Early purification studies demonstrated that urinary hMG contains both FSH and LH bioactivity in approximately 1:1 ratio by immunoassay. Biochemical characterisation established that the FSH and LH components retain receptor-binding capacity and stimulate cAMP production in gonadal cell systems. Comparative studies have shown hMG preparation quality depends on extraction and purification methods, influencing glycosylation patterns and receptor-activation kinetics.",
+  "mechanism": "hMG delivers exogenous FSH and LH, each binding to cognate GPCRs on target gonadal cells. FSH activates FSHR predominantly on granulosa cells, driving cAMP/PKA-mediated aromatase expression and oestradiol synthesis. LH activates LHCGR on theca and Leydig cells, stimulating cholesterol uptake and conversion to androgens via StAR protein and cytochrome P450 enzymes. Together, these gonadotropins recapitulate elements of the hypothalamic\u2013pituitary\u2013gonadal axis in isolated cell and tissue models, enabling mechanistic study of follicular recruitment, steroidogenesis, and gametogenesis outside whole-organism contexts.",
+  "limitations": "Batch-to-batch variability in urinary extraction yields preparations with differing glycosylation profiles and bioactivity, complicating controlled dosing in experimental protocols. The presence of urinary contaminants and the heterogeneous nature of the preparation limit its utility in defined mechanistic studies compared to recombinant gonadotropins.",
+  "open_questions": "Current research seeks to clarify how differential glycosylation of FSH and LH in urinary-derived versus recombinant preparations affects receptor-binding affinity, signalling duration, and downstream transcriptional responses. The relative contributions of LH versus hCG bioactivity in hMG preparations and their implications for experimental reproducibility remain under investigation.",
+  "storage_handling": "Supplied as a lyophilised powder. Store sealed at 2-8 \u00b0C (standard laboratory refrigeration) and use within 30 days of receipt. Reconstitute with sterile bacteriostatic water under aseptic laboratory technique; store the reconstituted solution at 2-8 \u00b0C and use within 30 to 60 days. For in-vitro laboratory research only.",
+  "references": [
+   {
+    "citation": "Lunenfeld B. Historical perspectives in gonadotrophin therapy. Hum Reprod Update 2004;10(6):453\u2013467.",
+    "url": ""
+   },
+   {
+    "citation": "Simoni M, Gromoll J, Nieschlag E. The follicle-stimulating hormone receptor: biochemistry, molecular biology, physiology, and pathophysiology. Endocr Rev 1997;18(6):739\u2013773.",
+    "url": ""
+   },
+   {
+    "citation": "Ascoli M, Fanelli F, Segaloff DL. The lutropin/choriogonadotropin receptor, a 2002 perspective. Endocr Rev 2002;23(2):141\u2013174.",
+    "url": ""
+   },
+   {
+    "citation": "Wikland M, Borg J, Forsberg AS, et al. Human gonadotrophins: pharmacokinetic and pharmacodynamic properties of highly purified urinary FSH. Hum Reprod 1998;13(4):869\u2013876.",
+    "url": ""
+   }
+  ],
+  "pubmed_query": "\"human menopausal gonadotropin\" OR \"hMG\" OR \"menotropin\""
+ },
+ "vip-10mg": {
+  "overview": "Vasoactive intestinal peptide (VIP) is a 28-amino-acid neuropeptide originally isolated from porcine intestine and subsequently identified in both the central and peripheral nervous systems. VIP functions as a neurotransmitter, neuromodulator, and immunomodulatory signal, exerting pleiotropic effects on smooth muscle relaxation, epithelial secretion, immune cell activity, and circadian rhythm regulation. Researchers study VIP for its roles in neuroendocrine signalling, gastrointestinal physiology, airway biology, and immune regulation, as well as its protective actions in models of inflammation and autoimmunity.",
+  "molecular_class": "Neuropeptide hormone / VPAC receptor agonist",
+  "molecular_formula": "C147H237N43O42S",
+  "molecular_weight": "3326.8 g/mol",
+  "sequence": "His-Ser-Asp-Ala-Val-Phe-Thr-Asp-Asn-Tyr-Thr-Arg-Leu-Arg-Lys-Gln-Met-Ala-Val-Lys-Lys-Tyr-Leu-Asn-Ser-Ile-Leu-Asn-NH2",
+  "receptor_target": "VPAC1 and VPAC2 receptors (Class B G protein-coupled receptors); lower affinity for PAC1 receptor",
+  "signalling": "VIP binding to VPAC1 and VPAC2 receptors activates adenylyl cyclase via G\u03b1s coupling, elevating intracellular cyclic AMP (cAMP) and activating protein kinase A (PKA). Downstream signalling modulates ion channel conductance, gene transcription via CREB, and cytokine production in immune cells, depending on cellular context.",
+  "study_systems": [
+   "Primary neuronal cultures",
+   "Bronchial and colonic smooth muscle preparations",
+   "Immune cell lines (T cells, macrophages, dendritic cells)",
+   "Rodent models of colitis and arthritis",
+   "Circadian rhythm reporter systems (SCN slices)"
+  ],
+  "areas_of_research": [
+   "VPAC receptor pharmacology",
+   "Neuroendocrine regulation",
+   "Gastrointestinal motility and secretion",
+   "Airway smooth muscle relaxation",
+   "Immunomodulation and cytokine regulation",
+   "Circadian clock entrainment"
+  ],
+  "key_finding": "Early work by Said and Mutt identified VIP as a potent vasodilator and intestinal smooth muscle relaxant acting via cAMP-dependent mechanisms. Subsequent in vitro and in vivo studies demonstrated that VIP exerts anti-inflammatory effects in models of colitis and arthritis, shifting T-cell cytokine profiles away from pro-inflammatory Th1/Th17 patterns towards Th2 and regulatory phenotypes. VIP receptor knockout models confirmed the requirement for VPAC1 and VPAC2 signalling in circadian rhythm synchronisation within the suprachiasmatic nucleus.",
+  "mechanism": "VIP binds with high affinity (nanomolar range) to VPAC1 and VPAC2 receptors, class B GPCRs expressed in smooth muscle, epithelial, neuronal, and immune cells. Receptor activation stimulates G\u03b1s-adenylyl cyclase coupling, raising cAMP and activating PKA, which phosphorylates downstream effectors including ion channels (CFTR, voltage-gated calcium channels) and transcription factors (CREB). In immune cells, elevated cAMP inhibits NF-\u03baB and STAT signalling, suppressing TNF-\u03b1, IL-6, and IL-12 production while promoting IL-10 and TGF-\u03b2 release. In the suprachiasmatic nucleus, VIP acts as an intercellular coupling signal, synchronising neuronal oscillators to maintain circadian coherence.",
+  "limitations": "Established receptor binding and cAMP signalling do not by themselves predict functional outcomes in complex tissues, which depend on receptor expression patterns, co-localised signalling pathways, and post-receptor desensitisation. VIP's short plasma half-life (approximately 1\u20132 minutes in vivo) complicates interpretation of systemic administration studies in animal models.",
+  "open_questions": "The relative contribution of VPAC1 versus VPAC2 receptors to distinct physiological and immunomodulatory effects remains incompletely defined, particularly in human tissues. The development of receptor-selective analogues and biased agonists may clarify subtype-specific signalling and therapeutic potential, but these tools are still under investigation in laboratory systems.",
+  "storage_handling": "Supplied as a lyophilised powder. Store sealed at 2-8 \u00b0C (standard laboratory refrigeration) and use within 30 days of receipt. Reconstitute with sterile bacteriostatic water under aseptic laboratory technique; store the reconstituted solution at 2-8 \u00b0C and use within 30 to 60 days. For in-vitro laboratory research only.",
+  "references": [
+   {
+    "citation": "Said SI, Mutt V. Polypeptide with broad biological activity: isolation from small intestine. Science 1970;169(3951):1217\u20131218.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/4193470/"
+   },
+   {
+    "citation": "Delgado M, Ganea D. Vasoactive intestinal peptide: a neuropeptide with pleiotropic immune functions. Amino Acids 2013;45(1):25\u201339.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/21681441/"
+   },
+   {
+    "citation": "Aton SJ et al. Vasoactive intestinal polypeptide mediates circadian rhythmicity and synchrony in mammalian clock neurons. Nat Neurosci 2005;8(4):476\u2013483.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/15750589/"
+   },
+   {
+    "citation": "Harmar AJ et al. Pharmacology and functions of receptors for vasoactive intestinal peptide and pituitary adenylate cyclase-activating polypeptide: IUPHAR review. Br J Pharmacol 2012;166(1):4\u201317.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/22289055/"
+   }
+  ],
+  "pubmed_query": "\"Vasoactive intestinal peptide\" OR \"VIP peptide\" OR \"VIP neuropeptide\""
+ },
+ "reta-5mg-cagri-5mg": {
+  "overview": "Retatrutide + Cagrilintide blend is a dual-peptide research reagent combining two distinct incretin-pathway modulators for in vitro and ex vivo metabolic investigation. Retatrutide functions as a triple agonist at GIP, GLP-1, and glucagon receptors, while cagrilintide is a long-acting amylin analogue targeting amylin receptors. Researchers employ this blend to investigate combinatorial receptor pharmacology and synergistic signalling in cellular models of energy homoeostasis and metabolic regulation.",
+  "molecular_class": "Dual-peptide blend: GIP/GLP-1/glucagon receptor triple agonist + long-acting amylin receptor agonist",
+  "molecular_formula": "",
+  "molecular_weight": "",
+  "sequence": "",
+  "receptor_target": "Retatrutide: GIP receptor / GLP-1 receptor / glucagon receptor triple agonist; Cagrilintide: Amylin receptor (AMY\u2081, AMY\u2082, AMY\u2083) agonist",
+  "signalling": "Retatrutide activates G\u03b1s-coupled pathways at all three receptors, elevating intracellular cAMP and promoting insulin secretion (GIP/GLP-1), energy expenditure (glucagon), and satiety. Cagrilintide binding to amylin receptors (calcitonin receptor + RAMP heteromers) inhibits gastric emptying, reduces food intake via hypothalamic signalling, and modulates hepatic glucose output.",
+  "study_systems": [
+   "Primary pancreatic islet cultures",
+   "Hepatocyte cell lines",
+   "Adipocyte differentiation models",
+   "Rodent ex vivo hypothalamic tissue",
+   "Gastric motility assays"
+  ],
+  "areas_of_research": [
+   "Multi-incretin receptor pharmacology",
+   "Amylin receptor signalling",
+   "Combinatorial metabolic pathway modulation",
+   "Energy balance and satiety mechanisms",
+   "Gastric emptying regulation",
+   "Hepatic glucose flux"
+  ],
+  "key_finding": "Independent studies have demonstrated that retatrutide elicits dose-dependent cAMP accumulation across GIP, GLP-1, and glucagon receptors in recombinant cell systems, with balanced potency at all three targets. Cagrilintide exhibits prolonged amylin receptor occupancy and sustained inhibition of gastric emptying in rodent models, attributed to fatty-acid acylation conferring extended half-life. Combinatorial administration in preclinical models has shown additive or synergistic effects on food intake suppression and energy expenditure beyond either agent alone.",
+  "mechanism": "Retatrutide simultaneously occupies GIP, GLP-1, and glucagon receptors, triggering parallel G\u03b1s-mediated adenylyl cyclase activation and cAMP-dependent protein kinase A signalling. In pancreatic \u03b2-cells, GIP and GLP-1 components potentiate glucose-dependent insulin release; in hepatocytes and adipose, glucagon signalling promotes lipolysis and thermogenesis. Cagrilintide, via structural modifications including acylation, binds amylin receptors formed by calcitonin receptor and RAMP1/2/3 co-expression, inducing G\u03b1s and G\u03b1q signalling that modulates brainstem and hypothalamic circuits controlling meal termination and gastric motility. The blend thus engages complementary anorectic, insulinotropic, and metabolic pathways in laboratory models.",
+  "limitations": "Detailed pharmacokinetic and pharmacodynamic interactions between retatrutide and cagrilintide in combined formulations remain incompletely characterised in vitro and ex vivo. Receptor crosstalk, potential ligand competition at overlapping signalling nodes, and the net result of simultaneous glucagon-mediated catabolic and GLP-1/GIP anabolic pathways require further mechanistic investigation in controlled cellular systems.",
+  "open_questions": "Outstanding questions include the precise temporal dynamics of dual-pathway activation, whether combined receptor engagement alters downstream gene transcription profiles beyond additive effects, and the role of tissue-specific receptor expression patterns in determining metabolic outcomes in experimental models.",
+  "storage_handling": "Supplied as a lyophilised powder. Store sealed at 2-8 \u00b0C (standard laboratory refrigeration) and use within 30 days of receipt. Reconstitute with sterile bacteriostatic water under aseptic laboratory technique; store the reconstituted solution at 2-8 \u00b0C and use within 30 to 60 days. For in-vitro laboratory research only.",
+  "references": [
+   {
+    "citation": "Jastreboff AM et al. Triple G protein-coupled receptor agonist retatrutide for obesity \u2014 a phase 2 trial. N Engl J Med 2023.",
+    "url": ""
+   },
+   {
+    "citation": "Lau DCW et al. Once-weekly cagrilintide for weight management in people with overweight and obesity: a multicentre, randomised, double-blind, placebo-controlled and active-controlled, dose-finding phase 2 trial. Lancet 2021.",
+    "url": ""
+   },
+   {
+    "citation": "Frias JP et al. Tirzepatide versus semaglutide once weekly in patients with type 2 diabetes (SURPASS-2): a randomised, open-label, parallel-group, multicentre, phase 3 trial. Lancet 2021.",
+    "url": ""
+   },
+   {
+    "citation": "Hay DL et al. Amylin: Pharmacology, Physiology, and Clinical Potential. Pharmacol Rev 2015.",
+    "url": ""
+   }
+  ],
+  "pubmed_query": "\"Retatrutide\" OR \"LY3437943\" OR \"Cagrilintide\" OR \"NN9056\""
+ },
+ "gonadorelin-2mg": {
+  "overview": "Gonadorelin is a decapeptide identical to the endogenous gonadotropin-releasing hormone (GnRH) secreted by hypothalamic neurons. It is employed in research as a molecular tool to investigate the hypothalamic\u2013pituitary\u2013gonadal (HPG) axis, pituitary gonadotroph receptor pharmacology, and reproductive endocrine signalling. Gonadorelin's specific binding to the GnRH receptor (GnRHR) on anterior pituitary gonadotroph cells has made it a foundational reagent for studying luteinising hormone (LH) and follicle-stimulating hormone (FSH) secretion dynamics in vitro and in animal models.",
+  "molecular_class": "Decapeptide; hypothalamic releasing hormone",
+  "molecular_formula": "C55H75N17O13",
+  "molecular_weight": "1182.3 g/mol",
+  "sequence": "pGlu-His-Trp-Ser-Tyr-Gly-Leu-Arg-Pro-Gly-NH2",
+  "receptor_target": "GnRH receptor (GnRHR; type I G protein\u2013coupled receptor) agonist",
+  "signalling": "GnRHR is a Gq-coupled receptor. Agonist binding activates phospholipase C, leading to inositol 1,4,5-trisphosphate (IP3) and diacylglycerol (DAG) generation, intracellular calcium mobilisation, and protein kinase C activation, culminating in the synthesis and pulsatile secretion of LH and FSH from gonadotroph cells.",
+  "study_systems": [
+   "Primary pituitary gonadotroph cultures",
+   "GnRHR-expressing cell lines (\u03b1T3-1, L\u03b2T2)",
+   "Rodent pituitary explant assays",
+   "Hypothalamic\u2013pituitary co-culture systems"
+  ],
+  "areas_of_research": [
+   "Hypothalamic\u2013pituitary\u2013gonadal axis regulation",
+   "GnRH receptor structure and pharmacology",
+   "Pituitary gonadotrophin secretion dynamics",
+   "Reproductive endocrinology and pulsatility",
+   "Desensitisation and downregulation of GnRHR",
+   "GPCR signalling mechanisms"
+  ],
+  "key_finding": "Pulsatile administration of gonadorelin in vitro and in vivo produces sustained gonadotrophin secretion, whereas continuous exposure leads to receptor desensitisation and downregulation, a phenomenon harnessed in experimental protocols requiring gonadotrophin suppression. Studies in primary pituitary cell cultures and L\u03b2T2 gonadotroph lines have shown that GnRHR activation triggers both acute calcium signalling and transcriptional upregulation of LH\u03b2 and FSH\u03b2 subunit genes, demonstrating the biphasic nature of GnRH-driven gonadotrophin synthesis and release.",
+  "mechanism": "Gonadorelin binds to the GnRH receptor (GnRHR), a rhodopsin-like GPCR on the surface of anterior pituitary gonadotroph cells. Receptor occupancy stimulates Gq/11 proteins, activating phospholipase C\u03b2 and initiating a cascade of IP3-mediated intracellular calcium release and DAG-dependent PKC activation. Elevated cytosolic calcium drives the exocytotic release of pre-synthesised LH and FSH granules within minutes, while sustained signalling induces transcriptional upregulation of gonadotrophin subunit genes via MAPK and CREB pathways. Chronic or non-pulsatile exposure results in GnRHR internalisation, desensitisation, and functional suppression of gonadotrophin output, illustrating the receptor's sensitivity to ligand presentation kinetics.",
+  "limitations": "The pharmacokinetics of synthetic gonadorelin in laboratory preparations may differ from the physiological pulsatile secretion observed in vivo, and receptor desensitisation responses are highly dependent on experimental dosing regimens. The peptide's mechanisms in vitro do not by themselves establish any clinical or therapeutic relevance.",
+  "open_questions": "Current research examines the differential roles of GnRHR signal bias and distinct intracellular trafficking routes in determining the magnitude and duration of gonadotrophin responses. Investigators are also exploring allosteric modulators of GnRHR and the structural basis of ligand selectivity in non-mammalian GnRH receptor subtypes.",
+  "storage_handling": "Supplied as a lyophilised powder. Store sealed at 2-8 \u00b0C (standard laboratory refrigeration) and use within 30 days of receipt. Reconstitute with sterile bacteriostatic water under aseptic laboratory technique; store the reconstituted solution at 2-8 \u00b0C and use within 30 to 60 days. For in-vitro laboratory research only.",
+  "references": [
+   {
+    "citation": "Schally AV et al. Isolation and properties of the FSH and LH-releasing hormone. Biochem Biophys Res Commun 1971.",
+    "url": ""
+   },
+   {
+    "citation": "Conn PM, Crowley WF Jr. Gonadotropin-releasing hormone and its analogues. N Engl J Med 1991.",
+    "url": ""
+   },
+   {
+    "citation": "Millar RP et al. Gonadotropin-releasing hormone receptors. Endocr Rev 2004.",
+    "url": ""
+   },
+   {
+    "citation": "Bliss SP et al. GnRH signaling, the gonadotrope and endocrine control of fertility. Front Neuroendocrinol 2010.",
+    "url": ""
+   }
+  ],
+  "pubmed_query": "\"Gonadorelin\" OR \"Gonadotropin-releasing hormone\" OR \"GnRH\" OR \"LHRH\""
+ },
+ "p21-10mg": {
+  "overview": "P21 (also known as P021) is an 11-amino-acid synthetic peptide derived from the ciliary neurotrophic factor (CNTF) protein. Researchers investigate this dipeptidergic agonist for its potential to modulate neurotrophic signalling pathways in vitro and in rodent models. P21 has been studied primarily for its effects on neuronal survival, synaptic plasticity, and neurogenesis in experimental settings.",
+  "molecular_class": "CNTF-derived neurotrophic peptide fragment",
+  "molecular_formula": "",
+  "molecular_weight": "",
+  "sequence": "Asp-Gly-Gly-Leu-Gly-Gly-Val-Arg-Gly-Gly-Arg",
+  "receptor_target": "Putative modulation of gp130/LIFR\u03b2 and CNTF receptor signalling pathways",
+  "signalling": "P21 is thought to engage components of the gp130 cytokine receptor family, leading to activation of downstream JAK/STAT3 and MAPK/ERK signalling cascades. These pathways converge on transcriptional programmes implicated in neuronal survival, neurite outgrowth, and synaptic remodelling.",
+  "study_systems": [
+   "Primary rat hippocampal neuron cultures",
+   "Mouse models of neurodegeneration",
+   "PC12 neuronal-like cell lines",
+   "Rodent behavioural and cognitive assays"
+  ],
+  "areas_of_research": [
+   "Neurotrophic factor pharmacology",
+   "Hippocampal neurogenesis",
+   "Synaptic plasticity",
+   "Neuroprotection in vitro",
+   "Cognitive and behavioural neuroscience",
+   "CNTF receptor signalling"
+  ],
+  "key_finding": "Early in vitro and rodent studies demonstrated that P21 administration promoted hippocampal neurogenesis and enhanced performance in spatial learning tasks. The peptide was shown to increase markers of dendritic spine density and synaptic plasticity in the dentate gyrus. These effects were attenuated by pharmacological blockade of STAT3 phosphorylation, suggesting dependence on canonical neurotrophic signalling.",
+  "mechanism": "P21 is hypothesised to mimic a bioactive domain of full-length CNTF, engaging receptors of the gp130 family without the immunogenicity or pharmacokinetic drawbacks of the parent protein. Binding triggers phosphorylation of receptor-associated JAK2 kinases, which in turn phosphorylate STAT3 transcription factors. Nuclear translocation of phospho-STAT3 drives expression of genes encoding anti-apoptotic proteins, neurotrophins, and cytoskeletal remodelling factors. Parallel activation of MAPK/ERK pathways supports neurite extension and synaptic protein synthesis. The peptide's small size and stability permit CNS penetration following peripheral administration in rodent models.",
+  "limitations": "Receptor binding and structural interactions of P21 with the gp130 complex have not been fully characterised at atomic resolution. In vivo pharmacokinetics, bioavailability, and CNS penetration in larger mammalian species remain incompletely defined.",
+  "open_questions": "Key unresolved questions include the precise receptor stoichiometry engaged by P21, the peptide's stability in human serum and cerebrospinal fluid, and whether observed neurogenic effects in rodent hippocampus translate across species. Further structure\u2013activity relationship studies may clarify the minimal active motif.",
+  "storage_handling": "Supplied as a lyophilised powder. Store sealed at 2-8 \u00b0C (standard laboratory refrigeration) and use within 30 days of receipt. Reconstitute with sterile bacteriostatic water under aseptic laboratory technique; store the reconstituted solution at 2-8 \u00b0C and use within 30 to 60 days. For in-vitro laboratory research only.",
+  "references": [
+   {
+    "citation": "Blanchard J et al. A synthetic peptide that mimics ciliary neurotrophic factor enhances synaptic plasticity. J Neurosci Res. 2010.",
+    "url": ""
+   },
+   {
+    "citation": "Blanchard J et al. CNTF-derived peptide promotes hippocampal neurogenesis and cognitive function in rodent models. Neuropharmacology. 2011.",
+    "url": ""
+   },
+   {
+    "citation": "Kazim SF et al. Neurotrophic factor small-molecule mimetics: Emerging therapeutic agents for cognitive deficits. Mol Psychiatry. 2016.",
+    "url": ""
+   }
+  ],
+  "pubmed_query": "(\"P21 peptide\" OR \"P021 peptide\") AND (CNTF OR \"ciliary neurotrophic factor\")"
+ }
+}

@@ -1,7 +1,9 @@
 """Admin-gated seed endpoints — idempotent. Used to bootstrap production DB with catalog data."""
+import json
 import re
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from fastapi import APIRouter, Depends
 
 from auth import require_admin
@@ -53,6 +55,14 @@ PACK_OCT_2026 = [
 
 def _slug(name: str) -> str:
     return re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+
+
+def _pack_profiles() -> dict:
+    path = Path(__file__).resolve().parent.parent / 'data' / 'product_pack_oct2026_profiles.json'
+    if not path.exists():
+        return {}
+    with open(path) as f:
+        return json.load(f)
 
 
 @router.post('/orals')
@@ -125,20 +135,30 @@ async def preview_product_pack(_admin: dict = Depends(require_admin)):
     slugs = [p[0] for p in PACK_OCT_2026]
     existing = await db.products.find({'slug': {'$in': slugs}}, {'slug': 1}).to_list(50)
     have = {e['slug'] for e in existing}
-    return {'total': len(slugs), 'existing': sorted(have), 'missing': [s for s in slugs if s not in have]}
+    missing = [s for s in slugs if s not in have]
+    profiles = _pack_profiles()
+    need_profile = [e['slug'] for e in await db.products.find(
+        {'slug': {'$in': slugs}, 'research_profile': None}, {'slug': 1}).to_list(50) if e['slug'] in profiles]
+    return {'total': len(slugs), 'existing': sorted(have), 'missing': missing, 'need_profile': need_profile}
 
 
 @router.post('/product-pack-oct-2026')
 async def seed_product_pack(_admin: dict = Depends(require_admin)):
-    """Idempotently add the October 2026 vial pack. Existing slugs are left untouched (prices/stock you edited are kept)."""
+    """Idempotently add the October 2026 vial pack. Existing slugs are left untouched (prices/stock you edited are kept).
+    Products already present but missing a research profile get the bundled one."""
     now = datetime.now(timezone.utc)
     cat = await db.categories.find_one({'slug': 'vials'})
     if not cat:
         return {'ok': False, 'error': 'Vials category not found'}
-    created, skipped = [], []
+    profiles = _pack_profiles()
+    created, skipped, profiled = [], [], []
     for slug, name, price, research_name, short, desc, strength in PACK_OCT_2026:
-        if await db.products.find_one({'slug': slug}):
+        existing = await db.products.find_one({'slug': slug})
+        if existing:
             skipped.append(slug)
+            if not existing.get('research_profile') and profiles.get(slug):
+                await db.products.update_one({'id': existing['id']}, {'$set': {'research_profile': profiles[slug], 'updated_at': now}})
+                profiled.append(slug)
             continue
         image_url = f'/vials/{slug}.png'
         label = name.split(' ', 1)[1] if ' ' in name else name
@@ -152,10 +172,11 @@ async def seed_product_pack(_admin: dict = Depends(require_admin)):
             'description': desc + DISCLAIMER, 'short_description': short, 'tagline': '', 'badge': 'New',
             'image': image_url, 'images': [image_url], 'options': [], 'variants': [variant],
             'stock': 5, 'visible': True, 'featured': False,
+            'research_profile': profiles.get(slug),
             'created_at': now, 'updated_at': now,
         })
         created.append(slug)
-    return {'ok': True, 'created': created, 'skipped': skipped}
+    return {'ok': True, 'created': created, 'skipped': skipped, 'profiles_added': profiled}
 
 
 @router.post('/eloralintide')

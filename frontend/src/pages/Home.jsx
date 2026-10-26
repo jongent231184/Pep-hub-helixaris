@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import SEO from '../components/SEO';
 import CategoryCard from '../components/CategoryCard';
 import ProductCard from '../components/ProductCard';
+import JustLanded from '../components/JustLanded';
 import { useStore } from '../context/StoreContext';
 
 const FEATURES = [
@@ -15,7 +16,7 @@ const FEATURES = [
 ];
 
 const Home = () => {
-  const { categories, getFeatured, loading } = useStore();
+  const { categories, getFeatured, loading, products } = useStore();
   const featured = getFeatured();
 
   return (
@@ -76,6 +77,8 @@ const Home = () => {
           </div>
         )}
       </section>
+
+      {!loading && <JustLanded products={products} />}
 
       <section className="max-w-7xl mx-auto px-4 pb-20">
         <div className="flex items-end justify-between mb-8">

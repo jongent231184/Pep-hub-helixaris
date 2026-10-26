@@ -135,12 +135,20 @@ const AdminProducts = () => {
 
   const runImportPack = async () => {
     const n = pack?.missing?.length || 0;
-    if (!n) return;
-    if (!window.confirm(`Add ${n} new vial product${n === 1 ? '' : 's'} (Cerebrolysin, ACE-031, Pinealon, PE-22-28, PEG-MGF, PNC-27, HCG, HMG, VIP, Reta/Cagri, Gonadorelin, P21)?\n\nThey are added with suggested prices, 5 in stock, visible on the site and a "New" badge. Products already present are left untouched.`)) return;
+    const np = pack?.need_profile?.length || 0;
+    if (!n && !np) return;
+    const msg = n
+      ? `Add ${n} new vial product${n === 1 ? '' : 's'} (Cerebrolysin, ACE-031, Pinealon, PE-22-28, PEG-MGF, PNC-27, HCG, HMG, VIP, Reta/Cagri, Gonadorelin, P21)?\n\nThey are added with suggested prices, 5 in stock, visible on the site, a "New" badge and a ready-made Research Profile. Products already present are left untouched.`
+      : `Attach the ready-made Research Profiles to ${np} new vial product${np === 1 ? '' : 's'} that don't have one yet? Nothing else is changed.`;
+    if (!window.confirm(msg)) return;
     setImportingPack(true);
     try {
       const res = await Products.importProductPack();
-      toast({ title: `${res.created.length} products added`, description: res.skipped.length ? `${res.skipped.length} already existed and were skipped.` : 'Review prices and stock, then you are done.' });
+      const added = res.profiles_added?.length || 0;
+      toast({
+        title: res.created.length ? `${res.created.length} products added` : `${added} research profiles attached`,
+        description: res.created.length && added ? `${added} existing products also got their research profile.` : res.skipped.length && res.created.length ? `${res.skipped.length} already existed and were skipped.` : 'Review prices and stock, then you are done.',
+      });
       setPack(await Products.productPackStatus());
       load();
     } catch (e) {
@@ -194,7 +202,7 @@ const AdminProducts = () => {
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight">Products</h1>
         <div className="flex items-center gap-2">
-          {pack && pack.missing.length > 0 && (
+          {pack && (pack.missing.length > 0 || (pack.need_profile || []).length > 0) && (
             <Button
               type="button"
               variant="outline"
@@ -204,7 +212,7 @@ const AdminProducts = () => {
               className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
             >
               {importingPack ? <Loader2 className="h-4 w-4 animate-spin" /> : <PackagePlus className="h-4 w-4" />}
-              {importingPack ? 'Adding…' : `Add new vials (${pack.missing.length})`}
+              {importingPack ? 'Adding…' : pack.missing.length > 0 ? `Add new vials (${pack.missing.length})` : `Add research profiles (${pack.need_profile.length})`}
             </Button>
           )}
           <Button
