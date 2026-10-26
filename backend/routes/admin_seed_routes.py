@@ -22,6 +22,34 @@ ORAL_PRODUCTS = [
 ]
 DISCLAIMER = ' For laboratory research use only — not for human consumption.'
 
+# (slug, name, price, research_name, short, description, strength_mg or None)
+PACK_OCT_2026 = [
+    ('cerebrolysin-60mg', 'Cerebrolysin 60mg', 35.0, 'Cerebrolysin', 'Neuropeptide mixture · 60mg per vial',
+     'Cerebrolysin is a porcine-derived mixture of low-molecular-weight neuropeptides and free amino acids studied in neurotrophic-signalling and neuronal-plasticity research models. Supplied as a 60mg vial.', 60),
+    ('ace-031-10mg', 'ACE-031 10mg', 165.0, 'ACE-031 (ActRIIB-Fc)', 'ActRIIB-Fc fusion protein · 10mg per vial',
+     'ACE-031 is a soluble activin receptor type IIB fusion protein (ActRIIB-Fc) used in research on myostatin / activin signalling and skeletal-muscle biology. Supplied as a lyophilised 10mg vial.', 10),
+    ('pinealon-10mg', 'Pinealon 10mg', 27.5, 'Pinealon (Glu-Asp-Arg)', 'Tripeptide bioregulator · 10mg per vial',
+     'Pinealon is a synthetic tripeptide (Glu-Asp-Arg) bioregulator investigated in neuronal-cell and oxidative-stress research models. Supplied as a lyophilised 10mg vial.', 10),
+    ('pe-22-28-10mg', 'PE-22-28 10mg', 32.5, 'PE-22-28 (spadin analogue)', 'Spadin analogue · 10mg per vial',
+     'PE-22-28 is a short synthetic analogue of spadin studied in TREK-1 potassium-channel and neurogenesis research. Supplied as a lyophilised 10mg vial.', 10),
+    ('peg-mgf-2mg', 'PEG-MGF 2mg', 25.0, 'PEG-MGF (pegylated mechano growth factor)', 'Pegylated MGF · 2mg per vial',
+     'PEG-MGF is a pegylated form of mechano growth factor, an IGF-1 splice variant studied in muscle-satellite-cell and tissue-repair research models. Supplied as a lyophilised 2mg vial.', 2),
+    ('pnc-27-10mg', 'PNC-27 10mg', 95.0, 'PNC-27', 'HDM-2 targeting peptide · 10mg per vial',
+     'PNC-27 is a synthetic peptide derived from the p53 HDM-2 binding domain, fused to a membrane-penetrating sequence, used in in-vitro oncology cell-membrane research. Supplied as a lyophilised 10mg vial.', 10),
+    ('hcg-5000iu', 'HCG 5000iu', 32.5, 'Human chorionic gonadotropin (hCG)', 'Gonadotropin · 5000iu per vial',
+     'HCG (human chorionic gonadotropin) is a glycoprotein hormone used in reproductive-endocrinology and LH-receptor signalling research. Supplied as a lyophilised 5000iu vial.', None),
+    ('hmg-75iu', 'HMG 75iu', 37.5, 'Human menopausal gonadotropin (hMG)', 'FSH + LH gonadotropin · 75iu per vial',
+     'HMG (human menopausal gonadotropin) contains FSH and LH activity and is used in gonadotropin-receptor and reproductive-biology research. Supplied as a lyophilised 75iu vial.', None),
+    ('vip-10mg', 'VIP 10mg', 42.5, 'Vasoactive intestinal peptide (VIP)', 'Neuropeptide · 10mg per vial',
+     'VIP (vasoactive intestinal peptide) is a 28-amino-acid neuropeptide investigated in immune-modulation, smooth-muscle and VPAC-receptor signalling research. Supplied as a lyophilised 10mg vial.', 10),
+    ('reta-5mg-cagri-5mg', 'Reta 5mg / Cagri 5mg', 65.0, 'Retatrutide + Cagrilintide blend', 'Triple-agonist + amylin analogue blend · 5mg + 5mg',
+     'A research blend combining a GLP-1 / GIP / glucagon triple-agonist peptide with an amylin analogue, studied in metabolic and satiety-signalling research models. Supplied as a lyophilised vial containing 5mg + 5mg.', 10),
+    ('gonadorelin-2mg', 'Gonadorelin 2mg', 17.5, 'Gonadorelin (GnRH)', 'GnRH decapeptide · 2mg per vial',
+     'Gonadorelin is a synthetic gonadotropin-releasing hormone (GnRH) decapeptide used in hypothalamic-pituitary axis and GnRH-receptor research. Supplied as a lyophilised 2mg vial.', 2),
+    ('p21-10mg', 'P21 10mg', 35.0, 'P21 (P021, CNTF-derived peptide)', 'CNTF-derived neurogenic peptide · 10mg per vial',
+     'P21 (P021) is a synthetic peptide derived from ciliary neurotrophic factor, investigated in neurogenesis and synaptic-plasticity research models. Supplied as a lyophilised 10mg vial.', 10),
+]
+
 
 def _slug(name: str) -> str:
     return re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
@@ -89,6 +117,45 @@ async def seed_orals(_admin: dict = Depends(require_admin)):
         'created': created_products,
         'updated': updated_products,
     }
+
+
+@router.get('/product-pack-oct-2026')
+async def preview_product_pack(_admin: dict = Depends(require_admin)):
+    """Which pack items already exist (by slug) — lets the UI show 'x of 12 imported'."""
+    slugs = [p[0] for p in PACK_OCT_2026]
+    existing = await db.products.find({'slug': {'$in': slugs}}, {'slug': 1}).to_list(50)
+    have = {e['slug'] for e in existing}
+    return {'total': len(slugs), 'existing': sorted(have), 'missing': [s for s in slugs if s not in have]}
+
+
+@router.post('/product-pack-oct-2026')
+async def seed_product_pack(_admin: dict = Depends(require_admin)):
+    """Idempotently add the October 2026 vial pack. Existing slugs are left untouched (prices/stock you edited are kept)."""
+    now = datetime.now(timezone.utc)
+    cat = await db.categories.find_one({'slug': 'vials'})
+    if not cat:
+        return {'ok': False, 'error': 'Vials category not found'}
+    created, skipped = [], []
+    for slug, name, price, research_name, short, desc, strength in PACK_OCT_2026:
+        if await db.products.find_one({'slug': slug}):
+            skipped.append(slug)
+            continue
+        image_url = f'/vials/{slug}.png'
+        label = name.split(' ', 1)[1] if ' ' in name else name
+        variant = {'label': label, 'price': price, 'stock': 5}
+        if strength:
+            variant['vial_strength_mg'] = strength
+        await db.products.insert_one({
+            'id': str(uuid.uuid4()), 'slug': slug, 'name': name, 'research_name': research_name,
+            'category_id': cat['id'], 'category_slug': 'vials', 'category': 'vials',
+            'price': price, 'was_price': None, 'price_label': None,
+            'description': desc + DISCLAIMER, 'short_description': short, 'tagline': '', 'badge': 'New',
+            'image': image_url, 'images': [image_url], 'options': [], 'variants': [variant],
+            'stock': 5, 'visible': True, 'featured': False,
+            'created_at': now, 'updated_at': now,
+        })
+        created.append(slug)
+    return {'ok': True, 'created': created, 'skipped': skipped}
 
 
 @router.post('/eloralintide')

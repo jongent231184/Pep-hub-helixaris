@@ -60,6 +60,8 @@ export const Products = {
   // Admin: rewrite storage_handling to the canonical text on every product
   normalizeResearchStorage: () =>
     api.post(`/admin/products/research-profile:normalize-storage`).then(r => r.data),
+  productPackStatus: () => api.get('/admin/seed/product-pack-oct-2026').then(r => r.data),
+  importProductPack: () => api.post('/admin/seed/product-pack-oct-2026').then(r => r.data),
 };
 
 export const Orders = {

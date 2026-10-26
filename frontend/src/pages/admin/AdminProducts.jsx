@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Products, resolveImage } from '../../lib/api';
-import { Plus, Pencil, Trash2, Loader2, Eye, EyeOff, Check, Sparkles, Thermometer } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Eye, EyeOff, Check, Sparkles, Thermometer, PackagePlus } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useToast } from '../../hooks/use-toast';
@@ -129,9 +129,30 @@ const AdminProducts = () => {
   }, []);
 
   const [normalizingStorage, setNormalizingStorage] = useState(false);
+  const [pack, setPack] = useState(null);
+  const [importingPack, setImportingPack] = useState(false);
+  useEffect(() => { Products.productPackStatus().then(setPack).catch(() => setPack(null)); }, []);
+
+  const runImportPack = async () => {
+    const n = pack?.missing?.length || 0;
+    if (!n) return;
+    if (!window.confirm(`Add ${n} new vial product${n === 1 ? '' : 's'} (Cerebrolysin, ACE-031, Pinealon, PE-22-28, PEG-MGF, PNC-27, HCG, HMG, VIP, Reta/Cagri, Gonadorelin, P21)?\n\nThey are added with suggested prices, 5 in stock, visible on the site and a "New" badge. Products already present are left untouched.`)) return;
+    setImportingPack(true);
+    try {
+      const res = await Products.importProductPack();
+      toast({ title: `${res.created.length} products added`, description: res.skipped.length ? `${res.skipped.length} already existed and were skipped.` : 'Review prices and stock, then you are done.' });
+      setPack(await Products.productPackStatus());
+      load();
+    } catch (e) {
+      toast({ title: 'Import failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally {
+      setImportingPack(false);
+    }
+  };
+
   const runNormalizeStorage = async () => {
     if (!window.confirm(
-      'Rewrite the "Storage & handling" text on every product to the canonical -20 °C statement?\n\n' +
+      'Rewrite the "Storage & handling" text on every product to the canonical 2–8 °C refrigerated statement?\n\n' +
       'This does NOT touch any other Research Profile field. It only fixes inconsistent storage lines produced by earlier AI runs.'
     )) return;
     setNormalizingStorage(true);
@@ -173,6 +194,19 @@ const AdminProducts = () => {
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight">Products</h1>
         <div className="flex items-center gap-2">
+          {pack && pack.missing.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={runImportPack}
+              disabled={importingPack}
+              data-testid="import-product-pack"
+              className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            >
+              {importingPack ? <Loader2 className="h-4 w-4 animate-spin" /> : <PackagePlus className="h-4 w-4" />}
+              {importingPack ? 'Adding…' : `Add new vials (${pack.missing.length})`}
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
