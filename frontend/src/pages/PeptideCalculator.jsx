@@ -19,6 +19,10 @@ const SYRINGES = [
 ];
 const VIAL_MG = [1, 2, 5, 10, 15];
 const BAC_ML = [1, 2, 3, 5];
+// One-tap product presets: vial strength + the water volume we recommend for it.
+const PRODUCT_PRESETS = [
+  { id: 'eloralintide', label: 'Eloralintide 10mg', detail: '10 mg · 2 ml water', vialMg: 10, bacMl: 2 },
+];
 // Dose presets in both units. mg presets are the values researchers most
 // commonly enter in mg (0.05mg = 50mcg, 0.25mg = 250mcg etc.) — keeps parity
 // with the mcg presets so switching units is intuitive.
@@ -388,6 +392,29 @@ const PeptideCalculator = () => {
                 </div>
               </div>
             )}
+
+            <StepCard icon={Beaker} label="Quick start · GHP product presets">
+              <p className="text-xs text-slate-500 mt-1">Tap a product to fill in the vial strength and the water volume we supply it with. Then just pick your dose.</p>
+              <div className="flex flex-wrap gap-2 mt-3" data-testid="product-presets">
+                {PRODUCT_PRESETS.map((p) => {
+                  const active = vialMg === p.vialMg && bacMl === p.bacMl;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => { setVial(p.vialMg); setVialOther(''); setBac(p.bacMl); setBacOther(''); }}
+                      className={`px-4 py-2.5 rounded-lg border text-left transition-colors ${active
+                        ? 'bg-emerald-500 text-white border-emerald-500'
+                        : 'bg-white text-slate-800 border-slate-300 hover:border-emerald-400'}`}
+                      data-testid={`preset-${p.id}`}
+                    >
+                      <span className="block text-xs font-bold uppercase tracking-wider">{p.label}</span>
+                      <span className={`block text-[11px] ${active ? 'text-emerald-50' : 'text-slate-500'}`}>{p.detail}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </StepCard>
 
             <StepCard icon={Syringe} label="1 · Insulin syringe size">
               <div className="grid grid-cols-3 gap-2 mt-3">
