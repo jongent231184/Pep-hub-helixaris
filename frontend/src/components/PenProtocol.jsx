@@ -150,9 +150,24 @@ const COMPOUNDS = {
     placeholderDose: '1',
     placeholderPeriodDose: '1',
   },
+  eloralintide: {
+    key: 'eloralintide',
+    label: 'Eloralintide 10mg',
+    subtitle: 'Eloralintide · 10 mg pen · 2 ml',
+    unit: 'mg',
+    frequency: 'week',
+    // 10 mg / 200 clicks → 0.05 mg/click, 20 clicks/mg
+    pens: [
+      { mg: 10, ml: 2, mgPerClick: 0.05, clicksPerMg: 20 },
+    ],
+    referenceDoses: [0.5, 1, 2, 3, 6, 9],
+    defaultPenIndex: 0,
+    placeholderDose: '1',
+    placeholderPeriodDose: '1',
+  },
 };
 
-const COMPOUND_ORDER = ['reta', 'ghkcu', 'mt2', 'motsc', 'nad', 'glow', 'klow', 'tbbpc', 'cagri'];
+const COMPOUND_ORDER = ['reta', 'ghkcu', 'mt2', 'motsc', 'nad', 'glow', 'klow', 'tbbpc', 'cagri', 'eloralintide'];
 
 // Convert user-facing dose value → mg (internal unit for click math)
 const toMg = (val, unit) => (unit === 'mcg' ? val / 1000 : val);
