@@ -15,7 +15,7 @@ import BankTrustBadges from '../components/BankTrustBadges';
 import RedirectingOverlay from '../components/RedirectingOverlay';
 import BankTransferPanel, { BankTransferDetails } from '../components/BankTransferPanel';
 import { useAuth } from '../context/AuthContext';
-import { Orders, Promos, Addresses, Wallid, resolveImage } from '../lib/api';
+import { Orders, Promos, Addresses, Wallid, Xoala, resolveImage } from '../lib/api';
 
 const PENDING_ORDER_STORAGE_KEY = 'ghp_pending_wallid_order';
 
@@ -35,6 +35,9 @@ const Checkout = () => {
   const [wallidFailed, setWallidFailed] = useState(false);
   const [complianceConfirmed, setComplianceConfirmed] = useState(false);
   const [squareConfig, setSquareConfig] = useState(null);
+  const [xoalaConfig, setXoalaConfig] = useState(null);
+  const [xoalaLoading, setXoalaLoading] = useState(false);
+  const [xoalaFailed, setXoalaFailed] = useState(false);
   const [squareLoading, setSquareLoading] = useState(false);
   const [bankChosen, setBankChosen] = useState(false);
 
@@ -126,7 +129,9 @@ const Checkout = () => {
   // creating a duplicate order.
   useEffect(() => {
     const wallidParam = searchParams.get('wallid');
-    if (wallidParam !== 'failed') return;
+    const xoalaParam = searchParams.get('xoala');
+    if (wallidParam !== 'failed' && xoalaParam !== 'failed') return;
+    const viaXoala = xoalaParam === 'failed';
     let stashed = null;
     try {
       const raw = localStorage.getItem(PENDING_ORDER_STORAGE_KEY);
@@ -140,12 +145,12 @@ const Checkout = () => {
           if (fresh?.payment_status === 'paid') {
             // Already paid via webhook / poller — jump straight to confirmation
             localStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
-            navigate(`/order-confirmation/${fresh.order_number}?wallid=1`, { replace: true });
+            navigate(`/order-confirmation/${fresh.order_number}?${viaXoala ? 'xoala' : 'wallid'}=1`, { replace: true });
             return;
           }
           setCreatedOrder(fresh);
           setStep('payment');
-          setWallidFailed(true);
+          if (viaXoala) setXoalaFailed(true); else setWallidFailed(true);
           // Strip the ?wallid=failed from the URL so a refresh doesn't retrigger
           setSearchParams({}, { replace: true });
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -232,6 +237,7 @@ const Checkout = () => {
 
   useEffect(() => {
     Wallid.config().then(setWallidConfig).catch(() => setWallidConfig({ configured: false }));
+    Xoala.config().then(setXoalaConfig).catch(() => setXoalaConfig({ configured: false }));
   }, []);
 
   const submitDetails = async (e) => {
@@ -343,6 +349,40 @@ const Checkout = () => {
       const detail = err.response?.data?.detail;
       toast({ title: 'Could not start payment', description: detail || err.message, variant: 'destructive' });
       setWallidLoading(false);
+    }
+  };
+
+  // Xoala card payment: server signs the form, the browser POSTs it to Xoala's
+  // hosted card page. Xoala POSTs the result back to our API which 303s here.
+  const payWithXoala = async () => {
+    if (!createdOrder) return;
+    setXoalaLoading(true);
+    setXoalaFailed(false);
+    try {
+      const res = await Xoala.createPayment(createdOrder.id);
+      if (!res?.action || !res?.fields) throw new Error('No payment form returned');
+      try {
+        localStorage.setItem(PENDING_ORDER_STORAGE_KEY, JSON.stringify({
+          id: createdOrder.id, order_number: createdOrder.order_number, created_at: Date.now(),
+        }));
+      } catch (_) { /* ignore */ }
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = res.action;
+      form.style.display = 'none';
+      Object.entries(res.fields).forEach(([name, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      toast({ title: 'Could not start card payment', description: detail || err.message, variant: 'destructive' });
+      setXoalaLoading(false);
     }
   };
 
@@ -585,6 +625,43 @@ const Checkout = () => {
                       Instant secure transfer from your bank · No card details required
                     </p>
                     <BankTrustBadges />
+
+                    {xoalaConfig?.configured && (
+                      <div data-testid="xoala-section">
+                        <div className="relative my-6">
+                          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
+                          <div className="relative flex justify-center">
+                            <span className="bg-white px-3 text-[11px] uppercase tracking-widest text-slate-500 font-bold">or pay by card</span>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={payWithXoala}
+                          disabled={xoalaLoading || !complianceConfirmed}
+                          variant="outline"
+                          className="w-full h-14 border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white font-bold uppercase tracking-wider text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                          data-testid="xoala-pay-btn"
+                        >
+                          {xoalaLoading
+                            ? <Loader2 className="h-5 w-5 animate-spin" />
+                            : (
+                              <>
+                                {xoalaFailed ? <RefreshCw className="h-4 w-4 mr-2" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                                {xoalaFailed ? 'Retry card payment · ' : 'Pay by Card · '}
+                                £{Number(createdOrder?.total || 0).toFixed(2)}
+                              </>
+                            )}
+                        </Button>
+                        <p className="text-xs text-slate-500 mt-2 text-center" data-testid="xoala-note">
+                          Visa &amp; Mastercard · 3-D Secure · card details are entered on our payment partner's secure page
+                          {xoalaConfig?.sandbox ? ' · TEST MODE — no real charge' : ''}
+                        </p>
+                        {xoalaFailed && (
+                          <p className="text-xs text-red-600 mt-2 text-center" data-testid="xoala-failed-note">
+                            The card payment didn't complete. You can try again or use Pay by Bank.
+                          </p>
+                        )}
+                      </div>
+                    )}
 
                     <BankTransferPanel
                       order={createdOrder}

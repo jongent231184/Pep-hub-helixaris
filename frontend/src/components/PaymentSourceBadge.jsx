@@ -23,6 +23,11 @@ const CONFIG = {
     Icon: Hand,
     className: 'bg-slate-100 text-slate-700 border-slate-200',
   },
+  return: {
+    label: 'Card · verified',
+    Icon: Zap,
+    className: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  },
 };
 
 const PaymentSourceBadge = ({ source, className = '' }) => {

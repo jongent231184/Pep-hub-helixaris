@@ -29,6 +29,7 @@ const OrderConfirmation = () => {
   }, []);
 
   const cameFromWallid = searchParams.get('wallid') === '1';
+  const cameFromXoala = searchParams.get('xoala') === '1';
 
   const applyOrder = (o) => {
     setOrder(o);
@@ -138,6 +139,28 @@ const OrderConfirmation = () => {
     pollRef.current = setInterval(tick, 4000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [order?.id, cameFromWallid]);
+
+  // Xoala: the return POST normally marks the order paid before we land here;
+  // if the notification is still in flight, re-fetch a few times.
+  useEffect(() => {
+    if (!order || !cameFromXoala || order.payment_status === 'paid') return;
+    let attempts = 0;
+    setVerifying(true);
+    const iv = setInterval(async () => {
+      attempts += 1;
+      try {
+        const fresh = await Orders.get(order.id);
+        if (fresh.payment_status === 'paid' || attempts >= 6) {
+          applyOrder(fresh);
+          setVerifying(false);
+          clearInterval(iv);
+        }
+      } catch (_) {
+        if (attempts >= 6) { setVerifying(false); clearInterval(iv); }
+      }
+    }, 4000);
+    return () => clearInterval(iv);
+  }, [order?.id, cameFromXoala]);
 
   if (loading) {
     return (

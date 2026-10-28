@@ -84,6 +84,12 @@ export const Orders = {
   setPaylinkAddress: (id, addr) => api.put(`/orders/pay/${id}/address`, addr).then(r => r.data),
 };
 
+export const Xoala = {
+  config: () => api.get('/xoala/config').then(r => r.data),
+  createPayment: (orderId) => api.post('/xoala/create-payment', { order_id: orderId }).then(r => r.data),
+  status: (orderId) => api.get(`/xoala/status/${orderId}`).then(r => r.data),
+};
+
 export const Analytics = {
   summary: (days = 30) => api.get('/admin/analytics/summary', { params: { days } }).then(r => r.data),
 };
