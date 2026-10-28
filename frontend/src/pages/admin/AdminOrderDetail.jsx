@@ -42,7 +42,7 @@ const AdminOrderDetail = () => {
     setRefunding(true);
     try {
       const r = await Xoala.refund(order.id, amount);
-      toast({ title: r.full ? 'Fully refunded' : 'Partial refund sent', description: `${r.refunded} refunded (${r.refunded_total} in total). The customer's bank usually shows it within 3–5 working days.` });
+      toast({ title: r.full ? 'Fully refunded' : 'Partial refund sent', description: `${r.refunded} refunded (${r.refunded_total} in total). Confirmation emailed to ${r.email_sent_to || 'the customer'}.` });
       const fresh = await Orders.get(order.id);
       setOrder(fresh);
     } catch (e) {

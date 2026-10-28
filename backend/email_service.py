@@ -749,6 +749,53 @@ async def send_blocked_attempt_email(entry: dict, addr: dict, channel: str, hits
         logger.error(f'blocked-attempt alert failed: {e}')
 
 
+# --------------------------------------------------------- REFUND CONFIRMATION
+
+async def send_refund_email(order: dict, amount: str, refunded_total: str, full: bool, card: str = '') -> None:
+    """Tell the customer a card refund has been issued (Xoala)."""
+    if not _init_resend():
+        logger.warning('refund email skipped: Resend not configured')
+        return
+    customer_email = (order.get('shipping_address') or {}).get('email', '')
+    if not customer_email or customer_email == 'pending@ghp-health.com':
+        return
+    order_number = order.get('order_number', '')
+    first = (order.get('shipping_address') or {}).get('first_name') or 'there'
+    currency = order.get('xoala_currency') or 'GBP'
+    sym = {'GBP': '£', 'EUR': '€', 'USD': '$'}.get(currency, f'{currency} ')
+    card_line = f' to your card ending <strong>{card.split("•")[-1].strip()}</strong>' if card and card.strip('• ') else ' to the card you paid with'
+    heading = 'Your refund is on its way' if full else 'A partial refund is on its way'
+    intro = (f"Hi {first}, we've refunded <strong>{sym}{amount}</strong>{card_line} for order <strong>{order_number}</strong>."
+             + ('' if full else f' In total <strong>{sym}{refunded_total}</strong> of this order has now been refunded.')
+             + ' Refunds usually appear on your statement within 3–5 working days, depending on your bank.')
+    html = f"""
+    <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#0f172a">
+      <div style="border-bottom:3px solid #0ea5e9;padding-bottom:16px;margin-bottom:20px">
+        <p style="font-size:11px;letter-spacing:2px;color:#0284c7;font-weight:700;text-transform:uppercase;margin:0">{BUSINESS_NAME} · Refund</p>
+        <h1 style="font-size:22px;font-weight:900;margin:6px 0 0">{heading}</h1>
+      </div>
+      <p style="font-size:14px;line-height:1.6;margin:0 0 18px">{intro}</p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;background:#f0f9ff;border-radius:8px;padding:8px">
+        <tr><td style="padding:6px 0;color:#64748b;width:150px">Order</td><td><strong style="font-family:'Courier New',monospace">{order_number}</strong></td></tr>
+        <tr><td style="padding:6px 0;color:#64748b">Refund amount</td><td><strong>{sym}{amount}</strong></td></tr>
+        <tr><td style="padding:6px 0;color:#64748b">Refunded to</td><td>{card or 'original payment card'}</td></tr>
+        <tr><td style="padding:6px 0;color:#64748b">Date</td><td>{datetime.utcnow().strftime('%d %b %Y')}</td></tr>
+      </table>
+      <p style="margin-top:22px;font-size:12px;color:#64748b;line-height:1.5">If you don't see the refund after 5 working days, reply to this email with your order number and we'll chase it with our payment provider.</p>
+    </div>
+    """
+    try:
+        res = await asyncio.to_thread(resend.Emails.send, {
+            'from': f'{BUSINESS_NAME} <{FROM_EMAIL}>',
+            'to': [customer_email],
+            'subject': f'{"Refund" if full else "Partial refund"} issued · {sym}{amount} · order {order_number}',
+            'html': html,
+        })
+        logger.info(f'refund email sent for {order_number}: {res.get("id")}')
+    except Exception as e:
+        logger.error(f'refund email failed for {order_number}: {e}')
+
+
 # --------------------------------------------------------- AMBASSADOR WELCOME
 
 async def send_ambassador_welcome(user: dict, temp_password: Optional[str] = None) -> Optional[str]:

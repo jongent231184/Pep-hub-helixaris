@@ -3,6 +3,7 @@
 Flow: POST /xoala/create-payment → signed form fields → browser POSTs them to Xoala →
 Xoala POSTs the result to /xoala/return (we verify + 303 to the SPA) and JSON to /xoala/notify.
 """
+import asyncio
 import hashlib
 import hmac
 import httpx
@@ -15,6 +16,7 @@ from fastapi.responses import RedirectResponse
 from db import db
 from order_helpers import mark_order_paid
 from auth import require_admin
+from email_service import send_refund_email
 
 logger = logging.getLogger('xoala')
 router = APIRouter(prefix='/xoala', tags=['xoala'])
@@ -299,7 +301,9 @@ async def refund_card_payment(order_id: str, payload: dict = Body(default={}), _
     await db.orders.update_one({'id': order['id']}, update)
     if not ok:
         raise HTTPException(502, f"Xoala declined the refund: {result.get('description') or body.get('remark') or 'unknown error'}")
-    return {'ok': True, 'refunded': amount_str, 'refunded_total': _amount_str(already + amount), 'full': already + amount >= paid - 0.005, 'xoala': entry}
+    full = already + amount >= paid - 0.005
+    asyncio.create_task(send_refund_email(order, amount_str, _amount_str(already + amount), full, order.get('xoala_card') or ''))
+    return {'ok': True, 'refunded': amount_str, 'refunded_total': _amount_str(already + amount), 'full': full, 'xoala': entry, 'email_sent_to': (order.get('shipping_address') or {}).get('email')}
 
 
 @router.get('/status/{order_id}')
