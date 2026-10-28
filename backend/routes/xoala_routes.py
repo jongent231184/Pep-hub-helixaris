@@ -5,8 +5,10 @@ Xoala POSTs the result to /xoala/return (we verify + 303 to the SPA) and JSON to
 """
 import hashlib
 import hmac
+import httpx
 import logging
 import os
+import uuid
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Request, Body, Depends
 from fastapi.responses import RedirectResponse
@@ -97,7 +99,7 @@ async def create_payment(payload: dict = Body(...), request: Request = None):
             raise HTTPException(409, f"Insufficient stock for '{item.get('name') or prod.get('name')}'. Only {available} left.")
 
     attempt = int(order.get('xoala_attempts', 0) or 0) + 1
-    txn_id = f"{order['order_number']}-{attempt}"
+    txn_id = f"{order['order_number']}-{attempt}-{uuid.uuid4().hex[:6]}"
     amount = _amount_str(order['total'])
     api_base = _api_base(request)
     redirect_url = f'{api_base}/api/xoala/return'
@@ -221,6 +223,83 @@ async def xoala_notify(request: Request):
     await _apply(order, tx_status, payment_id, 'webhook', p)
     await db.orders.update_one({'id': order['id']}, {'$set': {'xoala_notified_at': datetime.utcnow(), 'xoala_gateway_status': str(p.get('status') or '')}})
     return {'received': True}
+
+
+async def _auth_token() -> str:
+    data = {
+        'authentication.partnerId': os.environ.get('XOALA_PARTNER_ID', ''),
+        'merchant.username': os.environ.get('XOALA_MERCHANT_USERNAME', ''),
+        'authentication.sKey': XOALA_SECRET_KEY,
+    }
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        r = await client.post(f'{XOALA_BASE_URL}/transactionServices/REST/v1/authToken', data=data)
+    body = r.json() if r.headers.get('content-type', '').startswith('application/json') else {}
+    token = body.get('AuthToken')
+    if not token:
+        raise HTTPException(502, f"Xoala auth failed: {(body.get('result') or {}).get('description') or r.text[:200]}")
+    return token
+
+
+@router.post('/admin/{order_id}/refund')
+async def refund_card_payment(order_id: str, payload: dict = Body(default={}), _=Depends(require_admin)):
+    """Full or partial refund of a Xoala card payment, straight from the order page."""
+    if not _configured():
+        raise HTTPException(500, 'Card payments are not configured')
+    order = await db.orders.find_one({'$or': [{'id': order_id}, {'order_number': order_id}]})
+    if not order:
+        raise HTTPException(404, 'Order not found')
+    if order.get('payment_provider') != 'xoala' or not order.get('xoala_payment_id'):
+        raise HTTPException(400, 'This order was not paid by card through Xoala')
+    if order.get('payment_status') != 'paid':
+        raise HTTPException(400, 'Only paid orders can be refunded')
+    paid = float(order.get('xoala_amount') or order.get('total') or 0)
+    already = float(order.get('xoala_refunded_total') or 0)
+    amount = float(payload.get('amount') or (paid - already))
+    if amount <= 0 or amount > round(paid - already, 2) + 1e-9:
+        raise HTTPException(400, f'Refund must be between 0.01 and {paid - already:.2f}')
+    amount_str = _amount_str(amount)
+    payment_id = str(order['xoala_payment_id'])
+    refund_txn = f"{order['order_number']}-RF{int(order.get('xoala_refund_count', 0) or 0) + 1}"
+
+    token = await _auth_token()
+    data = {
+        'authentication.memberId': XOALA_MEMBER_ID,
+        'authentication.partnerId': os.environ.get('XOALA_PARTNER_ID', ''),
+        'authentication.checksum': _md5(XOALA_MEMBER_ID, XOALA_SECRET_KEY, payment_id, amount_str),
+        'paymentType': 'RF',
+        'amount': amount_str,
+        'currency': order.get('xoala_currency') or XOALA_CURRENCY,
+        'merchantTransactionId': refund_txn,
+    }
+    if XOALA_TERMINAL_ID:
+        data['authentication.terminalId'] = XOALA_TERMINAL_ID
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post(
+            f'{XOALA_BASE_URL}/transactionServices/REST/v1/payments/{payment_id}',
+            data=data, headers={'AuthToken': token, 'Authorization': f'Bearer {token}'},
+        )
+    try:
+        body = r.json()
+    except Exception:
+        raise HTTPException(502, f'Xoala refund: unexpected response ({r.status_code})')
+    result = body.get('result') or {}
+    tx_status = str(body.get('transactionStatus') or '').upper()
+    ok = tx_status in ('Y', 'P') or str(result.get('code', '')).startswith('000')
+    entry = {
+        'refund_txn': refund_txn, 'amount': amount_str, 'ok': ok, 'xoala_payment_id': str(body.get('paymentId') or ''),
+        'status': body.get('status'), 'code': result.get('code'), 'description': result.get('description'),
+        'at': datetime.utcnow(),
+    }
+    update = {'$push': {'xoala_refunds': entry}, '$inc': {'xoala_refund_count': 1}, '$set': {'updated_at': datetime.utcnow()}}
+    if ok:
+        new_total = round(already + amount, 2)
+        update['$inc']['xoala_refunded_total'] = amount
+        if new_total >= paid - 0.005:
+            update['$set'].update({'payment_status': 'refunded', 'status': 'refunded'})
+    await db.orders.update_one({'id': order['id']}, update)
+    if not ok:
+        raise HTTPException(502, f"Xoala declined the refund: {result.get('description') or body.get('remark') or 'unknown error'}")
+    return {'ok': True, 'refunded': amount_str, 'refunded_total': _amount_str(already + amount), 'full': already + amount >= paid - 0.005, 'xoala': entry}
 
 
 @router.get('/status/{order_id}')

@@ -88,6 +88,7 @@ export const Xoala = {
   config: () => api.get('/xoala/config').then(r => r.data),
   createPayment: (orderId) => api.post('/xoala/create-payment', { order_id: orderId }).then(r => r.data),
   status: (orderId) => api.get(`/xoala/status/${orderId}`).then(r => r.data),
+  refund: (orderId, amount) => api.post(`/xoala/admin/${orderId}/refund`, { amount }).then(r => r.data),
 };
 
 export const Analytics = {

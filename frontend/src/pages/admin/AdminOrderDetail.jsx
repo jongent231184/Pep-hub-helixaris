@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Orders, Wallid, Square, Blocklist, resolveImage } from '../../lib/api';
+import { Orders, Wallid, Square, Blocklist, Xoala, resolveImage } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
-import { ArrowLeft, Loader2, FileText, Trash2, RefreshCw, Download, ShieldBan, Send } from 'lucide-react';
+import { ArrowLeft, Loader2, FileText, Trash2, RefreshCw, Download, ShieldBan, Send, Undo2 } from 'lucide-react';
 import PaymentSourceBadge from '../../components/PaymentSourceBadge';
 import { useToast } from '../../hooks/use-toast';
 
@@ -25,6 +25,30 @@ const AdminOrderDetail = () => {
   const [notes, setNotes] = useState('');
   const [blocking, setBlocking] = useState(false);
   const [resending, setResending] = useState(false);
+  const [refunding, setRefunding] = useState(false);
+
+  const refundCard = async () => {
+    const paid = Number(order.xoala_amount || order.total || 0);
+    const already = Number(order.xoala_refunded_total || 0);
+    const remaining = (paid - already).toFixed(2);
+    const input = window.prompt(`Refund amount for ${order.order_number} (max ${remaining}, in ${order.xoala_currency || 'GBP'}). Leave as-is for a full refund.`, remaining);
+    if (input === null) return;
+    const amount = Number(input);
+    if (!(amount > 0) || amount > Number(remaining) + 1e-9) {
+      toast({ title: 'Invalid amount', description: `Enter a value between 0.01 and ${remaining}.`, variant: 'destructive' });
+      return;
+    }
+    if (!window.confirm(`Send a refund of ${amount.toFixed(2)} to the customer's card? This cannot be undone.`)) return;
+    setRefunding(true);
+    try {
+      const r = await Xoala.refund(order.id, amount);
+      toast({ title: r.full ? 'Fully refunded' : 'Partial refund sent', description: `${r.refunded} refunded (${r.refunded_total} in total). The customer's bank usually shows it within 3–5 working days.` });
+      const fresh = await Orders.get(order.id);
+      setOrder(fresh);
+    } catch (e) {
+      toast({ title: 'Refund failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally { setRefunding(false); }
+  };
 
   const resendInvoice = async () => {
     setResending(true);
@@ -172,6 +196,19 @@ const AdminOrderDetail = () => {
             {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Email invoice
           </Button>
+          {order.payment_provider === 'xoala' && order.xoala_payment_id && order.payment_status === 'paid' && (
+            <Button
+              variant="outline"
+              className="gap-2 border-amber-300 text-amber-800 hover:bg-amber-50"
+              onClick={refundCard}
+              disabled={refunding}
+              data-testid="xoala-refund-btn"
+              title="Refund this card payment through Xoala"
+            >
+              {refunding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}
+              Refund card payment
+            </Button>
+          )}
           {order.wallid_api_payment_id && (
             <Button
               variant="outline"

@@ -243,6 +243,13 @@ class OrderOut(BaseModel):
     notes: Optional[str] = ''
     invoice_resent_at: Optional[datetime] = None
     invoice_resend_count: Optional[int] = None
+    xoala_payment_id: Optional[str] = None
+    xoala_amount: Optional[str] = None
+    xoala_currency: Optional[str] = None
+    xoala_card: Optional[str] = None
+    xoala_status: Optional[str] = None
+    xoala_refunded_total: Optional[float] = None
+    xoala_refunds: Optional[list] = None
     created_at: datetime
     updated_at: datetime
 
