@@ -1,5 +1,6 @@
 """Order routes."""
 import asyncio
+import re
 from datetime import datetime
 import uuid
 from typing import Optional
@@ -130,9 +131,31 @@ async def my_orders(user: dict = Depends(get_current_user)):
     return [OrderOut(**doc_to_dict(d)) for d in docs]
 
 
+@router.get('/count')
+async def orders_count(_=Depends(require_admin)):
+    return {'total': await db.orders.count_documents({})}
+
+
 @router.get('/all', response_model=list[OrderOut])
-async def all_orders(_=Depends(require_admin)):
-    docs = await db.orders.find().sort('created_at', -1).to_list(1000)
+async def all_orders(_=Depends(require_admin), limit: int = 500, skip: int = 0, q: str = ''):
+    """Newest first. Paginate with skip/limit; `q` searches the whole history (order #, email, name)."""
+    limit = max(1, min(limit, 1000))
+    flt = {}
+    q = (q or '').strip()
+    if q:
+        rx = {'$regex': re.escape(q), '$options': 'i'}
+        flt = {'$or': [
+            {'order_number': rx}, {'shipping_address.email': rx},
+            {'shipping_address.first_name': rx}, {'shipping_address.last_name': rx},
+            {'xoala_payment_id': rx}, {'wallid_api_payment_id': rx},
+        ]}
+        parts = q.split()
+        if len(parts) >= 2:
+            flt['$or'].append({'$and': [
+                {'shipping_address.first_name': {'$regex': re.escape(parts[0]), '$options': 'i'}},
+                {'shipping_address.last_name': {'$regex': re.escape(' '.join(parts[1:])), '$options': 'i'}},
+            ]})
+    docs = await db.orders.find(flt).sort('created_at', -1).skip(max(0, skip)).limit(limit).to_list(limit)
     out = []
     for d in docs:
         try:

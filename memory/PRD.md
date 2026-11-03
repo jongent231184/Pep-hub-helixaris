@@ -22,6 +22,9 @@ See `/app/memory/test_credentials.md`.
 
 ## What's live now (chronological)
 
+### November 2026
+- ✅ **Full order history**: `GET /api/orders/all?limit&skip&q` (newest first, limit capped 1000, `q` regex over order #, email, first/last name, "first last", payment ids) + `GET /api/orders/count`. Admin Orders loads 500, "Load older orders (N more)" appends pages; search box (≥2 chars, debounced) searches the entire DB server-side; count label "Showing X of Y". Previously hard-capped at 1000 most recent.
+
 ### October 2026
 - ✅ **Refund confirmation email**: `email_service.send_refund_email(order, amount, refunded_total, full, card)` fired (fire-and-forget) from the Xoala refund endpoint after a successful refund — subject "Refund issued · £X · order N" (or "Partial refund…"), shows amount, card last-4 (from `xoala_card`), 3–5 working day note. Verified via Resend (both variants).
 - ⚠️ **Xoala card refunds (built, NOT yet verified)**: `POST /api/xoala/admin/{order_id}/refund {amount?}` → REST authToken (`authentication.partnerId`, `merchant.username`=`XOALA_MERCHANT_USERNAME`, `authentication.sKey`) then `POST /transactionServices/REST/v1/payments/{paymentId}` with `paymentType=RF`, checksum `memberId|secret|paymentId|amount`, headers `AuthToken` + `Authorization: Bearer`. Partial refunds tracked in `xoala_refunds`/`xoala_refunded_total`; full → `payment_status=refunded`. Admin order page: "Refund card payment" button (prompt for amount). **Blocked**: sandbox authToken rejects every login name tried ("Invalid login name… [A-Za-z0-9]") — need Xoala to supply the alphanumeric REST API username for the demo merchant (and confirm the AuthToken header name). Xoala fields added to `OrderOut`. `merchantTransactionId` now `{order}-{attempt}-{6hex}` (Xoala requires global uniqueness; counter resets in preview collided).

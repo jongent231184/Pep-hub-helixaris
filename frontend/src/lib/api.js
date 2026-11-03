@@ -67,7 +67,8 @@ export const Products = {
 export const Orders = {
   create: (data) => api.post('/orders', data).then(r => r.data),
   mine: () => api.get('/orders/mine').then(r => r.data),
-  all: () => api.get('/orders/all').then(r => r.data),
+  all: (params = {}) => api.get('/orders/all', { params }).then(r => r.data),
+  count: () => api.get('/orders/count').then(r => r.data),
   get: (id) => api.get(`/orders/${id}`).then(r => r.data),
   patch: (id, data) => api.patch(`/orders/${id}`, data).then(r => r.data),
   remove: (id) => api.delete(`/orders/${id}`).then(r => r.data),

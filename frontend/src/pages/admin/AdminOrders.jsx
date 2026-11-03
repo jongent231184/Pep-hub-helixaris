@@ -34,13 +34,43 @@ const AdminOrders = () => {
   const [blockingId, setBlockingId] = useState(null);
   const [resendingId, setResendingId] = useState(null);
   const [bulkSending, setBulkSending] = useState(false);
+  const [total, setTotal] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [serverQuery, setServerQuery] = useState('');
   const { toast } = useToast();
+  const PAGE = 500;
 
   const loadBlocked = () => Blocklist.matchingOrders().then(r => setBlockedIds(new Set(r.order_ids || []))).catch(() => {});
-  const load = () => {
+  const load = (q = serverQuery) => {
     loadBlocked();
-    return Orders.all().then(setOrders).catch(() => setOrders([])).finally(() => setLoading(false));
+    Orders.count().then(r => setTotal(r.total)).catch(() => {});
+    return Orders.all({ limit: PAGE, q })
+      .then(list => { setOrders(list); setHasMore(!q && list.length === PAGE); })
+      .catch(() => setOrders([]))
+      .finally(() => setLoading(false));
   };
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const more = await Orders.all({ limit: PAGE, skip: orders.length });
+      setOrders(prev => [...prev, ...more]);
+      setHasMore(more.length === PAGE);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Searching hits the full order history on the server (not just the loaded page).
+  useEffect(() => {
+    const q = query.trim();
+    const t = setTimeout(() => {
+      if (q.length >= 2) { setServerQuery(q); load(q); }
+      else if (serverQuery) { setServerQuery(''); load(''); }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [query]);
 
   useEffect(() => { load(); }, []);
 
@@ -294,7 +324,14 @@ const AdminOrders = () => {
       {tab === 'blocklist' && <CustomerBlocklist onChange={loadBlocked} />}
 
       {tab === 'orders' && (
-        <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by order #, name or email…" className="max-w-md mb-4" />
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search all orders by order #, name or email…" className="max-w-md" data-testid="orders-search" />
+          {total !== null && (
+            <span className="text-xs text-slate-500" data-testid="orders-count">
+              {serverQuery ? `${orders.length} match${orders.length === 1 ? '' : 'es'} across all ${total.toLocaleString()} orders` : `Showing ${orders.length.toLocaleString()} of ${total.toLocaleString()} orders`}
+            </span>
+          )}
+        </div>
       )}
 
       {tab !== 'orders' ? null : loading ? (
@@ -410,6 +447,14 @@ const AdminOrders = () => {
               {filtered.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-slate-500">No orders found.</td></tr>}
             </tbody>
           </table>
+          {hasMore && !serverQuery && (
+            <div className="p-4 border-t text-center">
+              <Button variant="outline" onClick={loadMore} disabled={loadingMore} className="gap-2" data-testid="load-older-orders">
+                {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4 rotate-180" />}
+                Load older orders{total ? ` (${(total - orders.length).toLocaleString()} more)` : ''}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
