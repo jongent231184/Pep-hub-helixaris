@@ -36,6 +36,16 @@ def _configured() -> bool:
     return bool(XOALA_BASE_URL and XOALA_MEMBER_ID and XOALA_TOTYPE and XOALA_SECRET_KEY)
 
 
+def _enabled_for(request: Request) -> bool:
+    """Sandbox credentials must never surface on a live domain — only on preview/localhost."""
+    if not _configured():
+        return False
+    if not SANDBOX:
+        return True
+    host = (request.headers.get('x-forwarded-host') or request.headers.get('host') or '').lower()
+    return 'preview.emergentagent.com' in host or host.startswith('localhost') or host.startswith('127.')
+
+
 def _md5(*parts: str) -> str:
     return hashlib.md5('|'.join(parts).encode('utf-8')).hexdigest()
 
@@ -69,15 +79,15 @@ def _amount_str(total) -> str:
 
 
 @router.get('/config')
-async def xoala_config():
-    return {'configured': _configured(), 'sandbox': SANDBOX, 'currency': XOALA_CURRENCY}
+async def xoala_config(request: Request):
+    return {'configured': _enabled_for(request), 'sandbox': SANDBOX, 'currency': XOALA_CURRENCY}
 
 
 @router.post('/create-payment')
 async def create_payment(payload: dict = Body(...), request: Request = None):
     """Build the signed Xoala form for an existing order. Frontend auto-submits it."""
-    if not _configured():
-        raise HTTPException(500, 'Card payments are not configured')
+    if not _enabled_for(request):
+        raise HTTPException(503, 'Card payments are not available yet')
     order = await db.orders.find_one({'id': payload.get('order_id', '')})
     if not order:
         raise HTTPException(404, 'Order not found')
