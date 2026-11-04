@@ -1,0 +1,26 @@
+{
+  "summary": "Tested the Xoala sandbox host check on the backend and in the checkout UI. The backend correctly turns card payments off on live hosts (www.ghp-health.com, ghp-health.com, helixaris.com, and X-Forwarded-Host www.ghp-health.com): /config returns configured:false and create-payment returns 503. Card payments stay on for the preview domain: config is true and create-payment returns 200 with a sandbox action and signed fields for a real order. /return and /notify still work (the 7 tests in test_xoala.py pass). In the UI on preview, the Pay by Card button shows with the TEST MODE note and turns clickable once the research-use box is ticked. With /api/xoala/config mocked to configured:false, xoala-section is not rendered and Pay by Bank still shows. 14/16 backend tests pass. The 2 failures are a security finding: the check trusts the client-supplied X-Forwarded-Host. The live site still showed configured:true when we checked (read-only GET), which suggests the fix is not deployed yet.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "_enabled_for (GET /api/xoala/config, POST /api/xoala/create-payment)", "issue": "The check trusts the client-supplied X-Forwarded-Host and matches it loosely: substring 'preview.emergentagent.com' and startswith('localhost'/'127.'). With Host www.ghp-health.com plus X-Forwarded-Host 'x.preview.emergentagent.com' or 'localhost.evil.com', configured:true comes back. On preview the ingress seems to overwrite X-Forwarded-Host, so spoofing had no effect there. We could not confirm this for the production ingress. If prod passes the header through, an attacker could create a live order, get a sandbox form, pay with a Xoala test card, and the signed return/notify would mark the real order as paid (free goods)."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_xoala_host_gating.py", "/app/backend/tests/test_xoala.py", "/app/test_reports/pytest/xoala_gating.xml"],
+  "action_items": [
+    "Make the sandbox check deployment-based rather than header-based. For example, set XOALA_ENABLED or XOALA_SANDBOX_ALLOWED=false in the prod env, or better, keep sandbox XOALA_* vars out of production. Alternatively, check the Host against an exact allowlist of preview hosts and ignore a client-supplied X-Forwarded-Host.",
+    "After deploying, confirm https://www.ghp-health.com/api/xoala/config returns configured:false. It returned configured:true at test time, so the fix is not live yet.",
+    "Optional: set XOALA_ENABLED=false in the production env so sandbox credentials can never reach live checkout."
+  ],
+  "critical_code_review_comments": [
+    "xoala_routes.py:45-46 host check uses substring/startswith matching on a header the client controls. Use exact matching (e.g. host.split(':')[0] in ALLOWED or host.endswith('.preview.emergentagent.com')) and prefer an env flag.",
+    "Cart is not cleared after the order is created (the second checkout had qty 2). This may be intentional so a failed payment can be retried, but stale baskets could produce duplicate orders."
+  ],
+  "updated_files": ["/app/backend/tests/test_xoala_host_gating.py"],
+  "success_rate": {"backend": "88% (14/16; the 2 failures are spoof probes)", "frontend": "100%"},
+  "seed_data_creation": "Created 3 TEST orders (one in pytest, GHP-044 and GHP-045 in the UI test). All were deleted as admin and the counter was reset to 44 (next_order_will_be GHP-044). No payment was completed on Xoala.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: cd /app/backend && python -m pytest tests/test_xoala_host_gating.py tests/test_xoala.py -p no:xdist -v. The spoof tests in test_xoala_host_gating.py will pass once _enabled_for stops trusting X-Forwarded-Host. Checkout: inputs are #email then unnamed inputs in this order: first, last, addr1, addr2, city, postcode, phone. Then click CONTINUE TO PAYMENT."
+}

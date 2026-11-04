@@ -42,7 +42,7 @@ def _enabled_for(request: Request) -> bool:
         return False
     if not SANDBOX:
         return True
-    host = (request.headers.get('x-forwarded-host') or request.headers.get('host') or '').lower()
+    host = (request.headers.get('host') or '').lower()
     return 'preview.emergentagent.com' in host or host.startswith('localhost') or host.startswith('127.')
 
 
