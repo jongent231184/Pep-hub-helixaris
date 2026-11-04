@@ -592,9 +592,10 @@ def _bank_details_html(order: dict, settings: dict) -> str:
     """
 
 
-async def send_invoice_email(order: dict, settings: Optional[dict] = None) -> dict:
+async def send_invoice_email(order: dict, settings: Optional[dict] = None, note: str = '') -> dict:
     """Re-send the invoice to the customer. Unpaid + bank details configured →
-    'new payment option' framing with transfer details; otherwise a plain copy."""
+    'new payment option' framing with transfer details; otherwise a plain copy.
+    `note` (optional) is shown as a highlighted personal message at the top."""
     if not _init_resend():
         raise RuntimeError('Email is not configured (RESEND_API_KEY missing)')
     settings = settings or {}
@@ -626,6 +627,12 @@ async def send_invoice_email(order: dict, settings: Optional[dict] = None) -> di
         extra = ''
 
     pdf_bytes = await asyncio.to_thread(build_invoice_pdf, order, settings)
+    note = (note or '').strip()
+    if note:
+        first = (order.get('shipping_address') or {}).get('first_name') or 'there'
+        extra = (f'<div style="margin:0 0 20px 0;padding:14px 18px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:14px;line-height:1.6;color:#78350f">'
+                 f'<strong>Hi {first},</strong><br/>{note}</div>') + extra
+        subject = f'Our apologies — {subject[0].lower()}{subject[1:]}'
     params = {
         'from': f'{BUSINESS_NAME} <{FROM_EMAIL}>',
         'to': [customer_email],

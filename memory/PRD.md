@@ -23,6 +23,7 @@ See `/app/memory/test_credentials.md`.
 ## What's live now (chronological)
 
 ### November 2026
+- ✅ **Apology invoices sent (live)** 4 Nov: GHP-2293, 2288, 2283, 2280, 2278, 2274 via `POST /api/orders/admin/resend-invoices {order_ids, note}` (new optional `note` → highlighted box + "Our apologies —" subject). GHP-2286 deliberately skipped (exact duplicate of 2288, same customer/basket). Live `/api/xoala/config` confirmed `configured:false` after republish.
 - 🚨 **Fixed: sandbox Xoala exposed on live** — the secret key had been saved to the live slot too, so www.ghp-health.com showed "Pay by Card" and sent 7 customers to the Xoala sandbox (EUR demo page; no money moved, orders GHP-2274/2278/2283/2286/2288/2293 left unpaid, GHP-2280 declined). Guard added: `_enabled_for(request)` — when `XOALA_BASE_URL` contains "sandbox", card payments are only enabled if the **Host** header (not X-Forwarded-Host — spoofable) contains `preview.emergentagent.com` or localhost. `/config` → configured:false and `/create-payment` → 503 elsewhere. Verified by testing_agent (iteration_23). User must republish for it to take effect on live.
 - ✅ **Full order history**: `GET /api/orders/all?limit&skip&q` (newest first, limit capped 1000, `q` regex over order #, email, first/last name, "first last", payment ids) + `GET /api/orders/count`. Admin Orders loads 500, "Load older orders (N more)" appends pages; search box (≥2 chars, debounced) searches the entire DB server-side; count label "Showing X of Y". Previously hard-capped at 1000 most recent.
 

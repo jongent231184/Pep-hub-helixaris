@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 import uuid
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Body
 from fastapi.responses import Response
 from db import db
 from models import (
@@ -410,12 +410,12 @@ async def customer_invoice_pdf(order_id: str, user: Optional[dict] = Depends(get
     )
 
 
-async def _resend_one(order_id: str, settings: dict) -> dict:
+async def _resend_one(order_id: str, settings: dict, note: str = '') -> dict:
     doc = await db.orders.find_one({'$or': [{'id': order_id}, {'order_number': order_id}]})
     if not doc:
         raise HTTPException(404, 'Order not found')
     try:
-        result = await send_invoice_email(doc, settings)
+        result = await send_invoice_email(doc, settings, note=note)
     except (ValueError, RuntimeError) as e:
         raise HTTPException(400, str(e))
     except Exception as e:
@@ -428,9 +428,9 @@ async def _resend_one(order_id: str, settings: dict) -> dict:
 
 
 @router.post('/admin/{order_id}/resend-invoice')
-async def resend_invoice(order_id: str, _=Depends(require_admin)):
+async def resend_invoice(order_id: str, payload: Optional[dict] = Body(default=None), _=Depends(require_admin)):
     settings = await db.settings.find_one({'_singleton': True}) or {}
-    return await _resend_one(order_id, settings)
+    return await _resend_one(order_id, settings, note=(payload or {}).get('note', ''))
 
 
 @router.post('/admin/resend-invoices')
@@ -438,11 +438,12 @@ async def resend_invoices_bulk(payload: dict, _=Depends(require_admin)):
     ids = [str(i) for i in (payload.get('order_ids') or [])][:200]
     if not ids:
         raise HTTPException(400, 'order_ids is required')
+    note = str(payload.get('note') or '')
     settings = await db.settings.find_one({'_singleton': True}) or {}
     sent, failed = [], []
     for oid in ids:
         try:
-            sent.append(await _resend_one(oid, settings))
+            sent.append(await _resend_one(oid, settings, note=note))
         except HTTPException as e:
             failed.append({'order_id': oid, 'error': e.detail})
     return {'sent': sent, 'failed': failed}
