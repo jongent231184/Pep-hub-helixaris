@@ -1,0 +1,22 @@
+{
+  "summary": "Tested the Xoala compliance changes. All checks passed. The /privacy-policy, /shipping-policy and /refund-policy pages each render with their data-testid, an H1 and a 'Last updated' line. The shipping page shows £4.99 flat and free over £50.00, taken from /api/settings. The links between policy pages work. Footer links footer-privacy-link, footer-shipping-link and footer-refund-link go to the right pages. /terms links to the refund, shipping and privacy policies and no longer says 'All sales are final'. End-to-end checkout run: added a product, filled a UK address with test@example.com, clicked Continue to payment and order GHP-044 was created. The compliance label links to /terms, /refund-policy, /shipping-policy and /privacy-policy. wallid-pay-btn and xoala-pay-btn are disabled until the checkbox is ticked and enabled after. The bank transfer panel is also gated by the checkbox. billing-descriptor-note reads 'This charge will appear on your card statement as GHP-HEALTH'. No pay buttons were clicked. The sitemap includes all three new pages. Home, product and /research-use-policy pages still render. No console errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_policy_pages_sitemap.py", "/app/test_reports/pytest/pytest_policy.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Checkout.jsx: the compliance checkbox, the Xoala card section and billing-descriptor-note are all rendered inside the wallidConfig?.configured block. If Wallid is ever turned off or unconfigured, the policy-acceptance checkbox and the card button with its descriptor disappear, and the acquirer requirement would no longer be met. Move the checkbox and the Xoala section outside the Wallid condition.",
+    "Terms.jsx uses plain <a href> for its internal policy links, which reloads the whole page. Use react-router <Link> to match the other pages (minor).",
+    "Checkout shipping-address inputs have no data-testid attributes, so tests have to select them by position (minor testability gap)."
+  ],
+  "updated_files": ["/app/backend/tests/test_policy_pages_sitemap.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Created test order 34dff037-9f6d-4c76-87fe-361464d67c74 (GHP-044, email test@example.com) during the checkout test and then deleted it with admin DELETE /api/orders/{id}, which returned 200. payments_paused was not changed and is still false.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Age gate: tick both checkboxes in [role=dialog], then click ENTER SITE. Checkout shipping inputs have no testids: fill #email, then '#details-form input[required]' at positions 1-6 (first name, last name, address, city, postcode, phone). Product used: /product/10-x-1ml-05-inch-unisharp (in stock)."
+}

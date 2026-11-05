@@ -22,6 +22,7 @@ See `/app/memory/test_credentials.md`.
 
 ## What's live now (chronological)
 
+- ✅ **Acquirer compliance policy pages** (for Xoala technical form): `/privacy-policy`, `/shipping-policy`, `/refund-policy` (shared `components/PolicyPage.jsx`), footer links, sitemap entries, Terms no longer says "all sales are final", checkout compliance checkbox now accepts Terms + Refund + Shipping + Privacy, billing-descriptor note under card button. Tested iteration_24.
 ### November 2026
 - ✅ **Pause all payments switch**: `Settings.payments_paused` + `payments_paused_message` (Admin → Settings → "Pause all payments"). Checkout + PayLinkPage show an amber banner and grey out / disable every payment option (`opacity-40 grayscale pointer-events-none`); Wallid and Xoala `create-payment` return 503 while paused. Orders can still be placed (saved unpaid). Context: Revolut closed the account; Wallid payouts reverted.
 - ✅ **Apology invoices sent (live)** 4 Nov: GHP-2293, 2288, 2283, 2280, 2278, 2274 via `POST /api/orders/admin/resend-invoices {order_ids, note}` (new optional `note` → highlighted box + "Our apologies —" subject). GHP-2286 deliberately skipped (exact duplicate of 2288, same customer/basket). Live `/api/xoala/config` confirmed `configured:false` after republish.
