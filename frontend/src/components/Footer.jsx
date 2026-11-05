@@ -70,7 +70,7 @@ const Footer = () => {
       </div>
       <div className="border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-4 py-5 text-xs text-slate-400 flex flex-col sm:flex-row justify-between gap-2">
-          <p>Copyright © {new Date().getFullYear()} {s.site_name || BRAND.legalName} | <Link to="/terms" className="hover:text-sky-400">Terms &amp; Conditions</Link> | <Link to="/research-use-policy" className="hover:text-sky-400">Research-Use Policy</Link></p>
+          <p>Copyright © {new Date().getFullYear()} {s.site_name || BRAND.legalName} | <Link to="/terms" className="hover:text-sky-400">Terms &amp; Conditions</Link> | <Link to="/research-use-policy" className="hover:text-sky-400">Research-Use Policy</Link> | <Link to="/privacy-policy" className="hover:text-sky-400" data-testid="footer-privacy-link">Privacy</Link> | <Link to="/shipping-policy" className="hover:text-sky-400" data-testid="footer-shipping-link">Shipping &amp; Delivery</Link> | <Link to="/refund-policy" className="hover:text-sky-400" data-testid="footer-refund-link">Returns &amp; Refunds</Link></p>
           <p>Premium-grade research peptides</p>
         </div>
         {(s.company_number || s.registered_address || s.vat_number) && (

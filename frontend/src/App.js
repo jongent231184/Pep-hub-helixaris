@@ -24,6 +24,9 @@ import Search from './pages/Search';
 import Wholesale from './pages/Wholesale';
 import Terms from './pages/Terms';
 import ResearchUsePolicy from './pages/ResearchUsePolicy';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import ShippingPolicy from './pages/ShippingPolicy';
+import RefundPolicy from './pages/RefundPolicy';
 import PeptideCalculator from './pages/PeptideCalculator';
 import Coa from './pages/Coa';
 
@@ -148,6 +151,9 @@ function App() {
               <Route path="/wholesale" element={<Wholesale />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/research-use-policy" element={<ResearchUsePolicy />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/shipping-policy" element={<ShippingPolicy />} />
+              <Route path="/refund-policy" element={<RefundPolicy />} />
               <Route path="/peptide-calculator" element={<PeptideCalculator />} />
               <Route path="/coa" element={<Coa />} />
               <Route path="/coas" element={<Coa />} />

@@ -17,6 +17,8 @@ import BankTransferPanel, { BankTransferDetails } from '../components/BankTransf
 import { useAuth } from '../context/AuthContext';
 import { Orders, Promos, Addresses, Wallid, Xoala, resolveImage } from '../lib/api';
 
+import { BRAND } from '../config/brand';
+
 const PENDING_ORDER_STORAGE_KEY = 'ghp_pending_wallid_order';
 
 const Checkout = () => {
@@ -613,7 +615,7 @@ const Checkout = () => {
                         data-testid="checkout-compliance-checkbox"
                       />
                       <span className="text-[13px] text-slate-800 leading-snug">
-                        I confirm the products in this order are for <strong>research or educational use only</strong> and will not be used for human or animal consumption. I am 18 or older and reside in a jurisdiction where the sale of laboratory research chemicals is not restricted. I accept the <Link to="/terms" className="underline text-sky-600 hover:text-sky-700">Terms &amp; Conditions</Link>.
+                        I confirm the products in this order are for <strong>research or educational use only</strong> and will not be used for human or animal consumption. I am 18 or older and reside in a jurisdiction where the sale of laboratory research chemicals is not restricted. I have read and accept the <Link to="/terms" target="_blank" className="underline text-sky-600 hover:text-sky-700">Terms &amp; Conditions</Link>, <Link to="/refund-policy" target="_blank" className="underline text-sky-600 hover:text-sky-700">Returns &amp; Refund Policy</Link>, <Link to="/shipping-policy" target="_blank" className="underline text-sky-600 hover:text-sky-700">Shipping Policy</Link> and <Link to="/privacy-policy" target="_blank" className="underline text-sky-600 hover:text-sky-700">Privacy Policy</Link>.
                       </span>
                     </label>
 
@@ -666,6 +668,9 @@ const Checkout = () => {
                         <p className="text-xs text-slate-500 mt-2 text-center" data-testid="xoala-note">
                           Visa &amp; Mastercard · 3-D Secure · card details are entered on our payment partner's secure page
                           {xoalaConfig?.sandbox ? ' · TEST MODE — no real charge' : ''}
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-1 text-center" data-testid="billing-descriptor-note">
+                          This charge will appear on your card statement as <strong className="text-slate-700">{(settings?.site_name || BRAND.name).toUpperCase().replace(/\s+/g, '-')}</strong>
                         </p>
                         {xoalaFailed && (
                           <p className="text-xs text-red-600 mt-2 text-center" data-testid="xoala-failed-note">

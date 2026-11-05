@@ -54,6 +54,9 @@ async def sitemap_xml():
         ("/contact", "0.5", "monthly"),
         ("/terms", "0.3", "yearly"),
         ("/research-use-policy", "0.4", "yearly"),
+        ("/privacy-policy", "0.4", "yearly"),
+        ("/shipping-policy", "0.4", "yearly"),
+        ("/refund-policy", "0.4", "yearly"),
     ]
     for path, prio, freq in static_pages:
         urls.append(_url(path, today, freq, prio))

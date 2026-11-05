@@ -16,7 +16,7 @@ const Terms = () => (
         <section>
           <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">1. Products &amp; Compliance</p>
           <p>All products supplied by GHP-Health are intended for <strong>laboratory research use only</strong>. Not for human consumption or veterinary use.</p>
-          <p>By placing an order through this website you confirm that you are <strong>aged 18 or over</strong>, that you are ordering for legitimate research purposes, and that you accept the disclaimer in the age-gate modal in full. All sales are final.</p>
+          <p>By placing an order through this website you confirm that you are <strong>aged 18 or over</strong>, that you are ordering for legitimate research purposes, and that you accept the disclaimer in the age-gate modal in full. Cancellations, returns and refunds are governed by our <a href="/refund-policy" className="underline text-sky-600">Returns, Refunds &amp; Cancellations Policy</a>; delivery by our <a href="/shipping-policy" className="underline text-sky-600">Shipping &amp; Delivery Policy</a>; and personal data by our <a href="/privacy-policy" className="underline text-sky-600">Privacy Policy</a>.</p>
           <p>Buyers are responsible for compliance with all applicable laws in their jurisdiction. GHP-Health accepts no liability for misuse of the products.</p>
         </section>
 
