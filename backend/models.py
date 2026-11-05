@@ -312,6 +312,9 @@ class Settings(BaseModel):
     bank_account_name: str = ''
     bank_sort_code: str = ''
     bank_account_number: str = ''
+    # Emergency switch — greys out every payment option at checkout / pay links.
+    payments_paused: bool = False
+    payments_paused_message: str = ''
 
 
 # ---------- PROMO CODES ----------

@@ -9,10 +9,12 @@ import { useToast } from '../hooks/use-toast';
 import Layout from '../components/Layout';
 import BankTrustBadges from '../components/BankTrustBadges';
 import RedirectingOverlay from '../components/RedirectingOverlay';
+import { useStore } from '../context/StoreContext';
 
 const PayLinkPage = () => {
   const { orderId } = useParams();
   const { toast } = useToast();
+  const { settings } = useStore();
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -198,6 +200,13 @@ const PayLinkPage = () => {
                     Edit details
                   </button>
                 </div>
+                {settings?.payments_paused && (
+                  <div className="border-2 border-amber-300 bg-amber-50 rounded-lg p-4 text-sm text-amber-900" data-testid="paylink-payments-paused">
+                    <p className="font-bold uppercase text-xs tracking-widest mb-1">Payments temporarily paused</p>
+                    {settings.payments_paused_message || 'We are switching payment providers and cannot take payments right now. Your order is saved — we will email you as soon as payment is available again.'}
+                  </div>
+                )}
+                <div className={settings?.payments_paused ? 'opacity-40 grayscale pointer-events-none select-none' : ''}>
                 {wallidConfig?.configured ? (
                   <div>
                     <p className="text-sm text-slate-700 mb-3">Complete your payment:</p>
@@ -221,6 +230,7 @@ const PayLinkPage = () => {
                     Payment is not currently configured. Please contact GHP-Health to complete this order.
                   </div>
                 )}
+                </div>
               </div>
             )}
           </div>

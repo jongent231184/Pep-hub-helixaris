@@ -137,6 +137,23 @@ const AdminSettings = () => {
           </div>
         </section>
 
+        {/* --- PAYMENTS PAUSE --- */}
+        <section className={`border rounded-lg p-6 space-y-4 ${form.payments_paused ? 'bg-amber-50 border-amber-300' : 'bg-white'}`} data-testid="settings-payments-pause">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base font-bold uppercase tracking-wide">Pause all payments</h2>
+              <p className="text-xs text-slate-500 mt-1">Greys out Pay by Bank, card and bank-transfer at checkout and on pay links, and blocks payments server-side. Orders can still be placed and are saved as unpaid.</p>
+            </div>
+            <Switch checked={!!form.payments_paused} onCheckedChange={v => setForm(f => ({ ...f, payments_paused: v }))} data-testid="settings-payments-paused" />
+          </div>
+          {form.payments_paused && (
+            <div>
+              <Label className="text-xs uppercase tracking-wide text-slate-500">Message shown to customers</Label>
+              <Input value={form.payments_paused_message || ''} onChange={update('payments_paused_message')} placeholder="We are switching payment providers and cannot take payments right now…" className="mt-1" data-testid="settings-payments-paused-message" />
+            </div>
+          )}
+        </section>
+
         {/* --- BANK TRANSFER --- */}
         <section className="bg-white border rounded-lg p-6 space-y-4" data-testid="settings-bank-section">
           <h2 className="text-base font-bold uppercase tracking-wide">Bank transfer</h2>

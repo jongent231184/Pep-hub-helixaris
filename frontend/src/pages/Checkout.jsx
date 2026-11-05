@@ -184,6 +184,7 @@ const Checkout = () => {
   };
 
   const flat = settings?.flat_shipping ?? 4.99;
+  const paymentsPaused = Boolean(settings?.payments_paused);
   const threshold = settings?.free_shipping_threshold ?? 50;
   const baseShipping = subtotal >= threshold ? 0 : flat;
 
@@ -585,6 +586,17 @@ const Checkout = () => {
 
                 <p className="text-sm text-slate-600 mb-6">Order <span className="font-mono font-bold">{createdOrder?.order_number}</span> {wallidFailed ? 'is ready to retry' : 'created'}. Complete payment below.</p>
 
+                {paymentsPaused && (
+                  <div className="flex items-start gap-3 border-2 border-amber-300 bg-amber-50 rounded-lg p-4 mb-5" data-testid="payments-paused-banner">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-bold text-amber-900 uppercase text-xs tracking-widest mb-1">Payments temporarily paused</p>
+                      <p className="text-amber-900">{settings?.payments_paused_message || 'We are switching payment providers and cannot take payments right now. Your order has been saved — we will email you as soon as payment is available again.'}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className={paymentsPaused ? 'opacity-40 grayscale pointer-events-none select-none' : ''} aria-disabled={paymentsPaused} data-testid="payment-options">
                 {wallidConfig?.configured ? (
                   <div data-testid="wallid-section">
                     {/* Compliance confirmation — underwriters look for this
@@ -716,6 +728,7 @@ const Checkout = () => {
                     onChosen={(o) => { setCreatedOrder(o); setBankChosen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   />
                 )}
+                </div>
 
                 <button onClick={() => setStep('details')} className="mt-6 text-sm text-sky-600 hover:text-sky-700">← Edit details</button>
               </section>

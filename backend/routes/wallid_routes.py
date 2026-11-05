@@ -92,6 +92,8 @@ async def create_payment(payload: dict = Body(...), request: Request = None):
     the customer to payment_link."""
     if not _configured():
         raise HTTPException(500, 'Wallid is not configured')
+    if (await db.settings.find_one({'_singleton': True}) or {}).get('payments_paused'):
+        raise HTTPException(503, 'Payments are temporarily paused')
 
     internal_order_id = payload.get('order_id')
     if not internal_order_id:

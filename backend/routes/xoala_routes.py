@@ -88,6 +88,8 @@ async def create_payment(payload: dict = Body(...), request: Request = None):
     """Build the signed Xoala form for an existing order. Frontend auto-submits it."""
     if not _enabled_for(request):
         raise HTTPException(503, 'Card payments are not available yet')
+    if (await db.settings.find_one({'_singleton': True}) or {}).get('payments_paused'):
+        raise HTTPException(503, 'Payments are temporarily paused')
     order = await db.orders.find_one({'id': payload.get('order_id', '')})
     if not order:
         raise HTTPException(404, 'Order not found')
