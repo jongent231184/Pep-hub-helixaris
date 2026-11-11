@@ -9,13 +9,83 @@ import { PhotosPanel } from '../../components/coaching/PhotosAndCertificates';
 import { Coaches } from '../../lib/api';
 import { toast } from 'sonner';
 import BRAND from '../../config/brand';
-import { Loader2, Send, CheckCircle2, Clock, FileText, PlayCircle, HelpCircle, ExternalLink } from 'lucide-react';
+import { Loader2, Send, CheckCircle2, Clock, FileText, PlayCircle, HelpCircle, ExternalLink, LayoutGrid, Layers, FlaskConical, ClipboardCheck, Eye, MessageSquare, CalendarDays, ChevronRight } from 'lucide-react';
 
-const PLAN_TABS = [['overview', 'Overview'], ['supplements', 'Supplements'], ['peptides', 'Peptide plan'], ['checkin', 'Check-in']];
+const PLAN_TABS = [['overview', 'Overview', LayoutGrid], ['supplements', 'Supplements', Layers], ['peptides', 'Peptide plan', FlaskConical], ['checkin', 'Check-in', ClipboardCheck]];
+const KIND_ICON = { guide: FileText, video: PlayCircle, faq: HelpCircle };
+const GOLD = 'linear-gradient(180deg, #f3dc9a 0%, #c8a24a 100%)';
+const fmtDate = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
 const Progress = ({ pct }) => (
   <div className="h-2 rounded-full bg-slate-200 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.max(0, pct))}%`, backgroundColor: BRAND.accent }} /></div>
 );
+
+const GoldButton = ({ children, className = '', ...rest }) => (
+  <button type="button" className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-[#0b1528] shadow-sm hover:brightness-105 transition ${className}`} style={{ background: GOLD }} {...rest}>{children}</button>
+);
+
+const PlanTabs = ({ tab, setTab }) => (
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6" role="tablist" data-testid="plan-tabs">
+    {PLAN_TABS.map(([k, label, Icon]) => {
+      const active = tab === k;
+      return (
+        <button key={k} role="tab" aria-selected={active} onClick={() => setTab(k)}
+          className={`inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold border transition-all ${active ? 'border-[#c8a24a] text-[#0b1528] shadow-md' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'}`}
+          style={active ? { background: GOLD } : undefined} data-testid={`plan-tab-${k}`}>
+          <Icon className="h-4 w-4" /> {label}
+        </button>
+      );
+    })}
+  </div>
+);
+
+const SuppTable = ({ supps, todays, onOpen }) => (
+  <div data-testid="overview-supplement-table">
+    <div className="flex items-center justify-between mb-2"><h3 className="font-black text-slate-900">Supplement plan</h3><button onClick={onOpen} className="text-xs font-bold text-slate-600 hover:underline">See all →</button></div>
+    {supps.length === 0 ? <p className="text-sm text-slate-500 border rounded-xl p-4">Your coach hasn't added supplements yet.</p> : (
+      <div className="border rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="text-left font-bold px-3 py-2">Item</th><th className="text-left font-bold px-3 py-2">Timing</th><th className="text-left font-bold px-3 py-2">Status</th></tr></thead>
+          <tbody>
+            {supps.map(s => {
+              const t = todays.find(e => e.item_id === s.id);
+              return (
+                <tr key={s.id} className="border-t" data-testid={`supp-row-${s.id}`}>
+                  <td className="px-3 py-2 font-semibold text-slate-800">{s.product_name || s.name}</td>
+                  <td className="px-3 py-2 text-slate-600">{s.time_of_day || s.frequency || '—'}</td>
+                  <td className="px-3 py-2">{t ? (t.done ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full"><CheckCircle2 className="h-3 w-3" /> Done today</span> : <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full"><Clock className="h-3 w-3" /> Due today</span>) : <span className="text-[11px] text-slate-400">Not today</span>}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+);
+
+const InfoRow = ({ icon: Icon, label, children }) => (
+  <div className="grid sm:grid-cols-[150px_1fr] gap-1 sm:gap-3 py-2.5 border-t first:border-t-0 text-sm">
+    <span className="inline-flex items-center gap-2 text-slate-600 font-semibold"><Icon className="h-3.5 w-3.5 text-slate-400" /> {label}</span>
+    <span className="text-slate-800">{children}</span>
+  </div>
+);
+
+const ResourceStrip = ({ src, base, has }) => {
+  const [list, setList] = useState([]);
+  useEffect(() => { if (has('resources')) src.resources().then(l => setList(l.slice(0, 3))).catch(() => {}); }, [has, src]);
+  if (!has('resources') || list.length === 0) return null;
+  return (
+    <div data-testid="overview-resources">
+      <h3 className="font-black text-slate-900 mb-2">Resources</h3>
+      <div className="grid sm:grid-cols-3 gap-2">
+        {list.map(r => { const Icon = KIND_ICON[r.kind] || FileText; return (
+          <Link key={r.id} to={`${base}/resources`} className="flex items-center gap-2 border rounded-xl px-3 py-3 text-sm hover:border-slate-400 transition"><Icon className="h-4 w-4 text-slate-500 shrink-0" /><span className="flex-1 font-semibold text-slate-800 leading-tight line-clamp-2">{r.title}</span><ChevronRight className="h-4 w-4 text-slate-400" /></Link>
+        ); })}
+      </div>
+    </div>
+  );
+};
 
 export const PortalPlan = () => {
   const { has, plans, membership, src, base } = useContext(PortalContext);
@@ -34,46 +104,56 @@ export const PortalPlan = () => {
   const peptides = (proto?.items || []).filter(i => (i.kind || 'peptide') !== 'supplement');
   const supps = (proto?.items || []).filter(i => i.kind === 'supplement');
   const todays = cal.filter(e => e.date === today);
+  const coachName = membership.coach_name || 'Your coach';
 
   return (
     <div data-testid="portal-plan">
-      <PortalHeader title="My plan" sub="Your personalised protocol, supplements, dosing calendar and weekly check-in." />
-      <div className="flex gap-1 border-b border-slate-200 mb-6 overflow-x-auto" role="tablist" data-testid="plan-tabs">
-        {PLAN_TABS.map(([k, label]) => (
-          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`px-4 py-2.5 text-sm font-bold whitespace-nowrap border-b-2 -mb-px transition-colors ${tab === k ? 'border-[#0b1528] text-[#0b1528]' : 'border-transparent text-slate-500 hover:text-slate-800'}`} data-testid={`plan-tab-${k}`}>{label}</button>
-        ))}
-      </div>
+      <PortalHeader title="My plan & weekly check-in" sub="Everything you need between coaching reviews." />
+      <PlanTabs tab={tab} setTab={setTab} />
 
       {tab === 'overview' && (
-        <div className="space-y-4" data-testid="plan-overview">
+        <div data-testid="plan-overview">
           {loaded && !proto ? <MyCoaching {...protoProps} sections={{ header: true }} /> : proto && (
-            <>
-              <Card testId="plan-overview-header">
-                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div className="grid lg:grid-cols-[1.15fr_1fr] gap-4">
+              <Card testId="plan-overview-header" className="space-y-6">
+                <div className="flex flex-col-reverse sm:flex-row sm:items-start justify-between gap-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: BRAND.accent }}>Your active protocol</p>
-                    <h2 className="text-2xl font-black text-slate-900 mt-1">{proto.title}</h2>
-                    <p className="text-sm text-slate-600 mt-1">{proto.duration_weeks} weeks · {peptides.length} peptide{peptides.length === 1 ? '' : 's'} · {supps.length} supplement{supps.length === 1 ? '' : 's'}</p>
+                    <h2 className="text-xl font-black text-slate-900">Your personalised plan</h2>
+                    <p className="text-sm text-slate-600 mt-0.5">Week {weeksIn} of {proto.duration_weeks} · {proto.title} · by {coachName}</p>
                   </div>
-                  {proto.next_review_date && <div className="text-sm bg-slate-50 border rounded-lg px-3 py-2"><span className="text-slate-500">Next review</span><br /><strong>{new Date(proto.next_review_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</strong></div>}
+                  <span className="self-start inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full whitespace-nowrap"><CheckCircle2 className="h-3 w-3" /> Coach reviewed</span>
                 </div>
-                <div className="mt-5 grid sm:grid-cols-2 gap-4">
-                  <div><div className="flex justify-between text-xs text-slate-600 mb-1"><span>Week {weeksIn} of {proto.duration_weeks}</span><span>{Math.round(100 * weeksIn / (proto.duration_weeks || 1))}%</span></div><Progress pct={100 * weeksIn / (proto.duration_weeks || 1)} /></div>
-                  <div><div className="flex justify-between text-xs text-slate-600 mb-1"><span>Doses ticked off to date</span><span>{adherence == null ? '—' : `${adherence}%`}</span></div><Progress pct={adherence || 0} /></div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div><div className="flex justify-between text-xs text-slate-600 mb-1"><span>Programme progress</span><span>{Math.round(100 * weeksIn / (proto.duration_weeks || 1))}%</span></div><Progress pct={100 * weeksIn / (proto.duration_weeks || 1)} /></div>
+                  <div><div className="flex justify-between text-xs text-slate-600 mb-1"><span>Doses ticked off</span><span>{adherence == null ? '—' : `${adherence}%`}</span></div><Progress pct={adherence || 0} /></div>
                 </div>
+                <SuppTable supps={supps} todays={todays} onOpen={() => setTab('supplements')} />
+                <div data-testid="overview-peptide-plan">
+                  <div className="flex items-center justify-between mb-2"><h3 className="font-black text-slate-900">Peptide plan</h3><GoldButton onClick={() => setTab('peptides')} data-testid="overview-view-plan-btn"><Eye className="h-3.5 w-3.5" /> View plan</GoldButton></div>
+                  <div className="border rounded-xl px-4 py-1">
+                    <InfoRow icon={FlaskConical} label="Peptides">{peptides.length ? peptides.map(p => p.product_name || p.name).join(', ') : '—'}</InfoRow>
+                    <InfoRow icon={MessageSquare} label="Coach notes">{proto.notes ? <span className="whitespace-pre-wrap">{proto.notes}</span> : <span className="text-slate-400">Your current focus and key points for the next few weeks.</span>}</InfoRow>
+                    <InfoRow icon={CalendarDays} label="Review date">{proto.next_review_date ? fmtDate(proto.next_review_date) : <span className="text-slate-400">To be set by your coach</span>}</InfoRow>
+                    <InfoRow icon={HelpCircle} label="Today">{todays.length === 0 ? <span className="text-slate-400">Nothing scheduled today.</span> : todays.map(e => <span key={e.id} className={`inline-flex items-center gap-1 mr-3 ${e.done ? 'line-through text-slate-400' : ''}`}><CheckCircle2 className={`h-3.5 w-3.5 ${e.done ? 'text-emerald-500' : 'text-slate-300'}`} />{e.item_name}{e.time_of_day && ` · ${e.time_of_day}`}</span>)}</InfoRow>
+                  </div>
+                </div>
+                <ResourceStrip src={src} base={base} has={has} />
               </Card>
-              <div className="grid lg:grid-cols-2 gap-4">
-                <Card title="Today" action={<button onClick={() => setTab('peptides')} className="text-sm font-bold text-slate-700 hover:underline">Open calendar →</button>} testId="plan-today">
-                  {todays.length === 0 ? <p className="text-sm text-slate-500">Nothing scheduled today.</p> : (
-                    <ul className="space-y-2">{todays.map(e => <li key={e.id} className="flex items-center gap-2 text-sm"><CheckCircle2 className={`h-4 w-4 ${e.done ? 'text-emerald-500' : 'text-slate-300'}`} /><span className={e.done ? 'line-through text-slate-400' : ''}><strong>{e.item_name}</strong>{e.dose && ` · ${e.dose}`}{e.time_of_day && ` · ${e.time_of_day}`}</span>{e.kind === 'supplement' && <span className="text-[9px] uppercase tracking-wider bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">Supp</span>}</li>)}</ul>
-                  )}
-                </Card>
-                <Card title="Coach notes" testId="plan-notes">
-                  {proto.notes ? <p className="text-sm text-slate-800 whitespace-pre-wrap">{proto.notes}</p> : <p className="text-sm text-slate-500">No notes yet.</p>}
-                  <Link to={`${base}/messages`} className="inline-block mt-3 text-sm font-bold text-slate-700 hover:underline">Message your coach →</Link>
-                </Card>
+              <div>
+                {has('checkin') ? <PortalCheckin embedded formOnly onDone={() => setTab('checkin')} /> : <LockedModule name="checkin" plans={plans} tier={membership.tier} />}
               </div>
-            </>
+            </div>
+          )}
+          {proto && (
+            <Card className="mt-4 !py-4" testId="overview-coach-bar">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex items-center gap-3 sm:pr-5 sm:border-r">
+                  <div className="h-11 w-11 rounded-full grid place-items-center text-[#0b1528] font-black text-lg" style={{ background: GOLD }}>{coachName.charAt(0).toUpperCase()}</div>
+                  <div><p className="text-[11px] text-slate-500">Your coach</p><p className="font-black text-slate-900 leading-tight">{coachName}</p></div>
+                </div>
+                <Link to={`${base}/messages`} className="inline-flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-lg text-[#0b1528] shadow-sm hover:brightness-105" style={{ background: GOLD }} data-testid="overview-message-coach-btn"><MessageSquare className="h-4 w-4" /> Send a message</Link>
+              </div>
+            </Card>
           )}
         </div>
       )}
@@ -102,7 +182,7 @@ export const PortalPlan = () => {
 
 const RATINGS = [['energy', 'Energy'], ['sleep', 'Sleep quality'], ['training', 'Training & recovery']];
 
-export const PortalCheckin = ({ embedded = false }) => {
+export const PortalCheckin = ({ embedded = false, formOnly = false, onDone }) => {
   const { has, plans, membership, src } = useContext(PortalContext);
   const [list, setList] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -127,6 +207,7 @@ export const PortalCheckin = ({ embedded = false }) => {
       toast.success('Check-in sent to your coach');
       setForm(f => ({ ...f, weight_kg: '', energy: '', sleep: '', training: '', notes: '', questions: '' }));
       load();
+      onDone?.();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Could not submit check-in');
     } finally { setBusy(false); }
@@ -135,8 +216,8 @@ export const PortalCheckin = ({ embedded = false }) => {
   return (
     <div data-testid="portal-checkin">
       {!embedded && <PortalHeader title="Weekly check-in" sub="Takes two minutes. Your coach reviews it and replies in the portal." />}
-      <div className="grid lg:grid-cols-[1fr_1fr] gap-4">
-        <Card title="This week" testId="checkin-form-card">
+      <div className={formOnly ? '' : 'grid lg:grid-cols-[1fr_1fr] gap-4'}>
+        <Card title={formOnly ? 'Weekly check-in' : 'This week'} action={formOnly && <span className="inline-flex items-center gap-1 text-xs text-slate-500"><CalendarDays className="h-3.5 w-3.5" /> Week ending {new Date(form.week_ending).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</span>} testId="checkin-form-card">
           {src.readOnly && <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 mb-3" data-testid="coach-readonly-note">Coach view — only the client can submit a check-in. Reply from their client page.</p>}
           <form onSubmit={submit} className={`space-y-4 ${src.readOnly ? 'opacity-50 pointer-events-none' : ''}`}>
             <label className="block text-sm"><span className="font-semibold text-slate-700">Week ending</span>
@@ -154,12 +235,12 @@ export const PortalCheckin = ({ embedded = false }) => {
               <textarea rows={4} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Share a brief update on how you're feeling, your progress, and anything else you'd like your coach to know…" className="mt-1 w-full border rounded-lg px-3 py-2" data-testid="checkin-notes" /></label>
             <label className="block text-sm"><span className="font-semibold text-slate-700">Questions for your coach <span className="text-slate-400 font-normal">(optional)</span></span>
               <textarea rows={2} value={form.questions} onChange={e => setForm(f => ({ ...f, questions: e.target.value }))} className="mt-1 w-full border rounded-lg px-3 py-2" data-testid="checkin-questions" /></label>
-            <button type="submit" disabled={busy} className="w-full inline-flex items-center justify-center gap-2 font-bold uppercase tracking-wider text-sm py-3 rounded-lg text-[#0b1528] disabled:opacity-60" style={{ backgroundColor: BRAND.accent }} data-testid="checkin-submit">
+            <button type="submit" disabled={busy} className="w-full inline-flex items-center justify-center gap-2 font-bold text-sm py-3 rounded-lg text-[#0b1528] shadow-sm hover:brightness-105 disabled:opacity-60" style={{ background: GOLD }} data-testid="checkin-submit">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Submit check-in
             </button>
           </form>
         </Card>
-        <Card title="Previous check-ins" testId="checkin-history">
+        {!formOnly && <Card title="Previous check-ins" testId="checkin-history">
           {list.length === 0 ? <p className="text-sm text-slate-500">No check-ins yet.</p> : (
             <ul className="space-y-3">
               {list.map(c => (
@@ -176,7 +257,7 @@ export const PortalCheckin = ({ embedded = false }) => {
               ))}
             </ul>
           )}
-        </Card>
+        </Card>}
       </div>
     </div>
   );
@@ -231,8 +312,6 @@ export const PortalMessages = () => {
     </div>
   );
 };
-
-const KIND_ICON = { guide: FileText, video: PlayCircle, faq: HelpCircle };
 
 export const PortalResources = () => {
   const { has, plans, membership, src } = useContext(PortalContext);
