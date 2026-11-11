@@ -165,6 +165,7 @@ const Coaching_ = () => {
             </p>
           </section>
         )}
+        {submitted ? (
           <section className="max-w-2xl bg-white border-2 border-emerald-200 rounded-xl p-8 md:p-10" data-testid="coaching-success">
             <div className="flex items-start gap-4">
               <div className="h-12 w-12 rounded-full bg-emerald-100 grid place-items-center shrink-0">

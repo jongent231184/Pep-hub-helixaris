@@ -113,7 +113,7 @@ const Bars = ({ data, k, label, color }) => (
     <p className="text-xs uppercase tracking-widest font-bold text-slate-500 mb-2">{label}</p>
     <div className="flex items-end gap-1.5 h-24">
       {data.map(c => (
-        <div key={c.id} className="flex-1 flex flex-col items-center gap-1" title={`${c.week_ending}: ${c[k] ?? '–'}`}>
+        <div key={c.id} className="flex-1 h-full flex flex-col justify-end items-center gap-1" title={`${c.week_ending}: ${c[k] ?? '–'}`}>
           <div className="w-full rounded-t" style={{ height: `${((c[k] || 0) / 10) * 100}%`, backgroundColor: color, minHeight: c[k] ? 4 : 0 }} />
         </div>
       ))}

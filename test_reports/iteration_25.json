@@ -1,0 +1,44 @@
+{
+  "summary": "Tested the 3-tier coaching memberships end to end, backend and frontend. Backend: 18/18 new pytest cases pass, covering plans, admin save validation, the full gold E2E flow (request→accept→paylink→402→mark paid→active→check-in→weigh-in→coach reply→pending list→resources), add_days, paylink replacement, silver/bronze module gating (403) and the cron (401, queued, duplicate, renewal created). The existing coaching regression suites also pass (26 passed, 1 skipped). Frontend: /coaching tier selection, general query, submit; /account MembershipCard none/active/pending; /portal for gold (all sections, check-in submit, progress, messages, resources), silver (locked resources), mobile nav; locked states and the unauthenticated redirect; coach membership panel, check-in reply and protocol supplements; admin plan editor, resources and requests tier column. Found and fixed 2 frontend bugs: a JSX conditional on /coaching was missing, and the weekly-ratings bars did not grow with the rating.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "_apply_membership_payments (coaching_plans_routes.py:117)", "issue": "Uses order.paid_at as a datetime, but routes/square_routes.py (lines ~270, 343, 441) stores paid_at as an ISO STRING. A membership order paid via the Square webhook/sync/poll would raise TypeError (str vs datetime compare / str + timedelta), causing a 500 on /my/membership and in the cron. Wallid, manual and PayPal store datetime, so it works today on those routes. Fix: parse it when it is a str, or normalise Square to a datetime."},
+      {"endpoint": "membership_state days_left", "issue": "Uses (paid_until-now).days, which rounds down: a fresh 30-day payment shows '29 days left' and +7 comp shows '6 days left'. Consider math.ceil."},
+      {"endpoint": "/api/coaching/my/resources", "issue": "The resource min_tier field is stored but never enforced or filtered; only the module gate applies."},
+      {"endpoint": "/api/coaching/admin/resources (POST/DELETE)", "issue": "Guarded by require_coach rather than admin despite the /admin path, so any coach can add or delete global resources. Confirm this is intended."},
+      {"endpoint": "PATCH /api/orders/{id} paid for coaching_membership", "issue": "mark_order_paid sends the generic order-confirmation email and admin notify for membership orders (address1 'Coaching membership'). Check that the wording suits a membership."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Coaching.jsx", "issue": "FIXED: `{submitted ? (` was missing before the success <section>. The success card and form were always rendered together, and stray ') : (' / ')}' text showed on the page.", "selector": "[data-testid='coaching-success']", "priority": "HIGH"},
+      {"component": "PortalSections.jsx Bars (Progress weekly ratings)", "issue": "FIXED: the bar wrapper had no height, so the percentage height collapsed to 4px. Added h-full justify-end; the energy-7 bar is now 67px.", "selector": "[data-testid='ratings-chart']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Coach client detail", "issues": ["The saved supplement_plan is only visible inside the protocol edit form; read mode does not show it."]},
+      {"screen": "Portal dashboard (Gold)", "issues": ["Gold shows the same 4 tiles as Silver; there is no tile or entry point for the Resources library or the 1-to-1 video call."]},
+      {"screen": "Portal check-in / weigh-in", "issues": ["Uses the browser's native <input type=date> and <select> instead of shadcn Calendar/Select (inconsistent with the rest of the app)."]},
+      {"screen": "Coach membership panel", "issues": ["After creating a silver link for a gold-requested client, the badge still shows GOLD until payment. This may confuse coaches; consider showing the 'requested: silver' tier."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_coaching_tiers_membership.py", "/app/backend/tests/setup_portal_members.py", "/app/test_reports/pytest/coaching_tiers.xml"],
+  "action_items": [
+    "Make _apply_membership_payments tolerate string paid_at (Square routes store isoformat strings), or store a datetime in square_routes",
+    "Optionally round days_left up",
+    "Enforce or remove resource min_tier; decide whether coaches or only admins manage resources",
+    "Show supplement_plan in coach read mode; add Resources/Video-call tiles for Gold on the dashboard"
+  ],
+  "critical_code_review_comments": [
+    "Square paid_at stored as a string breaks the membership date maths (latent 500)",
+    "Coaching.jsx conditional-rendering bug (fixed); please check the file renders correctly after your next edits",
+    "Coach PATCH membership lets a coach set tier/paid_until freely (comp access). Fine if intended, but not audited/logged"
+  ],
+  "updated_files": ["/app/frontend/src/pages/Coaching.jsx", "/app/frontend/src/pages/portal/PortalSections.jsx", "/app/backend/tests/test_coaching_tiers_membership.py", "/app/backend/tests/setup_portal_members.py"],
+  "success_rate": {"backend": "100% (18/18 new + 26 regression)", "frontend": "~95% (2 bugs found and fixed; minor UX notes)"},
+  "seed_data_creation": "TEST_ users test_tier_*, test_ui_gold_*, test_ui_pending_*, test_ui_plain_* @example.com (password Test1234!), plus their coaching requests. Their clients were deactivated, membership orders deleted and resources deleted. Check-ins, weigh-ins, messages and the TEST_ui protocol remain attached to the deactivated clients. Bronze price was changed to 55 and restored to 49.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest tests/test_coaching_tiers_membership.py -p no:randomly (the tests are ordered and use shared state). setup_portal_members.py creates gold/pending/plain UI users and writes their tokens to /tmp/ui_members.json. For UI, set localStorage ghp_token and sessionStorage ghp_age_verified='true' to skip the age gate. Cron runs process ALL active clients in the DB (renewal emails to real clients are possible). Checkout UI was not re-tested in the browser, only via the regression pytest suites."
+}
