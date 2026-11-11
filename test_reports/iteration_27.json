@@ -1,0 +1,35 @@
+{
+  "summary": "Tested Coach Broadcasts and the Sunday check-in nudge cron on the backend and frontend. Backend: 9 of 9 pytest tests passed. They cover: a blank title returns 400; posting returns coach_name and no _id; the coach list shows pinned posts first; a customer trying to post gets 401/403; a customer without a membership gets 403 on /my/broadcasts; an unpaid member gets 402; an active member sees their coach's posts in pinned order; portal-view includes broadcasts; deleting a post returns 200, deleting it again returns 404, and the member no longer sees it. Cron: no auth or a wrong token returns 401; a valid secret returns queued; a repeated run_id returns duplicate:true. Positive path: a new GOLD member (nudgetest+<rand>@ghp-health.com) with no check-ins was emailed through Resend (log shows 'checkin nudge sent to ...', nudges_sent=1). last_nudge_at was set, and a second run did not email them again. A SILVER member who checked in today and a BRONZE member were not nudged and have no last_nudge_at. A SILVER @example.com member with no check-in was attempted; Resend rejected the address, last_nudge_at stayed unset and the run counted 0, which is correct. The seeded silver member (checked in today) was not nudged. Frontend: the coach Overview shows broadcast-panel and the attention panel. The post button is disabled while the title is empty. Title + body + pinned -> post shows the 'Announcement posted' toast, the new item appears first with an amber pin icon, and the form clears. Deleting removes the item, and it stays gone after reload. On the member /portal, data-testid=broadcasts shows broadcast-<id> cards ('FROM GHP COACH · 11 NOV · PINNED', title, body) in pinned order; after the coach deleted the post it was gone on reload. The coach view at /coach/clients/{cid}/portal shows the broadcasts block. Regression: the portal plan, check-in, progress, messages and resources pages all load with no page errors.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "run_checkin_nudges / email_service.send_checkin_nudge_email", "issue": "send_checkin_nudge_email returns None silently when Resend is not configured (_init_resend False) or the client has no customer_email. The caller then sets last_nudge_at and counts the member as sent, so in an environment without Resend every member is marked as nudged without getting an email. It should return a bool (or raise) so last_nudge_at is set only after a real send."},
+      {"endpoint": "run_checkin_nudges", "issue": "The query pre-filters on {'active': True, 'paid_until': {'$gt': now}} using the paid_until stored on the client. If a member's paid order has not yet been applied by _apply_membership_payments (for example, they paid but have not opened the portal since), they are skipped even though membership_state would show them as active."},
+      {"endpoint": "run_checkin_nudges", "issue": "Recent activity is judged only by checkin.created_at. If a member resubmits an existing week_ending, the original created_at is kept, so updated_at is ignored. Edge case."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "BroadcastPanel delete", "issue": "There is no confirmation and no error handling. One click deletes immediately, and if the API call fails the promise rejection is unhandled with no toast.", "selector": "[data-testid^='broadcast-delete-']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_broadcasts_nudges.py", "/app/test_reports/pytest/pytest_broadcasts.xml"],
+  "action_items": [
+    "Make send_checkin_nudge_email return True/False (or raise) when it skips because Resend is not configured or there is no email, so run_checkin_nudges does not set last_nudge_at or count a nudge that was never sent",
+    "Optional: in run_checkin_nudges, run membership_state on all active clients (or apply payments first) rather than pre-filtering on the stored paid_until",
+    "Optional: add a confirm step and try/catch with a toast to BroadcastPanel delete; consider max lengths for title and body"
+  ],
+  "critical_code_review_comments": [
+    "send_checkin_nudge_email returning silently leads to false-positive nudges_sent and last_nudge_at",
+    "The nudge query uses stored paid_until, so payments not yet applied are missed",
+    "BroadcastIn has no length limits on title or body"
+  ],
+  "updated_files": ["/app/backend/tests/test_broadcasts_nudges.py"],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100%"},
+  "seed_data_creation": "TEST_ members created by the tests were deactivated through coach DELETE /coach/clients/{cid}. TEST_ broadcasts were deleted by id. The existing broadcast 'Away 20-24 Nov' was left in place. One real nudge email was sent to nudgetest+<rand>@ghp-health.com (Resend accepted it). cron_runs contains TEST_ run_id docs.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run with: pytest tests/test_broadcasts_nudges.py -p no:xdist -s (it reads cron_runs and coaching_clients.last_nudge_at directly from Mongo and greps backend.err.log). Server date is Nov 2026. The seeded silver member portal.test+bbbc6c@example.com has a check-in today, so it must never be nudged."
+}
