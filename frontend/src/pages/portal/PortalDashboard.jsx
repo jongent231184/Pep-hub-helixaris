@@ -122,8 +122,8 @@ const PortalDashboard = () => {
       </div>
       {certs.length > 0 && (
         <Card title="Your certificate" className="mt-4" testId="certificate-card">
-          <p className="text-sm text-slate-600 mb-3">Congratulations — your coach has issued your completion certificate. Open it, save it, and share it with the group if you'd like.</p>
-          <CertificateList fetchCerts={fetchCerts} />
+          <p className="text-sm text-slate-600 mb-3">Congratulations — your coach has issued your completion certificate. Open it, save it, and if you'd like, tick "Show on Wall of Wins" to share it with fellow members inside the portal (you can untick any time).</p>
+          <CertificateList fetchCerts={fetchCerts} onShare={coachView ? undefined : (id, shared) => Coaches.shareMyCertificate(id, shared)} />
         </Card>
       )}
     </div>

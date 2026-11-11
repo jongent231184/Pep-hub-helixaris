@@ -4,7 +4,7 @@ import { Coaches } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import BRAND from '../../config/brand';
 import { TierBadge } from '../../components/coaching/TierCards';
-import { LayoutDashboard, ClipboardList, CalendarCheck, TrendingUp, MessageSquare, BookOpen, Lock, Loader2, ArrowLeft, Menu, X, Eye } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, CalendarCheck, TrendingUp, MessageSquare, BookOpen, Lock, Loader2, ArrowLeft, Menu, X, Eye, Trophy } from 'lucide-react';
 
 export const PortalContext = React.createContext(null);
 
@@ -15,6 +15,7 @@ const NAV = [
   { path: 'progress', label: 'Progress', icon: TrendingUp, module: 'progress' },
   { path: 'messages', label: 'Messages', icon: MessageSquare, module: 'messages' },
   { path: 'resources', label: 'Resources', icon: BookOpen, module: 'resources' },
+  { path: 'wall', label: 'Wall of Wins', icon: Trophy, module: null },
 ];
 
 // Data source: the member's own endpoints, or (coach view) the per-client ones.

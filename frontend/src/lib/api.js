@@ -227,6 +227,11 @@ export const Coaches = {
   myCertificates: () => api.get('/coaching/my/certificates').then(r => r.data),
   certificateBlob: (id) => api.get(`/coaching/certificates/${id}/pdf`, { responseType: 'blob' }).then(r => URL.createObjectURL(r.data)),
   certificateImageBlob: (id) => api.get(`/coaching/certificates/${id}/image`, { responseType: 'blob' }).then(r => URL.createObjectURL(r.data)),
+  // Wall of Wins
+  wall: () => api.get('/coaching/wall').then(r => r.data),
+  wallImageBlob: (id) => api.get(`/coaching/wall/${id}/image`, { responseType: 'blob' }).then(r => URL.createObjectURL(r.data)),
+  shareMyCertificate: (id, shared) => api.patch(`/coaching/my/certificates/${id}/share`, { shared }).then(r => r.data),
+  coachShareCertificate: (id, shared) => api.patch(`/coaching/coach/certificates/${id}/share`, { shared }).then(r => r.data),
 };
 
 export const PayPal = {

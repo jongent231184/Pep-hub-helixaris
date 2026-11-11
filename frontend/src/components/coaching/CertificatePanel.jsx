@@ -60,7 +60,7 @@ const CertificatePanel = ({ clientId }) => {
           <Button onClick={issue} disabled={busy} className="w-full bg-amber-500 hover:bg-amber-600 text-[#0b1528] font-bold gap-2" data-testid="cert-generate-btn">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Award className="h-4 w-4" />} Generate certificate PDF</Button>
         </div>
       </div>
-      <CertificateList fetchCerts={fetchCerts} onDelete={(id) => Coaches.deleteCertificate(id)} />
+      <CertificateList fetchCerts={fetchCerts} onDelete={(id) => Coaches.deleteCertificate(id)} onShare={(id, shared) => Coaches.coachShareCertificate(id, shared)} />
     </div>
   );
 };

@@ -451,6 +451,66 @@ async def my_certificates(user: dict = Depends(get_current_user)):
     return [_cert_out(c) for c in docs]
 
 
+# ---------- Wall of Wins (members-only results page) ----------
+async def _wall_viewer(user: dict = Depends(get_current_user)) -> dict:
+    if user.get('role') in ('coach', 'admin'):
+        return user
+    client = await _my_client(user)
+    if not client:
+        raise HTTPException(403, 'No coaching membership')
+    if not (await membership_state(client))['active']:
+        raise HTTPException(402, 'Coaching membership is not active')
+    return user
+
+
+def _wall_out(c: dict) -> dict:
+    return {'id': c['id'], 'name_shown': c.get('name_shown'), 'plan_name': c.get('plan_name'), 'tier': c.get('tier'),
+            'headline': (c.get('options') or {}).get('headline'), 'results': c.get('results'),
+            'review_text': (c.get('options') or {}).get('review_text') if (c.get('options') or {}).get('include_review') else '',
+            'shared_at': c.get('shared_at'), 'created_at': c.get('created_at'),
+            'image_url': f"/api/coaching/wall/{c['id']}/image"}
+
+
+@router.get('/wall')
+async def wall_of_wins(_=Depends(_wall_viewer)):
+    docs = await db.coaching_certificates.find({'shared_to_wall': True, 'image_path': {'$exists': True}}).sort('shared_at', -1).to_list(200)
+    return [_wall_out(c) for c in docs]
+
+
+@router.get('/wall/{cert_id}/image')
+async def wall_image(cert_id: str, _=Depends(_wall_viewer)):
+    cert = await db.coaching_certificates.find_one({'id': cert_id, 'shared_to_wall': True})
+    if not cert or not cert.get('image_path'):
+        raise HTTPException(404, 'Not on the wall')
+    data, _ct = get_object(cert['image_path'])
+    return Response(content=data, media_type='image/png', headers={'Cache-Control': 'private, max-age=3600'})
+
+
+class ShareIn(BaseModel):
+    shared: bool
+
+
+@router.patch('/my/certificates/{cert_id}/share')
+async def my_share_certificate(cert_id: str, payload: ShareIn, user: dict = Depends(get_current_user)):
+    client = await _my_client(user)
+    cert = await db.coaching_certificates.find_one({'id': cert_id}) if client else None
+    if not cert or cert['client_id'] != client['id']:
+        raise HTTPException(404, 'Certificate not found')
+    if payload.shared and not cert.get('image_path'):
+        raise HTTPException(400, 'This certificate has no share image')
+    await db.coaching_certificates.update_one({'id': cert_id}, {'$set': {'shared_to_wall': payload.shared, 'shared_at': datetime.utcnow() if payload.shared else None}})
+    return _cert_out(await db.coaching_certificates.find_one({'id': cert_id}))
+
+
+@router.patch('/coach/certificates/{cert_id}/share')
+async def coach_share_certificate(cert_id: str, payload: ShareIn, user: dict = Depends(require_coach)):
+    cert = await db.coaching_certificates.find_one({'id': cert_id, 'coach_id': user['id']})
+    if not cert:
+        raise HTTPException(404, 'Certificate not found')
+    await db.coaching_certificates.update_one({'id': cert_id}, {'$set': {'shared_to_wall': payload.shared, 'shared_at': datetime.utcnow() if payload.shared else None}})
+    return _cert_out(await db.coaching_certificates.find_one({'id': cert_id}))
+
+
 @router.get('/certificates/{cert_id}/image')
 async def certificate_image(cert_id: str, user: dict = Depends(get_current_user)):
     cert = await db.coaching_certificates.find_one({'id': cert_id})

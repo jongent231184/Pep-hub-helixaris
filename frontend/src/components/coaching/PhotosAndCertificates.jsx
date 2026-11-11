@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Coaches } from '../../lib/api';
 import { toast } from 'sonner';
-import { Camera, Trash2, Loader2, Award, Download, Image as ImageIcon, ArrowRight } from 'lucide-react';
+import { Camera, Trash2, Loader2, Award, Download, Image as ImageIcon, ArrowRight, Trophy } from 'lucide-react';
 
 // Authenticated <img>: photos are private, so fetch as blob with the bearer token.
 export const PrivatePhoto = ({ id, alt, className }) => {
@@ -88,10 +88,17 @@ export const PhotosPanel = ({ readOnly = false, fetchPhotos, selectable = false,
   );
 };
 
-export const CertificateList = ({ fetchCerts, onDelete }) => {
+export const CertificateList = ({ fetchCerts, onDelete, onShare }) => {
   const [list, setList] = useState([]);
   useEffect(() => { fetchCerts().then(setList).catch(() => {}); }, [fetchCerts]);
   const open = async (id) => { const url = await Coaches.certificateBlob(id); window.open(url, '_blank'); };
+  const toggleShare = async (c) => {
+    try {
+      const updated = await onShare(c.id, !c.shared_to_wall);
+      setList(l => l.map(x => x.id === c.id ? { ...x, ...updated } : x));
+      toast.success(updated.shared_to_wall ? 'Shared on the Wall of Wins' : 'Removed from the Wall of Wins');
+    } catch (e) { toast.error(e.response?.data?.detail || 'Could not update'); }
+  };
   const downloadImage = async (id) => {
     const url = await Coaches.certificateImageBlob(id);
     const a = document.createElement('a'); a.href = url; a.download = `certificate-${id.slice(0, 8)}.png`; document.body.appendChild(a); a.click(); a.remove();
@@ -108,6 +115,12 @@ export const CertificateList = ({ fetchCerts, onDelete }) => {
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={() => open(c.id)} className="inline-flex items-center gap-1 text-xs font-bold bg-slate-900 text-white px-3 py-1.5 rounded-lg" data-testid={`certificate-open-${c.id}`}><Download className="h-3.5 w-3.5" /> PDF</button>
             {c.image_url && <button onClick={() => downloadImage(c.id)} className="inline-flex items-center gap-1 text-xs font-bold bg-amber-500 text-[#0b1528] px-3 py-1.5 rounded-lg" data-testid={`certificate-image-${c.id}`}><ImageIcon className="h-3.5 w-3.5" /> Share image</button>}
+            {onShare && c.image_url && (
+              <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer" data-testid={`certificate-share-toggle-${c.id}`}>
+                <input type="checkbox" checked={!!c.shared_to_wall} onChange={() => toggleShare(c)} className="accent-amber-500" data-testid={`certificate-share-${c.id}`} />
+                <Trophy className="h-3.5 w-3.5 text-amber-600" /> {c.shared_to_wall ? 'On the Wall of Wins' : 'Show on Wall of Wins'}
+              </label>
+            )}
             {onDelete && <button onClick={() => onDelete(c.id).then(() => setList(l => l.filter(x => x.id !== c.id)))} className="text-red-600" data-testid={`certificate-delete-${c.id}`}><Trash2 className="h-4 w-4" /></button>}
           </div>
         </li>
