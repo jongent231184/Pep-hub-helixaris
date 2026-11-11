@@ -1,0 +1,40 @@
+{
+  "summary": "Tested Owner KPIs, coach earnings with memberships counted, private progress photos and completion certificates, on the backend and frontend. Backend: 14 of 14 pytest tests passed (tests/test_coaching_owner_kpis_photos_certs.py). (1) KPIs: admin gets 200 with members, plans_purchased.by_tier, revenue.this_month/last_30_days/all_time, 6 distinct monthly entries, requests.conversion_pct and engagement. Member, coach and plain customer get 401/403. (2) Coach earnings: coachghp gross_total is 534.99, at least the 465.00 sum of paid coaching_membership orders for that coach, and the detail endpoint lists membership orders. (3) Photos: JPG upload returns 200 {id,url,caption} with no storage_path or _id. text/plain returns 400. The new photo shows in /my/photos. GET /photos/{id} returns 200 JPEG bytes for the member and their coach, and 404 for admin, another customer and another coach. The coach photo list returns 200 for the coach and 404 for the other coach. DELETE returns 200, then 404 on fetch and 404 on a second delete. An unpaid pending member gets 402 on GET and POST; a plain customer gets 403. (4) Certificates: anonymise plus a photo gives 200 with pdf_url, name_shown as first name only ('Portal') and a results dict. The PDF returns 200 application/pdf starting with %PDF for member, coach and admin, and 404 for another customer and another coach. Both /my/certificates and the coach list include the new certificate. The other coach gets 404 on list, issue and delete. The owning coach's DELETE returns 200, then the PDF returns 404. include_identity:false gives 'A valued client' and include_results:false gives results null. A member cannot issue a certificate (403). Frontend: /admin/coaching-kpis renders all the required testids with real data, the 'Coaching KPIs' nav link is present, and /admin/coach-earnings still renders and shows 534.99. Member /portal/progress: the caption and a PNG upload (POST 200) add a new photo-<id> tile with a blob: img (naturalWidth 10), and the caption field clears. photo-delete (after confirm) removes the tile. Coach view /coach/clients/{cid}/portal/progress shows photos read-only: no upload input and no delete buttons. Coach /coach/clients/{cid} certificate panel: default checkbox states are correct. Ticking include_photos and clicking a tile selects it (amber ring and checkbox). Headline, review and note filled, then Generate gives POST 200, the 'Certificate generated' toast, a popup and the new certificate-<id> row. certificate-open fetches the PDF with 200 application/pdf and opens a popup. certificate-delete returns 200 and removes the row. The member /portal certificate-card shows certificate-list with the new certificate, the open button returns PDF 200, and there are no delete buttons for the member. Regression: /portal, /portal/checkin, /portal/messages and /portal/progress load with no page errors on mobile and desktop.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/coaching/certificates/{id}/pdf", "issue": "Admin can download the certificate PDF. A certificate can embed the client's private progress photos, so the admin can see those photos indirectly, even though GET /photos/{id} returns 404 for admin by design. Either accept this as intended or block admin when options.include_photos is true."},
+      {"endpoint": "DELETE /api/coaching/my/photos/{id}", "issue": "Only the Mongo document is deleted. The object-storage blob stays, so 'deleted' private photos still exist in storage. Certificates already generated also keep the embedded photo."},
+      {"endpoint": "GET /api/coaching/admin/kpis", "issue": "members.awaiting_first_payment is 31 and requests.total is 47, both inflated by accumulated TEST_ clients and requests from testing agents. conversion_pct (10.6%) is therefore understated in preview. Not a code bug, but consider excluding test emails or adding a way to purge them."},
+      {"endpoint": "GET /api/coaching/admin/kpis", "issue": "The query runs membership_state once per active client (N+1 queries) and loads up to 5000 orders and check-ins into memory. This is fine at the current scale."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CertificatePanel issue() and CertificateList open()", "issue": "window.open(blobUrl) runs after an awaited network request, so it is no longer inside the user-gesture tick. Safari, iOS and some popup blockers may block it silently. The blob URLs are also never revoked. Consider opening a window synchronously and setting its location later, or using an <a download> fallback.", "selector": "[data-testid^='certificate-open-'], [data-testid='cert-generate-btn']", "priority": "LOW"},
+      {"component": "PhotosPanel delete", "issue": "There is no try/catch or error toast around deleteMyPhoto, so a failed delete fails silently.", "selector": "[data-testid^='photo-delete-']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Coach client page certificate panel", "issues": ["The photo tiles are very large on desktop: one tile is about 310x410px with aspect 3/4 at a quarter of the panel width. Use smaller thumbnails, e.g. grid-cols-6 or a fixed max width, inside the certificate picker."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_coaching_owner_kpis_photos_certs.py", "/app/test_reports/pytest/pytest_owner_kpis.xml"],
+  "action_items": [
+    "Decide whether admin should be able to open certificate PDFs that embed private photos; if not, return 404 for admin when options.include_photos is true",
+    "Delete the storage object (or mark it deleted) when a member deletes a photo",
+    "Optional: make the PDF open robust to popup blockers and revoke blob URLs; add error handling to photo delete; use smaller photo thumbnails in the certificate picker"
+  ],
+  "critical_code_review_comments": [
+    "The admin certificate PDF bypasses the photo privacy rule",
+    "Photo delete leaves orphaned storage blobs",
+    "The KPI monthly series uses month_start minus 28*i days; this works for 6 months but is fragile, and dateutil relativedelta would be clearer",
+    "renewals is computed by datetime equality against the first payment time; this is fragile if two orders share the same paid_at"
+  ],
+  "updated_files": ["/app/backend/tests/test_coaching_owner_kpis_photos_certs.py"],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "100%"},
+  "seed_data_creation": "Each run creates a TEST_other customer, a TEST pending member (request accepted plus an unpaid gold paylink; the client is deactivated at teardown, but the request and unpaid order remain) and a TEST coach (demoted to customer at teardown). All TEST_ photos and certificates were deleted by id. The seeded silver member's existing 'Week 1' photo and its original certificate were left untouched. payments_paused was not touched and no pay buttons were clicked.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run with: cd /app/backend && pytest tests/test_coaching_owner_kpis_photos_certs.py -p no:xdist -s (it reads the orders collection from Mongo for the earnings comparison). The seeded member is in /tmp/member_email.txt with password Portal123!, and the client id is in /tmp/cid.txt. When injecting a token, set localStorage ghp_token and sessionStorage ghp_age_verified first, then navigate."
+}
