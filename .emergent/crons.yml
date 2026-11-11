@@ -7,3 +7,11 @@ crons:
     method: POST
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
     enabled: true
+  - name: checkin-nudges
+    description: "Sunday 10am UK: emails active coaching members who haven't submitted this week's check-in"
+    cron: "0 10 * * 0"
+    timezone: "Europe/London"
+    endpoint: "{{BASE_URL}}/api/coaching/cron/checkin-nudges"
+    method: POST
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    enabled: true

@@ -209,6 +209,11 @@ export const Coaches = {
   // Coach attention + view-as-client
   attention: () => api.get('/coaching/coach/attention').then(r => r.data),
   portalView: (clientId) => api.get(`/coaching/coach/clients/${clientId}/portal-view`).then(r => r.data),
+  // Broadcasts
+  coachBroadcasts: () => api.get('/coaching/coach/broadcasts').then(r => r.data),
+  postBroadcast: (data) => api.post('/coaching/coach/broadcasts', data).then(r => r.data),
+  deleteBroadcast: (id) => api.delete(`/coaching/coach/broadcasts/${id}`).then(r => r.data),
+  myBroadcasts: () => api.get('/coaching/my/broadcasts').then(r => r.data),
 };
 
 export const PayPal = {

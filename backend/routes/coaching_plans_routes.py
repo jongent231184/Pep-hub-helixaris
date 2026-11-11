@@ -441,7 +441,105 @@ async def coach_portal_view(client_id: str, user: dict = Depends(require_coach))
     state['client_name'] = client.get('customer_name', '')
     return {'client': doc_to_dict(client), 'membership': state, 'protocol': proto,
             'checkins': [doc_to_dict(c) for c in checkins], 'messages': [doc_to_dict(m) for m in messages],
-            'resources': [doc_to_dict(r) for r in resources]}
+            'resources': [doc_to_dict(r) for r in resources], 'broadcasts': await _broadcasts_for(user['id'])}
+
+
+# ---------- coach broadcasts (announcements on every client dashboard) ----------
+class BroadcastIn(BaseModel):
+    title: str
+    body: str = ''
+    pinned: bool = False
+
+
+@router.get('/coach/broadcasts')
+async def coach_broadcasts(user: dict = Depends(require_coach)):
+    docs = await db.coaching_broadcasts.find({'coach_id': user['id']}).sort([('pinned', -1), ('created_at', -1)]).to_list(100)
+    return [doc_to_dict(d) for d in docs]
+
+
+@router.post('/coach/broadcasts')
+async def coach_post_broadcast(payload: BroadcastIn, user: dict = Depends(require_coach)):
+    if not payload.title.strip():
+        raise HTTPException(400, 'Title is required')
+    doc = {'id': str(uuid.uuid4()), 'coach_id': user['id'], 'title': payload.title.strip(), 'body': payload.body.strip(),
+           'pinned': payload.pinned, 'created_at': datetime.utcnow(),
+           'coach_name': f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or 'Your coach'}
+    await db.coaching_broadcasts.insert_one(dict(doc))
+    return doc_to_dict(doc)
+
+
+@router.delete('/coach/broadcasts/{bid}')
+async def coach_delete_broadcast(bid: str, user: dict = Depends(require_coach)):
+    res = await db.coaching_broadcasts.delete_one({'id': bid, 'coach_id': user['id']})
+    if res.deleted_count == 0:
+        raise HTTPException(404, 'Announcement not found')
+    return {'ok': True}
+
+
+async def _broadcasts_for(coach_id: str) -> list[dict]:
+    docs = await db.coaching_broadcasts.find({'coach_id': coach_id}).sort([('pinned', -1), ('created_at', -1)]).to_list(20)
+    return [doc_to_dict(d) for d in docs]
+
+
+@router.get('/my/broadcasts')
+async def my_broadcasts(client: dict = Depends(require_member)):
+    return await _broadcasts_for(client['coach_id'])
+
+
+# ---------- Sunday check-in nudges ----------
+async def run_checkin_nudges(run_id: str) -> dict:
+    """Email active members (with the check-in module) who have no check-in in the last 6 days."""
+    now = datetime.utcnow()
+    sent = 0
+    clients = await db.coaching_clients.find({'active': True, 'paid_until': {'$gt': now}}).to_list(1000)
+    for c in clients:
+        state = await membership_state(c)
+        if not state['active'] or 'checkin' not in state['modules']:
+            continue
+        last_nudge = c.get('last_nudge_at')
+        if last_nudge and last_nudge > now - timedelta(days=6):
+            continue
+        latest = await db.coaching_checkins.find_one({'client_id': c['id']}, sort=[('created_at', -1)])
+        if latest and latest.get('created_at') and latest['created_at'] > now - timedelta(days=6):
+            continue
+        try:
+            from email_service import send_checkin_nudge_email
+            await send_checkin_nudge_email(c)
+            await db.coaching_clients.update_one({'id': c['id']}, {'$set': {'last_nudge_at': now}})
+            sent += 1
+        except Exception as e:
+            logger.error(f'nudge email failed for {c["id"]}: {e}')
+    result = {'run_id': run_id, 'nudges_sent': sent, 'ran_at': now}
+    await db.cron_runs.update_one({'run_id': run_id}, {'$set': result}, upsert=True)
+    logger.info(f'checkin nudges: {result}')
+    return result
+
+
+def _check_cron_auth(authorization: Optional[str]):
+    secret = os.environ.get('WEBHOOK_CRON_SECRET', '')
+    token = authorization.split(' ', 1)[1] if authorization and authorization.startswith('Bearer ') else ''
+    if not secret or not token or not hmac.compare_digest(token, secret):
+        raise HTTPException(401, 'Unauthorized')
+
+
+@router.post('/cron/checkin-nudges')
+async def cron_checkin_nudges(request: Request, background: BackgroundTasks,
+                              authorization: Optional[str] = Header(None),
+                              x_webhook_id: Optional[str] = Header(None)):
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    _check_cron_auth(authorization)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        raise HTTPException(400, 'Invalid body')
+    run_id = x_webhook_id or body.get('run_id') or str(uuid.uuid4())
+    if await db.cron_runs.find_one({'run_id': run_id}):
+        return {'ok': True, 'duplicate': True}
+    await db.cron_runs.insert_one({'run_id': run_id, 'job': 'checkin-nudges', 'queued_at': datetime.utcnow()})
+    background.add_task(run_checkin_nudges, run_id)
+    return {'ok': True, 'queued': True, 'run_id': run_id}
 
 
 # ---------- renewal cron ----------

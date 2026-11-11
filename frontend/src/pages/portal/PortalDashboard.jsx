@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { PortalContext } from './PortalLayout';
 import BRAND from '../../config/brand';
 import { TierBadge } from '../../components/coaching/TierCards';
-import { CalendarCheck, ClipboardList, MessageSquare, TrendingUp, ArrowRight, Lock, CheckCircle2 } from 'lucide-react';
+import { CalendarCheck, ClipboardList, MessageSquare, TrendingUp, ArrowRight, Lock, CheckCircle2, Megaphone } from 'lucide-react';
 
 export const PortalHeader = ({ title, sub }) => (
   <div className="mb-6">
@@ -40,8 +40,10 @@ const PortalDashboard = () => {
   const { membership: m, has, src, base, coachView } = useContext(PortalContext);
   const [proto, setProto] = useState(null);
   const [checkins, setCheckins] = useState([]);
+  const [broadcasts, setBroadcasts] = useState([]);
   useEffect(() => {
     src.protocol().then(setProto).catch(() => {});
+    src.broadcasts().then(setBroadcasts).catch(() => {});
     if (has('checkin')) src.checkins().then(setCheckins).catch(() => {});
   }, [has, src]);
 
@@ -62,6 +64,19 @@ const PortalDashboard = () => {
   return (
     <div data-testid="portal-dashboard">
       <PortalHeader title={coachView ? `${m.client_name}'s portal` : 'Welcome back'} sub="Everything you need between coaching reviews." />
+      {broadcasts.length > 0 && (
+        <div className="space-y-3 mb-6" data-testid="broadcasts">
+          {broadcasts.map(b => (
+            <div key={b.id} className="rounded-2xl border-l-4 bg-white border border-slate-200 p-4 md:p-5 shadow-sm" style={{ borderLeftColor: BRAND.accent }} data-testid={`broadcast-${b.id}`}>
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-slate-500">
+                <Megaphone className="h-3.5 w-3.5" /> From {b.coach_name} · {new Date(b.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}{b.pinned && ' · Pinned'}
+              </div>
+              <p className="font-black text-slate-900 mt-1">{b.title}</p>
+              {b.body && <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">{b.body}</p>}
+            </div>
+          ))}
+        </div>
+      )}
       <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         {tiles.map(t => {
           const locked = !has(t.mod);

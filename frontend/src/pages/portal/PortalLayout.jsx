@@ -26,6 +26,7 @@ const memberSrc = () => ({
   messages: () => Coaches.myMessages(),
   sendMessage: (b) => Coaches.sendMyMessage(b),
   resources: () => Coaches.myResources(),
+  broadcasts: () => Coaches.myBroadcasts(),
   weighIns: null,
 });
 
@@ -37,6 +38,7 @@ const coachSrc = (clientId, bundle) => ({
   messages: () => Coaches.clientMessages(clientId),
   sendMessage: (b) => Coaches.sendMessage(clientId, b),
   resources: async () => bundle.resources,
+  broadcasts: async () => bundle.broadcasts || [],
   weighIns: () => Coaches.coachWeighIns(clientId),
 });
 

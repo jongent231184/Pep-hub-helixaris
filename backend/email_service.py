@@ -778,6 +778,33 @@ async def send_membership_lapsed_email(client: dict, order: Optional[dict]) -> N
         logger.error(f'membership lapsed email failed: {e}')
 
 
+async def send_checkin_nudge_email(client: dict) -> None:
+    if not _init_resend():
+        return
+    to = (client.get('customer_email') or '').strip()
+    if not to:
+        return
+    first = (client.get('customer_name') or '').split(' ')[0] or 'there'
+    link = f"{_site_base()}/portal/check-in"
+    html = f"""
+    <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#0f172a">
+      <div style="border-bottom:3px solid #c8a24a;padding-bottom:16px;margin-bottom:20px">
+        <p style="font-size:11px;letter-spacing:2px;color:#b08a2e;font-weight:700;text-transform:uppercase;margin:0">{BUSINESS_NAME} · Coaching</p>
+        <h1 style="font-size:22px;font-weight:900;margin:6px 0 0">Your weekly check-in is waiting</h1>
+      </div>
+      <p style="font-size:15px;line-height:1.6">Hi {first},</p>
+      <p style="font-size:15px;line-height:1.6">We haven't had this week's check-in yet. It takes two minutes — weight (optional), how your energy, sleep and training felt, and anything you want your coach to know. Your coach reviews every check-in personally.</p>
+      <p style="text-align:center;margin:24px 0"><a href="{link}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:14px 28px;border-radius:6px">Do my check-in</a></p>
+      <p style="font-size:12px;color:#64748b">Already done it? Ignore this — it'll show as reviewed in your portal shortly.</p>
+    </div>
+    """
+    res = await asyncio.to_thread(resend.Emails.send, {
+        'from': f'{BUSINESS_NAME} coaching <{FROM_EMAIL}>', 'to': [to],
+        'subject': 'Your weekly check-in is waiting', 'html': html,
+    })
+    logger.info(f'checkin nudge sent to {to}: {res.get("id")}')
+
+
 async def send_blocked_attempt_email(entry: dict, addr: dict, channel: str, hits: int) -> None:
     """Alert the admin that a blocklisted customer tried to order again."""
     if not _init_resend() or not ADMIN_NOTIFY_EMAIL:
