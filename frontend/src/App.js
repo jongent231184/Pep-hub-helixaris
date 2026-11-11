@@ -48,6 +48,10 @@ import AdminCoas from './pages/admin/AdminCoas';
 import AdminCoachingRequests from './pages/admin/AdminCoachingRequests';
 import AdminCoaches from './pages/admin/AdminCoaches';
 import AdminCoachEarnings from './pages/admin/AdminCoachEarnings';
+import AdminCoachingPlans from './pages/admin/AdminCoachingPlans';
+import PortalLayout from './pages/portal/PortalLayout';
+import PortalDashboard from './pages/portal/PortalDashboard';
+import { PortalPlan, PortalCheckin, PortalProgress, PortalMessages, PortalResources } from './pages/portal/PortalSections';
 import AdminSales from './pages/admin/AdminSales';
 
 import CoachLayout from './pages/coach/CoachLayout';
@@ -114,6 +118,7 @@ function App() {
                 <Route path="coaching" element={<AdminCoachingRequests />} />
                 <Route path="coaches" element={<AdminCoaches />} />
                 <Route path="coach-earnings" element={<AdminCoachEarnings />} />
+                <Route path="coaching-plans" element={<AdminCoachingPlans />} />
                 <Route path="customers" element={<AdminCustomers />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
@@ -124,6 +129,16 @@ function App() {
                 <Route path="orders" element={<AmbassadorOrders />} />
                 <Route path="orders/:orderId" element={<AmbassadorOrderDetail />} />
                 <Route path="payouts" element={<AmbassadorPayouts />} />
+              </Route>
+
+              {/* Coaching client portal (paid members only) */}
+              <Route path="/portal" element={<PortalLayout />}>
+                <Route index element={<PortalDashboard />} />
+                <Route path="plan" element={<PortalPlan />} />
+                <Route path="check-in" element={<PortalCheckin />} />
+                <Route path="progress" element={<PortalProgress />} />
+                <Route path="messages" element={<PortalMessages />} />
+                <Route path="resources" element={<PortalResources />} />
               </Route>
 
               {/* Coach portal */}

@@ -8,7 +8,7 @@ import { LogOut, ShoppingBag, Loader2 } from 'lucide-react';
 import { Orders } from '../lib/api';
 import ChangePasswordCard from '../components/ChangePasswordCard';
 import SavedAddresses from '../components/SavedAddresses';
-import MyCoaching from '../components/MyCoaching';
+import MembershipCard from '../components/coaching/MembershipCard';
 
 const Account = () => {
   const { user, logout, loading } = useAuth();
@@ -83,7 +83,7 @@ const Account = () => {
 
         <div className="mt-10 border-t pt-8">
           <h2 className="text-xl font-bold uppercase mb-4 flex items-center gap-2">Coaching</h2>
-          <MyCoaching />
+          <MembershipCard />
         </div>
 
         <div className="mt-10 border-t pt-8">

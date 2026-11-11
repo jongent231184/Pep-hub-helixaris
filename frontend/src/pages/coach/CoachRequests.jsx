@@ -100,7 +100,7 @@ const CoachRequests = () => {
                       </span>
                     </div>
                     <h3 className="text-lg font-black">{r.first_name} {r.last_name}</h3>
-                    <p className="text-xs text-slate-600 mt-1"><strong>Area:</strong> {AREA_LABEL[r.area] || r.area}</p>
+                    <p className="text-xs text-slate-600 mt-1"><strong>Area:</strong> {AREA_LABEL[r.area] || r.area}{r.tier && <> · <strong>Plan:</strong> <span className="capitalize">{r.tier}</span></>}</p>
                     <div className="flex flex-wrap gap-4 mt-2 text-xs">
                       <a href={`mailto:${r.email}`} className="inline-flex items-center gap-1 text-sky-600 hover:underline"><Mail className="h-3 w-3" />{r.email}</a>
                       {r.phone && <a href={`tel:${r.phone}`} className="inline-flex items-center gap-1 text-slate-700 hover:underline"><Phone className="h-3 w-3" />{r.phone}</a>}

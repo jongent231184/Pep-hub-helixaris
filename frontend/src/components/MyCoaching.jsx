@@ -24,7 +24,7 @@ const computeVials = (it, weeks) => {
   return { weekly_mg: +weekly_mg.toFixed(3), total_mg: +total_mg.toFixed(3), vials, vs };
 };
 
-const MyCoaching = () => {
+const MyCoaching = ({ hideMessages = false, hideWeighIns = false }) => {
   const [proto, setProto] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
@@ -134,7 +134,7 @@ const MyCoaching = () => {
       )}
 
       {/* Weigh-in tracker */}
-      <WeighInPanel />
+      {!hideWeighIns && <WeighInPanel />}
 
       {/* Calendar */}
       {sortedDates.length > 0 && (
@@ -183,6 +183,7 @@ const MyCoaching = () => {
         </div>
       )}
 
+      {!hideMessages && (
       <div className="bg-white border rounded-xl p-5">
         <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold mb-3">💬 Messages with your coach</h4>
         <div className="max-h-64 overflow-y-auto space-y-2 mb-3 border rounded p-3 bg-slate-50">
@@ -199,6 +200,7 @@ const MyCoaching = () => {
           <button onClick={sendMsg} disabled={!msgDraft.trim()} className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm px-4 py-2 rounded disabled:opacity-50">Send</button>
         </div>
       </div>
+      )}
 
       <div className="text-xs text-slate-500 flex items-start gap-2 p-3 border border-amber-200 bg-amber-50 rounded">
         <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-700" />

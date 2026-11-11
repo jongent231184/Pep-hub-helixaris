@@ -18,6 +18,7 @@ const NAV = [
   { to: '/admin/promos', label: 'Promos', icon: Ticket },
   { to: '/admin/ambassadors', label: 'Ambassadors', icon: Award },
   { to: '/admin/coaching', label: 'Coaching', icon: MessageCircle },
+  { to: '/admin/coaching-plans', label: 'Coaching Plans', icon: Award },
   { to: '/admin/coaches', label: 'Coaches', icon: Users },
   { to: '/admin/coach-earnings', label: 'Coach Earnings', icon: PoundSterling },
   { to: '/admin/coas', label: 'COAs', icon: FileCheck },

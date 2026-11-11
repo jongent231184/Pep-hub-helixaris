@@ -54,6 +54,7 @@ async def create_request(payload: CoachingRequestCreate):
         'admin_notes': '',
         'assigned_coach_id': None,
         'waiver_accepted': True,
+        'tier': payload.tier if payload.tier in ('bronze', 'silver', 'gold') else None,
         'created_at': now,
         'updated_at': now,
     }
@@ -202,6 +203,9 @@ async def coach_update_request(req_id: str, payload: CoachingRequestUpdate, user
                 'customer_name': f"{req.get('first_name', '')} {req.get('last_name', '')}".strip(),
                 'request_id': req_id,
                 'area': req.get('area', ''),
+                'tier': req.get('tier'),
+                'requested_tier': req.get('tier'),
+                'paid_until': None,
                 'active': True,
                 'started_at': datetime.utcnow(),
             }

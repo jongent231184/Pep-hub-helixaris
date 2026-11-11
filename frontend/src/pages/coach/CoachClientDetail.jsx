@@ -8,6 +8,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
 import WeighInPanel from '../../components/WeighInPanel';
+import { MembershipPanel, CheckinsPanel } from '../../components/coaching/CoachMembershipPanels';
 
 const AREA_LABEL = { weightloss: 'Weight loss', peptide_info: 'Peptide Information', dosage_guide: 'Dosage Guide', how_to_guide: 'How-to Guide' };
 const DAY_CODES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -204,9 +205,9 @@ const CoachClientDetail = () => {
   };
 
   const [editingProto, setEditingProto] = useState(false);
-  const [editForm, setEditForm] = useState({ title: '', duration_weeks: 8, notes: '' });
+  const [editForm, setEditForm] = useState({ title: '', duration_weeks: 8, notes: '', supplement_plan: '' });
   const openEdit = () => {
-    setEditForm({ title: proto.title || '', duration_weeks: proto.duration_weeks || 8, notes: proto.notes || '' });
+    setEditForm({ title: proto.title || '', duration_weeks: proto.duration_weeks || 8, notes: proto.notes || '', supplement_plan: proto.supplement_plan || '' });
     setEditingProto(true);
   };
   const saveEdit = async () => {
@@ -218,7 +219,7 @@ const CoachClientDetail = () => {
       if (!proceed) return;
     }
     try {
-      await Coaches.updateProtocol(proto.id, { title: editForm.title.trim(), duration_weeks: weeks, notes: editForm.notes });
+      await Coaches.updateProtocol(proto.id, { title: editForm.title.trim(), duration_weeks: weeks, notes: editForm.notes, supplement_plan: editForm.supplement_plan });
       toast({ title: 'Protocol updated' });
       setEditingProto(false);
       load();
@@ -295,6 +296,9 @@ const CoachClientDetail = () => {
         <p className="text-xs text-slate-500 mt-1">Client since {new Date(client.started_at).toLocaleDateString('en-GB')}</p>
       </div>
 
+      <MembershipPanel clientId={client.id} />
+      <CheckinsPanel clientId={client.id} />
+
       {/* No protocol yet — show create form */}
       {!proto && (
         <div className="bg-white border rounded-xl p-6" data-testid="create-protocol-form">
@@ -358,6 +362,13 @@ const CoachClientDetail = () => {
                       onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
                       placeholder="Notes"
                       data-testid="proto-edit-notes"
+                    />
+                    <Textarea
+                      rows={3}
+                      value={editForm.supplement_plan}
+                      onChange={e => setEditForm(f => ({ ...f, supplement_plan: e.target.value }))}
+                      placeholder="Supplement plan (Silver+ clients see this in their portal) — e.g. Vitamin D3 · morning · 4000iu"
+                      data-testid="proto-edit-supplements"
                     />
                     <div className="flex items-center gap-2">
                       <Button onClick={saveEdit} className="bg-sky-500 hover:bg-sky-600 text-white gap-1" data-testid="proto-edit-save">Save</Button>

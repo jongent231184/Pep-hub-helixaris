@@ -158,7 +158,7 @@ const AdminCoachingRequests = () => {
                       <p><Mail className="h-3 w-3 inline mr-1 text-slate-400" />{r.email}</p>
                       {r.phone && <p><Phone className="h-3 w-3 inline mr-1 text-slate-400" />{r.phone}</p>}
                     </td>
-                    <td className="p-3 text-xs font-semibold">{AREA_LABEL[r.area] || r.area}</td>
+                    <td className="p-3 text-xs font-semibold">{AREA_LABEL[r.area] || r.area}{r.tier && <span className="ml-1 capitalize text-amber-700">· {r.tier}</span>}</td>
                     <td className="p-3 text-right">
                       <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); remove(r); }} className="h-8 w-8 text-red-600 hover:bg-red-50">
                         <Trash2 className="h-4 w-4" />

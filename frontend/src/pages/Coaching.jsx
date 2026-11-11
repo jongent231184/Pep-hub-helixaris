@@ -15,6 +15,8 @@ import {
 } from '../components/ui/select';
 import { useToast } from '../hooks/use-toast';
 import { Users, Scale, ClipboardList, Calculator, BookOpen, ShieldAlert, Loader2, CheckCircle2, Sparkles, Lock } from 'lucide-react';
+import TierCards from '../components/coaching/TierCards';
+import { Coaches } from '../lib/api';
 
 const AREAS = [
   { value: 'weightloss', label: 'Weight loss', icon: Scale, blurb: 'Peptide-supported weight loss approach and lifestyle guidance.' },
@@ -30,6 +32,13 @@ const Coaching_ = () => {
   const location = useLocation();
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [plans, setPlans] = useState([]);
+  const [tier, setTier] = useState(null); // null = general query
+  useEffect(() => { Coaches.plans().then(setPlans).catch(() => {}); }, []);
+  const selectTier = (t) => {
+    setTier(t);
+    setTimeout(() => document.getElementById('coaching-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  };
   const [form, setForm] = useState({
     first_name: '',
     last_name: '',
@@ -60,7 +69,7 @@ const Coaching_ = () => {
     }
     setSubmitting(true);
     try {
-      await Coaching.submit(form);
+      await Coaching.submit({ ...form, tier });
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
@@ -140,7 +149,22 @@ const Coaching_ = () => {
           </p>
         </section>
 
-        {submitted ? (
+        {/* Tiers */}
+        {!submitted && plans.length > 0 && (
+          <section className="mb-12" data-testid="coaching-tiers">
+            <div className="flex items-end justify-between gap-4 flex-wrap mb-6">
+              <div>
+                <h2 className="text-xs uppercase tracking-widest text-slate-500 font-bold">Choose your level</h2>
+                <p className="text-2xl md:text-3xl font-black text-slate-900 mt-1">Three monthly plans. Each builds on the last.</p>
+              </div>
+              <p className="text-xs text-slate-500 max-w-xs">Billed monthly by pay link — no card stored, cancel any month. Your private client portal unlocks as soon as the first month is paid.</p>
+            </div>
+            <TierCards plans={plans} selected={tier} onSelect={selectTier} />
+            <p className="text-sm text-slate-600 mt-5">
+              Not sure yet? <button type="button" onClick={() => selectTier(null)} className="text-sky-600 font-semibold hover:underline" data-testid="coaching-general-query-btn">Send James a question first</button> and pick a plan after he replies.
+            </p>
+          </section>
+        )}
           <section className="max-w-2xl bg-white border-2 border-emerald-200 rounded-xl p-8 md:p-10" data-testid="coaching-success">
             <div className="flex items-start gap-4">
               <div className="h-12 w-12 rounded-full bg-emerald-100 grid place-items-center shrink-0">
@@ -149,7 +173,9 @@ const Coaching_ = () => {
               <div>
                 <h2 className="text-2xl font-black uppercase text-slate-900">Request received</h2>
                 <p className="text-slate-600 mt-3">
-                  Thanks, <strong>{form.first_name}</strong>. James has been notified and will reply to <strong>{form.email}</strong> within 48 hours. If you don&apos;t see anything, please check your spam folder.
+                  Thanks, <strong>{form.first_name}</strong>. {tier
+                    ? <>You've chosen the <strong className="capitalize">{tier}</strong> plan. James will review your details and email your first month's pay link to <strong>{form.email}</strong> within 48 hours — your portal unlocks the moment it's paid.</>
+                    : <>James has been notified and will reply to <strong>{form.email}</strong> within 48 hours.</>} If you don&apos;t see anything, please check your spam folder.
                 </p>
                 <p className="text-xs text-slate-500 mt-6">Reference sent — no need to resubmit.</p>
                 <Button
@@ -185,10 +211,11 @@ const Coaching_ = () => {
             </div>
 
             {/* Right column — form */}
-            <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-xl p-6 md:p-8 h-fit" data-testid="coaching-form">
+            <form id="coaching-form" onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-xl p-6 md:p-8 h-fit scroll-mt-24" data-testid="coaching-form">
               <div className="flex items-center gap-2 mb-6">
                 <Users className="h-5 w-5 text-sky-600" />
-                <h2 className="text-lg font-black uppercase">Request coaching</h2>
+                <h2 className="text-lg font-black uppercase">{tier ? `Sign up · ${tier} plan` : 'Ask a question'}</h2>
+                {tier && <span className="ml-auto text-xs text-slate-500" data-testid="coaching-selected-tier">£{Number(plans.find(p => p.tier === tier)?.price_monthly || 0).toFixed(0)}/month</span>}
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
@@ -245,7 +272,7 @@ const Coaching_ = () => {
                 className="mt-6 w-full h-12 bg-sky-500 hover:bg-sky-600 text-white font-bold uppercase tracking-wider"
                 data-testid="coaching-submit-btn"
               >
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit request'}
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (tier ? `Request ${tier} plan` : 'Send question')}
               </Button>
 
               <p className="text-[11px] text-slate-500 mt-3 text-center">

@@ -487,6 +487,7 @@ class CoachingRequestCreate(BaseModel):
     area: CoachingArea
     message: str = ''
     waiver_accepted: bool  # must be True
+    tier: Optional[str] = None  # bronze | silver | gold — chosen plan, None = general query
 
 
 class CoachingRequestUpdate(BaseModel):
@@ -507,6 +508,7 @@ class CoachingRequestOut(BaseModel):
     admin_notes: str = ''
     assigned_coach_id: Optional[str] = None
     waiver_accepted: bool
+    tier: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -584,6 +586,7 @@ class ProtocolUpdate(BaseModel):
     area: Optional[str] = None
     duration_weeks: Optional[int] = None
     notes: Optional[str] = None
+    supplement_plan: Optional[str] = None
     active: Optional[bool] = None
 
 

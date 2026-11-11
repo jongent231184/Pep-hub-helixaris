@@ -701,6 +701,83 @@ async def send_coaching_request_email(req: dict) -> None:
 
 # --------------------------------------------------------- BLOCKED ATTEMPT
 
+def _site_base() -> str:
+    return os.environ.get('SITE_BASE_URL', '').rstrip('/') or BUSINESS_URL
+
+
+async def send_membership_paylink_email(client: dict, order: dict, plan: dict, renewal: bool) -> None:
+    """Customer: pay link for this month's coaching membership (first month or renewal)."""
+    if not _init_resend():
+        logger.warning('membership email skipped: RESEND_API_KEY not set')
+        return
+    to = (client.get('customer_email') or '').strip()
+    if not to:
+        return
+    first = (client.get('customer_name') or '').split(' ')[0] or 'there'
+    link = f"{_site_base()}/paylink/{order['id']}"
+    amount = f"£{float(order.get('total') or 0):.2f}"
+    plan_name = plan.get('name', 'Coaching')
+    headline = f'Your {plan_name} coaching renewal is due' if renewal else f'Activate your {plan_name} coaching plan'
+    body = (f'Your current month of {plan_name} coaching is coming to an end. Pay this month\'s membership to keep your '
+            f'portal, plan and coach access running without a break.' if renewal else
+            f'Your coach has set up your {plan_name} plan. Pay the first month below and your coaching portal unlocks straight away.')
+    html = f"""
+    <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#0f172a">
+      <div style="border-bottom:3px solid #c8a24a;padding-bottom:16px;margin-bottom:20px">
+        <p style="font-size:11px;letter-spacing:2px;color:#b08a2e;font-weight:700;text-transform:uppercase;margin:0">{BUSINESS_NAME} · Coaching</p>
+        <h1 style="font-size:22px;font-weight:900;margin:6px 0 0">{headline}</h1>
+      </div>
+      <p style="font-size:15px;line-height:1.6">Hi {first},</p>
+      <p style="font-size:15px;line-height:1.6">{body}</p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;margin:16px 0;background:#f8fafc;border-radius:8px">
+        <tr><td style="padding:10px 14px;color:#64748b;width:120px">Plan</td><td style="padding:10px 14px"><strong>{plan_name}</strong> · monthly</td></tr>
+        <tr><td style="padding:10px 14px;color:#64748b">Amount</td><td style="padding:10px 14px"><strong>{amount}</strong></td></tr>
+        <tr><td style="padding:10px 14px;color:#64748b">Reference</td><td style="padding:10px 14px">{order.get('order_number', '')}</td></tr>
+      </table>
+      <p style="text-align:center;margin:24px 0">
+        <a href="{link}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:14px 28px;border-radius:6px">Pay {amount} now</a>
+      </p>
+      <p style="font-size:12px;color:#64748b;line-height:1.6">No card is stored and nothing is taken automatically — you pay each month using the link we send. Once paid, open your portal at <a href="{_site_base()}/portal">{_site_base().replace('https://', '')}/portal</a>.</p>
+      <p style="font-size:11px;color:#94a3b8;margin-top:20px">Coaching is peer-to-peer education based on personal experience, not medical advice.</p>
+    </div>
+    """
+    try:
+        res = await asyncio.to_thread(resend.Emails.send, {
+            'from': f'{BUSINESS_NAME} coaching <{FROM_EMAIL}>',
+            'to': [to],
+            'subject': f'{headline} · {amount}',
+            'html': html,
+        })
+        logger.info(f'membership paylink email sent to {to}: {res.get("id")}')
+    except Exception as e:
+        logger.error(f'membership paylink email failed: {e}')
+
+
+async def send_membership_lapsed_email(client: dict, order: Optional[dict]) -> None:
+    if not _init_resend():
+        return
+    to = (client.get('customer_email') or '').strip()
+    if not to:
+        return
+    first = (client.get('customer_name') or '').split(' ')[0] or 'there'
+    link = f"{_site_base()}/paylink/{order['id']}" if order else f"{_site_base()}/account"
+    html = f"""
+    <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#0f172a">
+      <h1 style="font-size:20px;font-weight:900">Your coaching portal is paused</h1>
+      <p style="font-size:15px;line-height:1.6">Hi {first}, this month's coaching membership hasn't been paid yet, so your portal is paused. Your plan, calendar and messages are all kept safe — pay below and access returns immediately.</p>
+      <p style="text-align:center;margin:24px 0"><a href="{link}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:14px 28px;border-radius:6px">Reactivate my coaching</a></p>
+      <p style="font-size:12px;color:#64748b">If you'd like to pause or stop coaching, just reply to this email and let your coach know.</p>
+    </div>
+    """
+    try:
+        await asyncio.to_thread(resend.Emails.send, {
+            'from': f'{BUSINESS_NAME} coaching <{FROM_EMAIL}>', 'to': [to],
+            'subject': 'Your coaching portal is paused — reactivate in one click', 'html': html,
+        })
+    except Exception as e:
+        logger.error(f'membership lapsed email failed: {e}')
+
+
 async def send_blocked_attempt_email(entry: dict, addr: dict, channel: str, hits: int) -> None:
     """Alert the admin that a blocklisted customer tried to order again."""
     if not _init_resend() or not ADMIN_NOTIFY_EMAIL:

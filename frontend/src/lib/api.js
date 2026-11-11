@@ -188,6 +188,24 @@ export const Coaches = {
   adminCreatePayout: (coachId, data) => api.post(`/coaching/admin/coach-earnings/${coachId}/payouts`, data).then(r => r.data),
   adminDeletePayout: (coachId, payoutId) => api.delete(`/coaching/admin/coach-earnings/${coachId}/payouts/${payoutId}`).then(r => r.data),
   myEarnings: () => api.get('/coaching/coach/earnings').then(r => r.data),
+  // Tiers & memberships
+  plans: () => api.get('/coaching/plans').then(r => r.data),
+  adminSavePlans: (plans) => api.put('/coaching/admin/plans', plans).then(r => r.data),
+  myMembership: () => api.get('/coaching/my/membership').then(r => r.data),
+  coachMembership: (clientId) => api.get(`/coaching/coach/clients/${clientId}/membership`).then(r => r.data),
+  coachMembershipPaylink: (clientId, data) => api.post(`/coaching/coach/clients/${clientId}/membership-paylink`, data).then(r => r.data),
+  coachAdjustMembership: (clientId, data) => api.patch(`/coaching/coach/clients/${clientId}/membership`, data).then(r => r.data),
+  // Check-ins
+  myCheckins: () => api.get('/coaching/my/checkins').then(r => r.data),
+  submitCheckin: (data) => api.post('/coaching/my/checkins', data).then(r => r.data),
+  coachCheckins: (clientId) => api.get(`/coaching/coach/clients/${clientId}/checkins`).then(r => r.data),
+  coachPendingCheckins: () => api.get('/coaching/coach/checkins/pending').then(r => r.data),
+  reviewCheckin: (id, data) => api.patch(`/coaching/coach/checkins/${id}`, data).then(r => r.data),
+  // Resources
+  myResources: () => api.get('/coaching/my/resources').then(r => r.data),
+  adminResources: () => api.get('/coaching/admin/resources').then(r => r.data),
+  adminAddResource: (data) => api.post('/coaching/admin/resources', data).then(r => r.data),
+  adminDeleteResource: (id) => api.delete(`/coaching/admin/resources/${id}`).then(r => r.data),
 };
 
 export const PayPal = {
