@@ -93,7 +93,7 @@ export const PortalPlan = () => {
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'overview');
   useEffect(() => { src.protocol().then(setProto).catch(() => {}).finally(() => setLoaded(true)); }, [src]);
-  const protoProps = { hideMessages: true, hideWeighIns: true, protoOverride: src.coachView ? (proto || { none: true }) : undefined, readOnly: src.readOnly };
+  const protoProps = { hideMessages: true, hideWeighIns: true, protoOverride: src.coachView ? (proto || { none: true }) : undefined, readOnly: src.readOnly, onToggle: (id, done) => setProto(p => p ? { ...p, calendar: p.calendar.map(e => e.id === id ? { ...e, done } : e) } : p) };
 
   const today = new Date().toISOString().slice(0, 10);
   const cal = proto?.calendar || [];

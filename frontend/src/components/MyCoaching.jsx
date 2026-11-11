@@ -5,6 +5,7 @@ import { HeartPulse, Package, ShoppingCart, Loader2, Info, CheckCircle2 } from '
 import { toast } from 'sonner';
 import { useCart } from '../context/CartContext';
 import WeighInPanel from './WeighInPanel';
+import WeekCalendar from './coaching/WeekCalendar';
 
 const AREA_LABEL = { weightloss: 'Weight loss', peptide_info: 'Peptide Information', dosage_guide: 'Dosage Guide', how_to_guide: 'How-to Guide' };
 
@@ -24,7 +25,7 @@ const computeVials = (it, weeks) => {
   return { weekly_mg: +weekly_mg.toFixed(3), total_mg: +total_mg.toFixed(3), vials, vs };
 };
 
-const MyCoaching = ({ hideMessages = false, hideWeighIns = false, protoOverride, readOnly = false, sections = { header: true, items: true, calendar: true }, itemKind = null }) => {
+const MyCoaching = ({ hideMessages = false, hideWeighIns = false, protoOverride, readOnly = false, sections = { header: true, items: true, calendar: true }, itemKind = null, onToggle }) => {
   const [proto, setProto] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
@@ -49,6 +50,7 @@ const MyCoaching = ({ hideMessages = false, hideWeighIns = false, protoOverride,
     try {
       await Coaches.toggleEntry(entry.id, done);
       setProto(p => p ? { ...p, calendar: p.calendar.map(e => e.id === entry.id ? { ...e, done } : e) } : p);
+      onToggle?.(entry.id, done);
     } catch (_) { /* silent */ } finally {
       setSaving(null);
     }
@@ -102,12 +104,6 @@ const MyCoaching = ({ hideMessages = false, hideWeighIns = false, protoOverride,
     );
   }
 
-  // Group calendar entries by date
-  const grouped = (proto.calendar || []).reduce((acc, e) => {
-    (acc[e.date] = acc[e.date] || []).push(e);
-    return acc;
-  }, {});
-  const sortedDates = Object.keys(grouped).sort();
   const visibleItems = (proto.items || []).filter(it => !itemKind || (it.kind || 'peptide') === itemKind);
 
   return (
@@ -151,50 +147,13 @@ const MyCoaching = ({ hideMessages = false, hideWeighIns = false, protoOverride,
       {!hideWeighIns && <WeighInPanel />}
 
       {/* Calendar */}
-      {sections.calendar && sortedDates.length > 0 && (
-        <div className="bg-white border rounded-xl p-5">
-          <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold mb-3">Your dose calendar</h4>
-          <div className="space-y-3">
-            {sortedDates.map(date => (
-              <div key={date} className="border rounded-lg p-3">
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-600 mb-2">
-                  {new Date(date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
-                </p>
-                <div className="space-y-1.5">
-                  {grouped[date].map(e => (
-                    <button
-                      key={e.id}
-                      onClick={() => toggle(e, !e.done)}
-                      disabled={saving === e.id}
-                      title={e.done ? 'Click to mark as not done' : 'Click to mark as done'}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg border transition text-left disabled:opacity-60 ${e.done ? 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100/60' : 'bg-white border-slate-200 hover:border-sky-300 hover:bg-sky-50/40'}`}
-                      data-testid={`cal-entry-${e.id}`}
-                    >
-                      <span className={`shrink-0 h-6 w-6 rounded flex items-center justify-center border-2 transition ${e.done ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300'}`}>
-                        {saving === e.id
-                          ? <Loader2 className="h-4 w-4 animate-spin text-sky-500" />
-                          : e.done
-                            ? <CheckCircle2 className="h-4 w-4 text-white" />
-                            : null}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm ${e.done ? 'text-emerald-800' : 'text-slate-900'}`}>
-                          <strong>{e.item_name}</strong>
-                          {e.kind === 'supplement' && <span className="ml-1.5 text-[9px] uppercase tracking-wider bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded align-middle">Supplement</span>}
-                          {e.dose && <span className={e.done ? '' : 'text-slate-700'}> · {e.dose}</span>}
-                          {e.time_of_day && <span className={e.done ? 'text-emerald-700' : 'text-slate-500'}> · {e.time_of_day}</span>}
-                        </p>
-                        {e.notes && <p className={`text-xs ${e.done ? 'text-emerald-700' : 'text-slate-500'}`}>{e.notes}</p>}
-                      </div>
-                      {e.done && (
-                        <span className="text-[10px] uppercase tracking-widest font-bold text-emerald-600 shrink-0">Done</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
+      {sections.calendar && (proto.calendar || []).length > 0 && (
+        <div className="bg-white border rounded-xl p-5" data-testid="dose-calendar">
+          <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+            <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold">Your dose calendar</h4>
+            <p className="text-[11px] text-slate-500">Tap an item to tick it off — it turns green and counts towards your progress.</p>
           </div>
+          <WeekCalendar calendar={proto.calendar} saving={saving} onToggle={toggle} readOnly={readOnly} />
         </div>
       )}
 
