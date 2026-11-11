@@ -1,6 +1,8 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PortalContext } from './PortalLayout';
+import { Coaches } from '../../lib/api';
+import { CertificateList } from '../../components/coaching/PhotosAndCertificates';
 import BRAND from '../../config/brand';
 import { TierBadge } from '../../components/coaching/TierCards';
 import { CalendarCheck, ClipboardList, MessageSquare, TrendingUp, ArrowRight, Lock, CheckCircle2, Megaphone } from 'lucide-react';
@@ -41,11 +43,14 @@ const PortalDashboard = () => {
   const [proto, setProto] = useState(null);
   const [checkins, setCheckins] = useState([]);
   const [broadcasts, setBroadcasts] = useState([]);
+  const [certs, setCerts] = useState([]);
+  const fetchCerts = useCallback(() => (coachView ? Coaches.coachCertificates(src.clientId) : Coaches.myCertificates()), [coachView, src.clientId]);
   useEffect(() => {
     src.protocol().then(setProto).catch(() => {});
     src.broadcasts().then(setBroadcasts).catch(() => {});
+    fetchCerts().then(setCerts).catch(() => {});
     if (has('checkin')) src.checkins().then(setCheckins).catch(() => {});
-  }, [has, src]);
+  }, [has, src, fetchCerts]);
 
   const today = new Date().toISOString().slice(0, 10);
   const todays = (proto?.calendar || []).filter(e => e.date === today);
@@ -115,6 +120,12 @@ const PortalDashboard = () => {
           {proto?.notes && <div className="mt-4 p-3 bg-slate-50 border rounded-lg text-xs text-slate-700 whitespace-pre-wrap" data-testid="coach-notes"><p className="text-[10px] uppercase tracking-widest font-bold text-slate-500 mb-1">Coach notes</p>{proto.notes}</div>}
         </Card>
       </div>
+      {certs.length > 0 && (
+        <Card title="Your certificate" className="mt-4" testId="certificate-card">
+          <p className="text-sm text-slate-600 mb-3">Congratulations — your coach has issued your completion certificate. Open it, save it, and share it with the group if you'd like.</p>
+          <CertificateList fetchCerts={fetchCerts} />
+        </Card>
+      )}
     </div>
   );
 };

@@ -4,6 +4,8 @@ import { PortalHeader, Card, LockedModule } from './PortalDashboard';
 import MyCoaching from '../../components/MyCoaching';
 import CoachMessages from '../../components/coaching/CoachMessages';
 import WeighInPanel from '../../components/WeighInPanel';
+import { PhotosPanel } from '../../components/coaching/PhotosAndCertificates';
+import { Coaches } from '../../lib/api';
 import { toast } from 'sonner';
 import BRAND from '../../config/brand';
 import { Loader2, Send, CheckCircle2, Clock, FileText, PlayCircle, HelpCircle, ExternalLink } from 'lucide-react';
@@ -131,6 +133,9 @@ export const PortalProgress = () => {
       <PortalHeader title="Progress" sub="Weight trend plus how you've rated each week." />
       <div className="space-y-4">
         <WeighInPanel readOnly={src.readOnly} coachFetch={src.weighIns} />
+        <Card title="Progress photos" testId="photos-card">
+          <PhotosPanel readOnly={src.readOnly} fetchPhotos={src.coachView ? () => Coaches.coachPhotos(src.clientId) : undefined} />
+        </Card>
         <Card title="Weekly ratings" testId="ratings-chart">
           {list.length === 0 ? <p className="text-sm text-slate-500">Submit a weekly check-in to see your ratings here.</p> : (
             <div className="grid md:grid-cols-3 gap-6">

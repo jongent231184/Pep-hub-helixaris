@@ -68,6 +68,7 @@ async def _orders_for_coach(coach_id: str) -> list[dict]:
     coaching_selector = {
         '$or': [
             {'purpose': 'coaching'},
+            {'purpose': 'coaching_membership'},
             {'items.slug': 'coaching-plan'},
         ],
     }
@@ -86,7 +87,7 @@ async def _orders_for_coach(coach_id: str) -> list[dict]:
 
 
 def _looks_like_coaching_order(order: dict) -> bool:
-    if order.get('purpose') == 'coaching':
+    if order.get('purpose') in ('coaching', 'coaching_membership'):
         return True
     for item in order.get('items') or []:
         if item.get('slug') == 'coaching-plan':

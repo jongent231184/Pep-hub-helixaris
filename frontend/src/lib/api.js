@@ -214,6 +214,18 @@ export const Coaches = {
   postBroadcast: (data) => api.post('/coaching/coach/broadcasts', data).then(r => r.data),
   deleteBroadcast: (id) => api.delete(`/coaching/coach/broadcasts/${id}`).then(r => r.data),
   myBroadcasts: () => api.get('/coaching/my/broadcasts').then(r => r.data),
+  // Owner KPIs, photos, certificates
+  adminKpis: () => api.get('/coaching/admin/kpis').then(r => r.data),
+  myPhotos: () => api.get('/coaching/my/photos').then(r => r.data),
+  uploadMyPhoto: (file, caption = '', takenOn = '') => { const fd = new FormData(); fd.append('file', file); return api.post(`/coaching/my/photos?caption=${encodeURIComponent(caption)}&taken_on=${encodeURIComponent(takenOn)}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data); },
+  deleteMyPhoto: (id) => api.delete(`/coaching/my/photos/${id}`).then(r => r.data),
+  coachPhotos: (clientId) => api.get(`/coaching/coach/clients/${clientId}/photos`).then(r => r.data),
+  photoBlob: (id) => api.get(`/coaching/photos/${id}`, { responseType: 'blob' }).then(r => URL.createObjectURL(r.data)),
+  issueCertificate: (clientId, data) => api.post(`/coaching/coach/clients/${clientId}/certificate`, data).then(r => r.data),
+  coachCertificates: (clientId) => api.get(`/coaching/coach/clients/${clientId}/certificates`).then(r => r.data),
+  deleteCertificate: (id) => api.delete(`/coaching/coach/certificates/${id}`).then(r => r.data),
+  myCertificates: () => api.get('/coaching/my/certificates').then(r => r.data),
+  certificateBlob: (id) => api.get(`/coaching/certificates/${id}/pdf`, { responseType: 'blob' }).then(r => URL.createObjectURL(r.data)),
 };
 
 export const PayPal = {

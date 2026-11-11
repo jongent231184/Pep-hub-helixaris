@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
 import WeighInPanel from '../../components/WeighInPanel';
 import { MembershipPanel, CheckinsPanel } from '../../components/coaching/CoachMembershipPanels';
+import CertificatePanel from '../../components/coaching/CertificatePanel';
 
 const AREA_LABEL = { weightloss: 'Weight loss', peptide_info: 'Peptide Information', dosage_guide: 'Dosage Guide', how_to_guide: 'How-to Guide' };
 const DAY_CODES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -303,6 +304,7 @@ const CoachClientDetail = () => {
 
       <MembershipPanel clientId={client.id} />
       <CheckinsPanel clientId={client.id} />
+      <CertificatePanel clientId={client.id} />
 
       {/* No protocol yet — show create form */}
       {!proto && (

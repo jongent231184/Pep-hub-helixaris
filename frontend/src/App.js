@@ -49,6 +49,7 @@ import AdminCoachingRequests from './pages/admin/AdminCoachingRequests';
 import AdminCoaches from './pages/admin/AdminCoaches';
 import AdminCoachEarnings from './pages/admin/AdminCoachEarnings';
 import AdminCoachingPlans from './pages/admin/AdminCoachingPlans';
+import AdminCoachingKpis from './pages/admin/AdminCoachingKpis';
 import PortalLayout from './pages/portal/PortalLayout';
 import PortalDashboard from './pages/portal/PortalDashboard';
 import { PortalPlan, PortalCheckin, PortalProgress, PortalMessages, PortalResources } from './pages/portal/PortalSections';
@@ -120,6 +121,7 @@ function App() {
                 <Route path="coaches" element={<AdminCoaches />} />
                 <Route path="coach-earnings" element={<AdminCoachEarnings />} />
                 <Route path="coaching-plans" element={<AdminCoachingPlans />} />
+                <Route path="coaching-kpis" element={<AdminCoachingKpis />} />
                 <Route path="customers" element={<AdminCustomers />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>

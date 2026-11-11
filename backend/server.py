@@ -109,6 +109,8 @@ api_router.include_router(coa_router)
 api_router.include_router(coaching_router)
 from routes.coaching_plans_routes import router as coaching_plans_router  # noqa: E402
 api_router.include_router(coaching_plans_router)
+from routes.coaching_owner_routes import router as coaching_owner_router  # noqa: E402
+api_router.include_router(coaching_owner_router)
 api_router.include_router(admin_seed_router)
 api_router.include_router(admin_sales_router)
 api_router.include_router(coach_earnings_router)
