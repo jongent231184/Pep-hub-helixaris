@@ -17,7 +17,7 @@ export const PhotoCompare = ({ photos }) => {
   const days = Math.max(0, Math.round((new Date(latest.taken_on || latest.created_at) - new Date(first.taken_on || first.created_at)) / 86400000));
   const fmt = (p) => new Date(p.taken_on || p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   return (
-    <div data-testid="photo-compare">
+    <div data-testid="photo-compare" className="max-w-xl mx-auto">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         {[first, latest].map((p, i) => (
           <React.Fragment key={p.id}>

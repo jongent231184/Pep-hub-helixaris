@@ -1,0 +1,37 @@
+{
+  "summary": "Tested the certificate share image (1080x1080 PNG), the certificate email (send_email), photo compare on the portal, and regressions on the certificate PDF and photo upload/delete. Backend: 19/19 pytest passed (5 new + 14 regression). Share image: image_url is set; GET returns 200 image/png with PNG magic bytes and 1080x1080 size for member, coach and admin; other customer gets 404; unauthenticated gets 401/403. Email: an @example.com client gets email_error 'Invalid `to` field...' and no emailed_at. send_email defaults to true. A new real-domain client (certtest+<rand>@ghp-health.com) got emailed_at, and the backend log shows 'certificate email sent to ...'. Frontend: /portal/progress shows photo-compare with FIRST/LATEST labels and '72 days between photos · 2 photos in total'. With a mocked 1-photo list the compare block is absent. Dashboard certificate-image-<id> downloads certificate-<id8>.png; the blob request returns 200 image/png. Coach panel: cert-opt-send_email is ticked by default. Unticking it and generating returns no emailed_at/email_error. The toast says 'The client can now open it from their portal dashboard.' The row has no 'emailed' text, has a share-image button, and its download works. PDF open returns 200 application/pdf. Member photo upload and delete via the UI work.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/coaching/coach/clients/{cid}/certificate (_build_share_image)", "issue": "The review quote is silently dropped from the share PNG when photos and results are both included. After 2 photos (y=740) and the stats row (+150 -> 890), the check 'review and y < S-220 (860)' fails. Reproduced with include_photos + 2 photo_ids + review_text: the image has no quote and a large empty band above the footer. Fix: shrink photos (e.g. ph=260) or the stats row when review is present, or drop the stats row in favour of the review."},
+      {"endpoint": "email_service.send_certificate_email", "issue": "coach_note (and coach_name) are interpolated into the HTML email without html.escape, so a coach can inject markup. Escape the user text."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "CertificateList downloadImage/open", "issue": "No try/catch or error toast if the blob fetch fails, and the object URL is never revoked (minor leak).", "affected_selectors": ["certificate-image-<id>", "certificate-open-<id>"]}
+    ],
+    "design_issues": [
+      {"screen": "Portal > Progress > Progress photos (photo-compare)", "issues": ["The compare images are full column width at 3:4 (~540px tall each on desktop). They push the thumbnail grid and Add photo controls far below the fold. Consider max-w-sm per side or a fixed max height."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_cert_share_image_email.py", "/app/backend/tests/test_coaching_owner_kpis_photos_certs.py", "/app/test_reports/pytest/pytest_results_iter29.xml"],
+  "action_items": [
+    "Fix the share-image layout so the review quote still renders when photos + results + review are all selected",
+    "html.escape coach_note/coach_name in send_certificate_email",
+    "Optional: add error handling and URL.revokeObjectURL in CertificateList downloadImage/open",
+    "Optional: cap the photo-compare image size"
+  ],
+  "critical_code_review_comments": [
+    "_build_share_image: the review is skipped when y >= 860, which always happens with 2 photos and stats. The ph=300 'if review' sizing does not account for stats.",
+    "send_certificate_email: unescaped user input in HTML.",
+    "The send_email default of true means existing API callers that omit the flag (e.g. the older regression tests) now trigger real emails / email_error. Expected, but note it for scripts."
+  ],
+  "updated_files": ["/app/backend/tests/test_cert_share_image_email.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Temporary TEST_ certificates were deleted by id. A temporary coaching request/client (certtest+<rand>@ghp-health.com) was created and the client deleted (the request record may remain). One real certificate email was sent to certtest+<rand>@ghp-health.com via Resend. A UI-generated certificate and an uploaded photo were deleted. The member's 2 original photos and 2 original certificates were left untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest with -p no:xdist -o addopts=\"\" for the cert tests. The member's file upload input is hidden, so use wait_for_selector(state='attached'). Photo delete uses window.confirm, so accept the dialog. Coach certificate generate button: cert-generate-btn; PDF button: certificate-open-<id>. The coach client page shows no photo-compare (showCompare is only used in the portal PhotosPanel)."
+}
