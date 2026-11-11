@@ -555,6 +555,7 @@ class ProtocolItemIn(BaseModel):
     freq_days: Optional[list[str]] = None  # e.g. ["Mon","Wed","Fri"] — used to auto-generate calendar
     freq_time: Optional[str] = None  # "AM" | "PM" | "AM+PM"
     notes: str = ''
+    kind: str = 'peptide'  # "peptide" | "supplement"
 
 
 class ProtocolItemOut(ProtocolItemIn):

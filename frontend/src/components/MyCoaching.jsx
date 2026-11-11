@@ -24,7 +24,7 @@ const computeVials = (it, weeks) => {
   return { weekly_mg: +weekly_mg.toFixed(3), total_mg: +total_mg.toFixed(3), vials, vs };
 };
 
-const MyCoaching = ({ hideMessages = false, hideWeighIns = false, protoOverride, readOnly = false }) => {
+const MyCoaching = ({ hideMessages = false, hideWeighIns = false, protoOverride, readOnly = false, sections = { header: true, items: true, calendar: true }, itemKind = null }) => {
   const [proto, setProto] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
@@ -108,10 +108,12 @@ const MyCoaching = ({ hideMessages = false, hideWeighIns = false, protoOverride,
     return acc;
   }, {});
   const sortedDates = Object.keys(grouped).sort();
+  const visibleItems = (proto.items || []).filter(it => !itemKind || (it.kind || 'peptide') === itemKind);
 
   return (
     <div className="space-y-6" data-testid="my-coaching-section">
       {/* Protocol header */}
+      {sections.header && (
       <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
         <p className="text-[10px] uppercase tracking-widest text-emerald-700 font-bold">Your active protocol</p>
         <h3 className="text-xl font-black text-slate-900 mt-1">{proto.title}</h3>
@@ -125,27 +127,31 @@ const MyCoaching = ({ hideMessages = false, hideWeighIns = false, protoOverride,
           </div>
         )}
       </div>
+      )}
 
       {/* Items */}
-      {proto.items?.length > 0 && (
+      {sections.items && visibleItems.length > 0 && (
         <div className="bg-white border rounded-xl p-5">
           <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-            <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Package className="h-3.5 w-3.5" /> Your items</h4>
-            <AddAllButton items={proto.items} weeks={proto.duration_weeks} />
+            <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Package className="h-3.5 w-3.5" /> {itemKind === 'supplement' ? 'Your supplements' : itemKind === 'peptide' ? 'Your peptides' : 'Your items'}</h4>
+            <AddAllButton items={visibleItems} weeks={proto.duration_weeks} />
           </div>
           <div className="grid md:grid-cols-2 gap-3">
-            {proto.items.map(it => (
+            {visibleItems.map(it => (
               <ItemCard key={it.id} it={it} weeks={proto.duration_weeks} />
             ))}
           </div>
         </div>
+      )}
+      {sections.items && itemKind && visibleItems.length === 0 && (
+        <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center text-sm text-slate-500" data-testid={`no-${itemKind}-items`}>Your coach hasn't added any {itemKind === 'supplement' ? 'supplements' : 'peptides'} to your plan yet.</div>
       )}
 
       {/* Weigh-in tracker */}
       {!hideWeighIns && <WeighInPanel />}
 
       {/* Calendar */}
-      {sortedDates.length > 0 && (
+      {sections.calendar && sortedDates.length > 0 && (
         <div className="bg-white border rounded-xl p-5">
           <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold mb-3">Your dose calendar</h4>
           <div className="space-y-3">
@@ -174,6 +180,7 @@ const MyCoaching = ({ hideMessages = false, hideWeighIns = false, protoOverride,
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm ${e.done ? 'text-emerald-800' : 'text-slate-900'}`}>
                           <strong>{e.item_name}</strong>
+                          {e.kind === 'supplement' && <span className="ml-1.5 text-[9px] uppercase tracking-wider bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded align-middle">Supplement</span>}
                           {e.dose && <span className={e.done ? '' : 'text-slate-700'}> · {e.dose}</span>}
                           {e.time_of_day && <span className={e.done ? 'text-emerald-700' : 'text-slate-500'}> · {e.time_of_day}</span>}
                         </p>
@@ -223,6 +230,7 @@ export default MyCoaching;
 const AddAllButton = ({ items, weeks }) => {
   const { addItem } = useCart();
   const addable = items
+    .filter(it => (it.kind || 'peptide') !== 'supplement')
     .map(it => ({ it, calc: computeVials(it, weeks) }))
     .filter(({ it, calc }) => it.product_id && calc?.vials);
   const totalVials = addable.reduce((s, { calc }) => s + calc.vials, 0);
@@ -258,17 +266,19 @@ const AddAllButton = ({ items, weeks }) => {
 
 const ItemCard = ({ it, weeks }) => {
   const { addItem } = useCart();
-  const calc = computeVials(it, weeks);
-  const canAdd = it.product_id && calc?.vials;
+  const isSupp = (it.kind || 'peptide') === 'supplement';
+  const calc = isSupp ? null : computeVials(it, weeks);
+  const qty = isSupp ? 1 : calc?.vials;
+  const canAdd = it.product_id && qty;
 
   const add = () => {
     if (!canAdd) return;
     addItem(
-      { id: it.product_id, slug: it.product_slug, name: it.product_name || it.name, price: it.product_price, image: it.product_image, category: 'peptides' },
-      calc.vials,
+      { id: it.product_id, slug: it.product_slug, name: it.product_name || it.name, price: it.product_price, image: it.product_image, category: isSupp ? 'supplements' : 'peptides' },
+      qty,
       it.variant_label,
     );
-    toast(`Added ${calc.vials} × ${it.product_name || it.name}${it.variant_label ? ' · ' + it.variant_label : ''} to cart`);
+    toast(`Added ${qty} × ${it.product_name || it.name}${it.variant_label ? ' · ' + it.variant_label : ''} to cart`);
   };
 
   return (
@@ -276,6 +286,7 @@ const ItemCard = ({ it, weeks }) => {
       <div className="flex items-start gap-2 flex-wrap">
         <p className="font-bold text-slate-900">{it.product_name || it.name}</p>
         {it.variant_label && <span className="text-[10px] uppercase tracking-wider bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">{it.variant_label}</span>}
+        {isSupp && <span className="text-[10px] uppercase tracking-wider bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">Supplement</span>}
       </div>
       <p className="text-xs text-slate-500">
         {it.dose && <span><strong>{it.dose}</strong></span>}
@@ -300,8 +311,8 @@ const ItemCard = ({ it, weeks }) => {
           className="mt-1 self-start inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold px-3 py-2 rounded"
           data-testid={`add-to-cart-${it.id}`}
         >
-          <ShoppingCart className="h-4 w-4" /> Add {calc.vials} to cart
-          {it.product_price ? <span className="opacity-90 font-semibold"> · £{(calc.vials * Number(it.product_price)).toFixed(2)}</span> : null}
+          <ShoppingCart className="h-4 w-4" /> {isSupp ? 'Add to cart' : `Add ${qty} to cart`}
+          {it.product_price ? <span className="opacity-90 font-semibold"> · £{(qty * Number(it.product_price)).toFixed(2)}</span> : null}
         </button>
       ) : it.product_id ? (
         <Link

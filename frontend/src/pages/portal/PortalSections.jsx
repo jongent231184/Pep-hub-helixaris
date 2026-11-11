@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { PortalContext } from './PortalLayout';
 import { PortalHeader, Card, LockedModule } from './PortalDashboard';
 import MyCoaching from '../../components/MyCoaching';
@@ -10,27 +11,98 @@ import { toast } from 'sonner';
 import BRAND from '../../config/brand';
 import { Loader2, Send, CheckCircle2, Clock, FileText, PlayCircle, HelpCircle, ExternalLink } from 'lucide-react';
 
+const PLAN_TABS = [['overview', 'Overview'], ['supplements', 'Supplements'], ['peptides', 'Peptide plan'], ['checkin', 'Check-in']];
+
+const Progress = ({ pct }) => (
+  <div className="h-2 rounded-full bg-slate-200 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.max(0, pct))}%`, backgroundColor: BRAND.accent }} /></div>
+);
+
 export const PortalPlan = () => {
-  const { has, plans, membership, src } = useContext(PortalContext);
+  const { has, plans, membership, src, base } = useContext(PortalContext);
   const [proto, setProto] = useState(null);
-  useEffect(() => { src.protocol().then(setProto).catch(() => {}); }, [src]);
+  const [loaded, setLoaded] = useState(false);
+  const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'overview');
+  useEffect(() => { src.protocol().then(setProto).catch(() => {}).finally(() => setLoaded(true)); }, [src]);
+  const protoProps = { hideMessages: true, hideWeighIns: true, protoOverride: src.coachView ? (proto || { none: true }) : undefined, readOnly: src.readOnly };
+
+  const today = new Date().toISOString().slice(0, 10);
+  const cal = proto?.calendar || [];
+  const past = cal.filter(e => e.date <= today);
+  const adherence = past.length ? Math.round(100 * past.filter(e => e.done).length / past.length) : null;
+  const start = proto?.created_at ? new Date(proto.created_at) : null;
+  const weeksIn = start ? Math.min(proto.duration_weeks || 0, Math.max(0, Math.floor((Date.now() - start) / (7 * 86400000)) + 1)) : 0;
+  const peptides = (proto?.items || []).filter(i => (i.kind || 'peptide') !== 'supplement');
+  const supps = (proto?.items || []).filter(i => i.kind === 'supplement');
+  const todays = cal.filter(e => e.date === today);
+
   return (
     <div data-testid="portal-plan">
-      <PortalHeader title="My plan" sub="Your personalised protocol, dosing calendar and items." />
-      {has('supplements') && (
-        <Card title="Supplement plan" className="mb-6" testId="supplement-plan">
-          {proto?.supplement_plan ? <p className="text-sm text-slate-800 whitespace-pre-wrap">{proto.supplement_plan}</p> : <p className="text-sm text-slate-500">Your coach hasn't added a supplement plan yet.</p>}
-        </Card>
+      <PortalHeader title="My plan" sub="Your personalised protocol, supplements, dosing calendar and weekly check-in." />
+      <div className="flex gap-1 border-b border-slate-200 mb-6 overflow-x-auto" role="tablist" data-testid="plan-tabs">
+        {PLAN_TABS.map(([k, label]) => (
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`px-4 py-2.5 text-sm font-bold whitespace-nowrap border-b-2 -mb-px transition-colors ${tab === k ? 'border-[#0b1528] text-[#0b1528]' : 'border-transparent text-slate-500 hover:text-slate-800'}`} data-testid={`plan-tab-${k}`}>{label}</button>
+        ))}
+      </div>
+
+      {tab === 'overview' && (
+        <div className="space-y-4" data-testid="plan-overview">
+          {loaded && !proto ? <MyCoaching {...protoProps} sections={{ header: true }} /> : proto && (
+            <>
+              <Card testId="plan-overview-header">
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: BRAND.accent }}>Your active protocol</p>
+                    <h2 className="text-2xl font-black text-slate-900 mt-1">{proto.title}</h2>
+                    <p className="text-sm text-slate-600 mt-1">{proto.duration_weeks} weeks · {peptides.length} peptide{peptides.length === 1 ? '' : 's'} · {supps.length} supplement{supps.length === 1 ? '' : 's'}</p>
+                  </div>
+                  {proto.next_review_date && <div className="text-sm bg-slate-50 border rounded-lg px-3 py-2"><span className="text-slate-500">Next review</span><br /><strong>{new Date(proto.next_review_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</strong></div>}
+                </div>
+                <div className="mt-5 grid sm:grid-cols-2 gap-4">
+                  <div><div className="flex justify-between text-xs text-slate-600 mb-1"><span>Week {weeksIn} of {proto.duration_weeks}</span><span>{Math.round(100 * weeksIn / (proto.duration_weeks || 1))}%</span></div><Progress pct={100 * weeksIn / (proto.duration_weeks || 1)} /></div>
+                  <div><div className="flex justify-between text-xs text-slate-600 mb-1"><span>Doses ticked off to date</span><span>{adherence == null ? '—' : `${adherence}%`}</span></div><Progress pct={adherence || 0} /></div>
+                </div>
+              </Card>
+              <div className="grid lg:grid-cols-2 gap-4">
+                <Card title="Today" action={<button onClick={() => setTab('peptides')} className="text-sm font-bold text-slate-700 hover:underline">Open calendar →</button>} testId="plan-today">
+                  {todays.length === 0 ? <p className="text-sm text-slate-500">Nothing scheduled today.</p> : (
+                    <ul className="space-y-2">{todays.map(e => <li key={e.id} className="flex items-center gap-2 text-sm"><CheckCircle2 className={`h-4 w-4 ${e.done ? 'text-emerald-500' : 'text-slate-300'}`} /><span className={e.done ? 'line-through text-slate-400' : ''}><strong>{e.item_name}</strong>{e.dose && ` · ${e.dose}`}{e.time_of_day && ` · ${e.time_of_day}`}</span>{e.kind === 'supplement' && <span className="text-[9px] uppercase tracking-wider bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">Supp</span>}</li>)}</ul>
+                  )}
+                </Card>
+                <Card title="Coach notes" testId="plan-notes">
+                  {proto.notes ? <p className="text-sm text-slate-800 whitespace-pre-wrap">{proto.notes}</p> : <p className="text-sm text-slate-500">No notes yet.</p>}
+                  <Link to={`${base}/messages`} className="inline-block mt-3 text-sm font-bold text-slate-700 hover:underline">Message your coach →</Link>
+                </Card>
+              </div>
+            </>
+          )}
+        </div>
       )}
-      {!has('supplements') && <div className="mb-6"><LockedModule name="supplements" plans={plans} tier={membership.tier} /></div>}
-      <MyCoaching hideMessages hideWeighIns protoOverride={src.coachView ? (proto || { none: true }) : undefined} readOnly={src.readOnly} />
+
+      {tab === 'supplements' && (
+        <div className="space-y-4" data-testid="plan-supplements">
+          {!has('supplements') ? <LockedModule name="supplements" plans={plans} tier={membership.tier} /> : (
+            <>
+              {proto?.supplement_plan && <Card title="Coach's supplement guidance" testId="supplement-plan"><p className="text-sm text-slate-800 whitespace-pre-wrap">{proto.supplement_plan}</p></Card>}
+              <MyCoaching {...protoProps} sections={{ items: true }} itemKind="supplement" />
+            </>
+          )}
+        </div>
+      )}
+
+      {tab === 'peptides' && (
+        <div data-testid="plan-peptides">
+          <MyCoaching {...protoProps} sections={{ items: true, calendar: true }} itemKind="peptide" />
+        </div>
+      )}
+
+      {tab === 'checkin' && <div data-testid="plan-checkin"><PortalCheckin embedded /></div>}
     </div>
   );
 };
 
 const RATINGS = [['energy', 'Energy'], ['sleep', 'Sleep quality'], ['training', 'Training & recovery']];
 
-export const PortalCheckin = () => {
+export const PortalCheckin = ({ embedded = false }) => {
   const { has, plans, membership, src } = useContext(PortalContext);
   const [list, setList] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -62,7 +134,7 @@ export const PortalCheckin = () => {
 
   return (
     <div data-testid="portal-checkin">
-      <PortalHeader title="Weekly check-in" sub="Takes two minutes. Your coach reviews it and replies in the portal." />
+      {!embedded && <PortalHeader title="Weekly check-in" sub="Takes two minutes. Your coach reviews it and replies in the portal." />}
       <div className="grid lg:grid-cols-[1fr_1fr] gap-4">
         <Card title="This week" testId="checkin-form-card">
           {src.readOnly && <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 mb-3" data-testid="coach-readonly-note">Coach view — only the client can submit a check-in. Reply from their client page.</p>}

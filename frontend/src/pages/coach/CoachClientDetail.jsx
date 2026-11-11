@@ -39,7 +39,7 @@ const CoachClientDetail = () => {
   const [creatingProto, setCreatingProto] = useState(false);
   const [itemForm, setItemForm] = useState({
     product_id: null, variant_label: '', name: '', dose_amount: '', dose_unit: 'mg',
-    vial_strength_mg: '', freqDays: [], freqTime: '', notes: '',
+    vial_strength_mg: '', freqDays: [], freqTime: '', notes: '', kind: 'peptide',
   });
   // Selected product cached to render its variants dropdown
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -132,6 +132,7 @@ const CoachClientDetail = () => {
         dose_unit: itemForm.dose_unit,
         vial_strength_mg: itemForm.vial_strength_mg ? Number(itemForm.vial_strength_mg) : null,
         notes: itemForm.notes,
+        kind: itemForm.kind || 'peptide',
         frequency,
         freq_days: itemForm.freqDays,
         freq_time: itemForm.freqTime,
@@ -447,6 +448,12 @@ const CoachClientDetail = () => {
             {/* Add item form */}
             <div className="border rounded-lg p-4 bg-slate-50 mb-4">
               <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-2">Add an item</p>
+              <div className="flex gap-2 mb-3" data-testid="item-kind-toggle">
+                {[['peptide', 'Peptide'], ['supplement', 'Supplement']].map(([k, label]) => (
+                  <button key={k} type="button" onClick={() => setItemForm(f => ({ ...f, kind: k, dose_unit: k === 'supplement' ? 'caps' : 'mg' }))} className={`px-3 py-1.5 rounded-lg border text-sm font-bold ${(itemForm.kind || 'peptide') === k ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-300'}`} data-testid={`item-kind-${k}`}>{label}</button>
+                ))}
+                <span className="text-[11px] text-slate-500 self-center">Supplements show under their own tab and on the calendar.</span>
+              </div>
               {/* Product picker */}
               <div className="relative mb-3">
                 {itemForm.product_id ? (
@@ -522,6 +529,10 @@ const CoachClientDetail = () => {
                       <option value="mcg">mcg</option>
                       <option value="IU">IU</option>
                       <option value="clicks">clicks</option>
+                      <option value="caps">caps</option>
+                      <option value="tabs">tabs</option>
+                      <option value="ml">ml</option>
+                      <option value="g">g</option>
                     </select>
                   </div>
                 </div>
@@ -585,6 +596,7 @@ const CoachClientDetail = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-bold text-slate-900">{it.name}</p>
+                          {it.kind === 'supplement' && <span className="text-[10px] uppercase tracking-wider bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">Supplement</span>}
                           {it.variant_label && <span className="text-[10px] uppercase tracking-wider bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">{it.variant_label}</span>}
                           {it.product_id && <span className="text-[10px] uppercase tracking-wider bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded">Store product</span>}
                         </div>
