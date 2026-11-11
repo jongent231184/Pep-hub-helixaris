@@ -5,7 +5,8 @@ import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../hooks/use-toast';
 import TierCards from '../../components/coaching/TierCards';
-import { Loader2, Trash2, Plus } from 'lucide-react';
+import ResourcesManager from '../../components/coaching/ResourcesManager';
+import { Loader2 } from 'lucide-react';
 
 const MODULES = [
   ['plan', 'Protocol & calendar'], ['messages', 'Messaging'], ['checkin', 'Weekly check-in'],
@@ -16,12 +17,9 @@ const AdminCoachingPlans = () => {
   const { toast } = useToast();
   const [plans, setPlans] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [resources, setResources] = useState([]);
-  const [res, setRes] = useState({ title: '', kind: 'guide', url: '', body: '' });
 
   useEffect(() => {
     Coaches.plans().then(setPlans).catch(() => setPlans([]));
-    Coaches.adminResources().then(setResources).catch(() => {});
   }, []);
 
   const upd = (i, patch) => setPlans(ps => ps.map((p, j) => j === i ? { ...p, ...patch } : p));
@@ -36,12 +34,6 @@ const AdminCoachingPlans = () => {
     } finally { setSaving(false); }
   };
 
-  const addRes = async () => {
-    if (!res.title.trim()) return;
-    try { await Coaches.adminAddResource(res); setRes({ title: '', kind: 'guide', url: '', body: '' }); setResources(await Coaches.adminResources()); toast({ title: 'Resource added' }); }
-    catch (_) { toast({ title: 'Failed', variant: 'destructive' }); }
-  };
-  const delRes = async (id) => { await Coaches.adminDeleteResource(id); setResources(r => r.filter(x => x.id !== id)); };
 
   if (!plans) return <div className="grid place-items-center py-20"><Loader2 className="h-8 w-8 animate-spin text-sky-500" /></div>;
 
@@ -86,25 +78,7 @@ const AdminCoachingPlans = () => {
         <TierCards plans={plans.map(p => ({ ...p, features: (p.features || []).filter(Boolean) }))} />
       </div>
 
-      <div className="bg-white border rounded-xl p-5" data-testid="resources-admin">
-        <h2 className="text-lg font-black">Resources library <span className="text-sm font-semibold text-slate-500">(Gold portal)</span></h2>
-        <div className="grid md:grid-cols-[1fr_120px_1fr_auto] gap-2 mt-3">
-          <Input value={res.title} onChange={e => setRes(r => ({ ...r, title: e.target.value }))} placeholder="Title" data-testid="resource-title" />
-          <select value={res.kind} onChange={e => setRes(r => ({ ...r, kind: e.target.value }))} className="border rounded-md px-2 text-sm bg-white"><option value="guide">Guide</option><option value="video">Video</option><option value="faq">FAQ</option></select>
-          <Input value={res.url} onChange={e => setRes(r => ({ ...r, url: e.target.value }))} placeholder="Link (optional)" />
-          <Button onClick={addRes} className="bg-slate-900 text-white gap-1" data-testid="resource-add-btn"><Plus className="h-4 w-4" /> Add</Button>
-        </div>
-        <Textarea rows={2} value={res.body} onChange={e => setRes(r => ({ ...r, body: e.target.value }))} placeholder="Short description or the FAQ answer" className="mt-2" />
-        <ul className="mt-4 divide-y">
-          {resources.map(r => (
-            <li key={r.id} className="py-2 flex items-center justify-between gap-3 text-sm">
-              <span><span className="text-[10px] uppercase tracking-widest font-bold text-slate-500 mr-2">{r.kind}</span><strong>{r.title}</strong>{r.url && <span className="text-slate-500"> · {r.url}</span>}</span>
-              <button onClick={() => delRes(r.id)} className="text-red-600" data-testid={`resource-delete-${r.id}`}><Trash2 className="h-4 w-4" /></button>
-            </li>
-          ))}
-          {resources.length === 0 && <li className="py-2 text-sm text-slate-500">No resources yet.</li>}
-        </ul>
-      </div>
+      <ResourcesManager />
     </div>
   );
 };

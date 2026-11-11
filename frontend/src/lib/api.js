@@ -206,6 +206,9 @@ export const Coaches = {
   adminResources: () => api.get('/coaching/admin/resources').then(r => r.data),
   adminAddResource: (data) => api.post('/coaching/admin/resources', data).then(r => r.data),
   adminDeleteResource: (id) => api.delete(`/coaching/admin/resources/${id}`).then(r => r.data),
+  // Coach attention + view-as-client
+  attention: () => api.get('/coaching/coach/attention').then(r => r.data),
+  portalView: (clientId) => api.get(`/coaching/coach/clients/${clientId}/portal-view`).then(r => r.data),
 };
 
 export const PayPal = {

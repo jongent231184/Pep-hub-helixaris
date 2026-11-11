@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Coaches, Products, resolveImage } from '../../lib/api';
-import { Loader2, ArrowLeft, Plus, Trash2, Package, Search, Calendar as CalendarIcon, X, ShoppingCart } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Trash2, Package, Search, Calendar as CalendarIcon, X, ShoppingCart, Eye } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
@@ -205,9 +205,9 @@ const CoachClientDetail = () => {
   };
 
   const [editingProto, setEditingProto] = useState(false);
-  const [editForm, setEditForm] = useState({ title: '', duration_weeks: 8, notes: '', supplement_plan: '' });
+  const [editForm, setEditForm] = useState({ title: '', duration_weeks: 8, notes: '', supplement_plan: '', next_review_date: '' });
   const openEdit = () => {
-    setEditForm({ title: proto.title || '', duration_weeks: proto.duration_weeks || 8, notes: proto.notes || '', supplement_plan: proto.supplement_plan || '' });
+    setEditForm({ title: proto.title || '', duration_weeks: proto.duration_weeks || 8, notes: proto.notes || '', supplement_plan: proto.supplement_plan || '', next_review_date: proto.next_review_date || '' });
     setEditingProto(true);
   };
   const saveEdit = async () => {
@@ -219,7 +219,7 @@ const CoachClientDetail = () => {
       if (!proceed) return;
     }
     try {
-      await Coaches.updateProtocol(proto.id, { title: editForm.title.trim(), duration_weeks: weeks, notes: editForm.notes, supplement_plan: editForm.supplement_plan });
+      await Coaches.updateProtocol(proto.id, { title: editForm.title.trim(), duration_weeks: weeks, notes: editForm.notes, supplement_plan: editForm.supplement_plan, next_review_date: editForm.next_review_date || '' });
       toast({ title: 'Protocol updated' });
       setEditingProto(false);
       load();
@@ -291,7 +291,12 @@ const CoachClientDetail = () => {
 
       {/* Client header */}
       <div className="bg-white border rounded-xl p-6">
-        <h1 className="text-2xl font-black">{client.customer_name}</h1>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <h1 className="text-2xl font-black">{client.customer_name}</h1>
+          <Link to={`/coach/clients/${client.id}/portal`} className="inline-flex items-center gap-2 bg-[#0b1528] hover:bg-slate-800 text-white text-sm font-bold px-4 py-2 rounded-lg" data-testid="view-client-portal-btn">
+            <Eye className="h-4 w-4" /> View client's portal
+          </Link>
+        </div>
         <p className="text-sm text-slate-600 mt-1">{client.customer_email} · <strong>{AREA_LABEL[client.area] || client.area || '—'}</strong></p>
         <p className="text-xs text-slate-500 mt-1">Client since {new Date(client.started_at).toLocaleDateString('en-GB')}</p>
       </div>
@@ -370,6 +375,10 @@ const CoachClientDetail = () => {
                       placeholder="Supplement plan (Silver+ clients see this in their portal) — e.g. Vitamin D3 · morning · 4000iu"
                       data-testid="proto-edit-supplements"
                     />
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-slate-600 whitespace-nowrap">Next review date:</Label>
+                      <Input type="date" value={editForm.next_review_date} onChange={e => setEditForm(f => ({ ...f, next_review_date: e.target.value }))} className="w-44" data-testid="proto-edit-review-date" />
+                    </div>
                     <div className="flex items-center gap-2">
                       <Button onClick={saveEdit} className="bg-sky-500 hover:bg-sky-600 text-white gap-1" data-testid="proto-edit-save">Save</Button>
                       <Button onClick={() => setEditingProto(false)} variant="outline" data-testid="proto-edit-cancel">Cancel</Button>

@@ -1,13 +1,14 @@
 import React, { useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, ClipboardList, Users, LogOut, Loader2, ExternalLink, PoundSterling } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Users, LogOut, Loader2, ExternalLink, PoundSterling, BookOpen } from 'lucide-react';
 import BRAND from '../../config/brand';
 
 const NAV = [
   { to: '/coach', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/coach/requests', label: 'Requests', icon: ClipboardList },
   { to: '/coach/clients', label: 'Clients', icon: Users },
+  { to: '/coach/resources', label: 'Resources', icon: BookOpen },
   { to: '/coach/earnings', label: 'Earnings', icon: PoundSterling },
 ];
 

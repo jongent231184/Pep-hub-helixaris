@@ -60,6 +60,7 @@ import CoachRequests from './pages/coach/CoachRequests';
 import CoachClients from './pages/coach/CoachClients';
 import CoachClientDetail from './pages/coach/CoachClientDetail';
 import CoachEarnings from './pages/coach/CoachEarnings';
+import CoachResources from './pages/coach/CoachResources';
 
 import Coaching from './pages/Coaching';
 import Portal from './pages/Portal';
@@ -140,6 +141,15 @@ function App() {
                 <Route path="messages" element={<PortalMessages />} />
                 <Route path="resources" element={<PortalResources />} />
               </Route>
+              {/* Coach: view a client's portal as they see it */}
+              <Route path="/coach/clients/:clientId/portal" element={<PortalLayout />}>
+                <Route index element={<PortalDashboard />} />
+                <Route path="plan" element={<PortalPlan />} />
+                <Route path="check-in" element={<PortalCheckin />} />
+                <Route path="progress" element={<PortalProgress />} />
+                <Route path="messages" element={<PortalMessages />} />
+                <Route path="resources" element={<PortalResources />} />
+              </Route>
 
               {/* Coach portal */}
               <Route path="/coach" element={<CoachLayout />}>
@@ -148,6 +158,7 @@ function App() {
                 <Route path="clients" element={<CoachClients />} />
                 <Route path="clients/:clientId" element={<CoachClientDetail />} />
                 <Route path="earnings" element={<CoachEarnings />} />
+                <Route path="resources" element={<CoachResources />} />
               </Route>
 
               {/* Storefront */}

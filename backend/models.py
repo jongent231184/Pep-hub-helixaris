@@ -587,6 +587,7 @@ class ProtocolUpdate(BaseModel):
     duration_weeks: Optional[int] = None
     notes: Optional[str] = None
     supplement_plan: Optional[str] = None
+    next_review_date: Optional[str] = None  # ISO date shown on client dashboard
     active: Optional[bool] = None
 
 

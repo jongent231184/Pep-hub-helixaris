@@ -24,21 +24,27 @@ const computeVials = (it, weeks) => {
   return { weekly_mg: +weekly_mg.toFixed(3), total_mg: +total_mg.toFixed(3), vials, vs };
 };
 
-const MyCoaching = ({ hideMessages = false, hideWeighIns = false }) => {
+const MyCoaching = ({ hideMessages = false, hideWeighIns = false, protoOverride, readOnly = false }) => {
   const [proto, setProto] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
 
   const load = () => {
+    if (protoOverride !== undefined) {
+      setProto(protoOverride?.none ? null : protoOverride);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     Coaches.myProtocol()
       .then(setProto)
       .catch(() => setProto(null))
       .finally(() => setLoading(false));
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [protoOverride]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = async (entry, done) => {
+    if (readOnly) return;
     setSaving(entry.id);
     try {
       await Coaches.toggleEntry(entry.id, done);
@@ -50,7 +56,7 @@ const MyCoaching = ({ hideMessages = false, hideWeighIns = false }) => {
 
   const [msgs, setMsgs] = useState([]);
   const [msgDraft, setMsgDraft] = useState('');
-  useEffect(() => { Coaches.myMessages().then(setMsgs).catch(() => {}); }, [proto?.id]);
+  useEffect(() => { if (!hideMessages) Coaches.myMessages().then(setMsgs).catch(() => {}); }, [proto?.id, hideMessages]);
   const sendMsg = async () => {
     if (!msgDraft.trim()) return;
     try {
@@ -68,16 +74,18 @@ const MyCoaching = ({ hideMessages = false, hideWeighIns = false }) => {
     return (
       <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
         <HeartPulse className="h-8 w-8 mx-auto text-slate-300 mb-3" />
-        <p className="text-slate-600 font-semibold">No active coaching protocol.</p>
+        <p className="text-slate-600 font-semibold">{readOnly ? 'No active protocol for this client yet.' : 'No active coaching protocol.'}</p>
+        {!readOnly && (
         <p className="text-sm text-slate-500 mt-1">
           Interested? <Link to="/coaching" className="text-sky-600 hover:underline font-semibold">Request coaching</Link>
         </p>
+        )}
       </div>
     );
   }
 
-  // Payment gate — hide plan details until paid
-  if (!proto.paid) {
+  // Payment gate — hide plan details until paid (legacy per-protocol paylinks only)
+  if (!proto.paid && proto.payment_order_id && !readOnly) {
     const payUrl = proto.payment_order_id ? `/paylink/${proto.payment_order_id}` : null;
     return (
       <div className="border border-amber-200 bg-amber-50 rounded-xl p-6">

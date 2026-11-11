@@ -396,6 +396,54 @@ async def admin_delete_resource(res_id: str, _=Depends(require_coach)):
     return {'ok': True}
 
 
+# ---------- coach: attention feed + view-as-client ----------
+@router.get('/coach/attention')
+async def coach_attention(user: dict = Depends(require_coach)):
+    clients = await db.coaching_clients.find({'coach_id': user['id'], 'active': True}).to_list(500)
+    by_id = {c['id']: c for c in clients}
+    now = datetime.utcnow()
+    pending = await db.coaching_checkins.find({'coach_id': user['id'], 'reviewed': False}).sort('created_at', -1).to_list(100)
+    pending_checkins = [{'id': c['id'], 'client_id': c['client_id'], 'customer_name': by_id.get(c['client_id'], {}).get('customer_name', ''),
+                         'week_ending': c['week_ending'], 'created_at': c['created_at']} for c in pending if c['client_id'] in by_id]
+    unanswered = []
+    for c in clients:
+        last = await db.coach_messages.find_one({'client_id': c['id']}, sort=[('created_at', -1)])
+        if last and last.get('from_role') == 'client':
+            unanswered.append({'client_id': c['id'], 'customer_name': c.get('customer_name', ''), 'body': last.get('body', '')[:140], 'created_at': last['created_at']})
+    expiring, lapsed, unpaid = [], [], []
+    for c in clients:
+        state = await membership_state(c)
+        row = {'client_id': c['id'], 'customer_name': c.get('customer_name', ''), 'tier': state['tier'],
+               'paid_until': state['paid_until'], 'days_left': state['days_left'], 'pending_order': state['pending_order']}
+        if state['paid_until'] and not state['active']:
+            lapsed.append(row)
+        elif state['active'] and state['days_left'] <= 5:
+            expiring.append(row)
+        if state['pending_order'] and not state['paid_until']:
+            unpaid.append(row)
+    return {'pending_checkins': pending_checkins, 'unanswered_messages': unanswered,
+            'expiring': expiring, 'lapsed': lapsed, 'unpaid_first_month': unpaid, 'as_of': now}
+
+
+@router.get('/coach/clients/{client_id}/portal-view')
+async def coach_portal_view(client_id: str, user: dict = Depends(require_coach)):
+    """Everything the client's portal shows, so the coach can view it as them."""
+    from routes.coaching_routes import _hydrate_protocol, _sync_protocol_payment
+    client = await _get_coach_client(client_id, user['id'])
+    state = await membership_state(client)
+    proto = await db.protocols.find_one({'client_id': client_id, 'active': True})
+    if proto:
+        proto = await _hydrate_protocol(await _sync_protocol_payment(proto))
+    checkins = await db.coaching_checkins.find({'client_id': client_id}).sort('week_ending', -1).to_list(200)
+    messages = await db.coach_messages.find({'client_id': client_id}).sort('created_at', 1).to_list(500)
+    resources = await db.coaching_resources.find().sort('created_at', -1).to_list(200)
+    state['coach_name'] = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or 'Your coach'
+    state['client_name'] = client.get('customer_name', '')
+    return {'client': doc_to_dict(client), 'membership': state, 'protocol': proto,
+            'checkins': [doc_to_dict(c) for c in checkins], 'messages': [doc_to_dict(m) for m in messages],
+            'resources': [doc_to_dict(r) for r in resources]}
+
+
 # ---------- renewal cron ----------
 async def run_renewals(run_id: str) -> dict:
     """Memberships expiring within 3 days (or lapsed < 14 days) without a pending

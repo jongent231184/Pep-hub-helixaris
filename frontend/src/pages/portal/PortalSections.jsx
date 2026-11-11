@@ -4,15 +4,14 @@ import { PortalHeader, Card, LockedModule } from './PortalDashboard';
 import MyCoaching from '../../components/MyCoaching';
 import CoachMessages from '../../components/coaching/CoachMessages';
 import WeighInPanel from '../../components/WeighInPanel';
-import { Coaches } from '../../lib/api';
 import { toast } from 'sonner';
 import BRAND from '../../config/brand';
 import { Loader2, Send, CheckCircle2, Clock, FileText, PlayCircle, HelpCircle, ExternalLink } from 'lucide-react';
 
 export const PortalPlan = () => {
-  const { has, plans, membership } = useContext(PortalContext);
+  const { has, plans, membership, src } = useContext(PortalContext);
   const [proto, setProto] = useState(null);
-  useEffect(() => { Coaches.myProtocol().then(setProto).catch(() => {}); }, []);
+  useEffect(() => { src.protocol().then(setProto).catch(() => {}); }, [src]);
   return (
     <div data-testid="portal-plan">
       <PortalHeader title="My plan" sub="Your personalised protocol, dosing calendar and items." />
@@ -22,7 +21,7 @@ export const PortalPlan = () => {
         </Card>
       )}
       {!has('supplements') && <div className="mb-6"><LockedModule name="supplements" plans={plans} tier={membership.tier} /></div>}
-      <MyCoaching hideMessages hideWeighIns />
+      <MyCoaching hideMessages hideWeighIns protoOverride={src.coachView ? (proto || { none: true }) : undefined} readOnly={src.readOnly} />
     </div>
   );
 };
@@ -30,20 +29,20 @@ export const PortalPlan = () => {
 const RATINGS = [['energy', 'Energy'], ['sleep', 'Sleep quality'], ['training', 'Training & recovery']];
 
 export const PortalCheckin = () => {
-  const { has, plans, membership } = useContext(PortalContext);
+  const { has, plans, membership, src } = useContext(PortalContext);
   const [list, setList] = useState([]);
   const [busy, setBusy] = useState(false);
   const sunday = (() => { const d = new Date(); d.setDate(d.getDate() + ((7 - d.getDay()) % 7)); return d.toISOString().slice(0, 10); })();
   const [form, setForm] = useState({ week_ending: sunday, weight_kg: '', energy: '', sleep: '', training: '', notes: '', questions: '' });
-  const load = () => Coaches.myCheckins().then(setList).catch(() => {});
-  useEffect(() => { if (has('checkin')) load(); }, [has]);
+  const load = () => src.checkins().then(setList).catch(() => {});
+  useEffect(() => { if (has('checkin')) load(); }, [has, src]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!has('checkin')) return <><PortalHeader title="Weekly check-in" /><LockedModule name="checkin" plans={plans} tier={membership.tier} /></>;
 
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
     try {
-      await Coaches.submitCheckin({
+      await src.submitCheckin({
         week_ending: form.week_ending,
         weight_kg: form.weight_kg ? Number(form.weight_kg) : null,
         energy: form.energy ? Number(form.energy) : null,
@@ -64,7 +63,8 @@ export const PortalCheckin = () => {
       <PortalHeader title="Weekly check-in" sub="Takes two minutes. Your coach reviews it and replies in the portal." />
       <div className="grid lg:grid-cols-[1fr_1fr] gap-4">
         <Card title="This week" testId="checkin-form-card">
-          <form onSubmit={submit} className="space-y-4">
+          {src.readOnly && <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 mb-3" data-testid="coach-readonly-note">Coach view — only the client can submit a check-in. Reply from their client page.</p>}
+          <form onSubmit={submit} className={`space-y-4 ${src.readOnly ? 'opacity-50 pointer-events-none' : ''}`}>
             <label className="block text-sm"><span className="font-semibold text-slate-700">Week ending</span>
               <input type="date" value={form.week_ending} onChange={e => setForm(f => ({ ...f, week_ending: e.target.value }))} className="mt-1 w-full border rounded-lg px-3 py-2" data-testid="checkin-week" required /></label>
             <label className="block text-sm"><span className="font-semibold text-slate-700">Weight <span className="text-slate-400 font-normal">(optional, kg)</span></span>
@@ -122,15 +122,15 @@ const Bars = ({ data, k, label, color }) => (
 );
 
 export const PortalProgress = () => {
-  const { has, plans, membership } = useContext(PortalContext);
+  const { has, plans, membership, src } = useContext(PortalContext);
   const [list, setList] = useState([]);
-  useEffect(() => { if (has('checkin')) Coaches.myCheckins().then(l => setList([...l].reverse().slice(-12))).catch(() => {}); }, [has]);
+  useEffect(() => { if (has('checkin')) src.checkins().then(l => setList([...l].reverse().slice(-12))).catch(() => {}); }, [has, src]);
   if (!has('progress')) return <><PortalHeader title="Progress" /><LockedModule name="progress" plans={plans} tier={membership.tier} /></>;
   return (
     <div data-testid="portal-progress">
       <PortalHeader title="Progress" sub="Weight trend plus how you've rated each week." />
       <div className="space-y-4">
-        <WeighInPanel />
+        <WeighInPanel readOnly={src.readOnly} coachFetch={src.weighIns} />
         <Card title="Weekly ratings" testId="ratings-chart">
           {list.length === 0 ? <p className="text-sm text-slate-500">Submit a weekly check-in to see your ratings here.</p> : (
             <div className="grid md:grid-cols-3 gap-6">
@@ -146,11 +146,11 @@ export const PortalProgress = () => {
 };
 
 export const PortalMessages = () => {
-  const { membership } = useContext(PortalContext);
+  const { membership, src } = useContext(PortalContext);
   return (
     <div data-testid="portal-messages">
-      <PortalHeader title="Messages" sub={`Direct line to ${membership.coach_name}.`} />
-      <Card><CoachMessages /></Card>
+      <PortalHeader title="Messages" sub={src.coachView ? `Replying as coach to ${membership.client_name}.` : `Direct line to ${membership.coach_name}.`} />
+      <Card><CoachMessages src={src} /></Card>
     </div>
   );
 };
@@ -158,9 +158,9 @@ export const PortalMessages = () => {
 const KIND_ICON = { guide: FileText, video: PlayCircle, faq: HelpCircle };
 
 export const PortalResources = () => {
-  const { has, plans, membership } = useContext(PortalContext);
+  const { has, plans, membership, src } = useContext(PortalContext);
   const [list, setList] = useState([]);
-  useEffect(() => { if (has('resources')) Coaches.myResources().then(setList).catch(() => {}); }, [has]);
+  useEffect(() => { if (has('resources')) src.resources().then(setList).catch(() => {}); }, [has, src]);
   if (!has('resources')) return <><PortalHeader title="Resources" /><LockedModule name="resources" plans={plans} tier={membership.tier} /></>;
   return (
     <div data-testid="portal-resources">
