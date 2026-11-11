@@ -1,0 +1,39 @@
+{
+  "summary": "Coach-side tools tested end-to-end. Backend: new pytest suite (9/9 pass) covering /coach/attention (all 5 keys; unanswered message appears then clears after coach reply; pending check-in appears then clears after PATCH coach_reply; paid_until +2d -> expiring with days_left=2; past -> lapsed and not expiring), /coach/clients/{cid}/portal-view (bundle keys, client_name/coach_name, protocol null then hydrated, 404 unknown id, 403 customer), PUT /coach/protocols/{id} next_review_date + supplement_plan persisted. Regression test_coaching_tiers_membership.py 18/18 pass. Frontend: /coach attention-panel renders rows (message row -> /coach/clients/:id/portal/messages, works on click); coach-nav-resources -> /coach/resources add+delete works; view-client-portal-btn -> coach view portal with banner, title \"<client>'s portal\", sidebar name+tier, all nav/tile links under /coach/clients/:id/portal; My Plan read-only (clicking calendar entry made no mutating request, no state change); Check-in shows coach-readonly-note with form pointer-events none; Progress has no add form; Messages coach send -> right-aligned, client sees it via /my/messages and in their /portal as left-aligned; gold Resources lists resource, silver shows locked-resources; portal-back-link -> client page; lapsed client renders (no portal-locked) with '(currently locked for them)' banner; unknown client shows 'Client not found'. Protocol edit (proto-edit-review-date + proto-edit-notes + proto-edit-save) -> client /portal shows next-review-date and coach-notes. Member regression OK (links /portal/*, check-in submit, messaging, resources, calendar toggle). Admin /admin/coaching-plans save-plans-btn -> 'Plans saved', resources-admin present.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/coaching/coach/attention", "issue": "N+1 queries: per-client find_one on coach_messages + membership_state (which also runs order queries) for every active client. Fine at 34 clients, will slow with growth; consider aggregation."},
+      {"endpoint": "DELETE /api/coaching/admin/resources/{id}", "issue": "Any coach can delete any resource in the shared library (require_coach). Acceptable if intended, but there is no per-coach ownership."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PortalLayout/PortalDashboard coach view of lapsed client", "issue": "Tiles show 'Upgrade to unlock' and LockedModule says 'Not included in your gold plan' for a lapsed GOLD client - misleading; reason is lapse, not tier.", "selector": "[data-testid^=dash-tile-], [data-testid^=locked-]", "priority": "LOW"},
+      {"component": "MyCoaching calendar (readOnly)", "issue": "In coach read-only view entries still show hover styling and title 'Click to mark as done' - looks clickable but does nothing.", "selector": "[data-testid^=cal-entry-]", "priority": "LOW"},
+      {"component": "PortalCheckin (coach view)", "issue": "Form is only visually disabled via pointer-events:none; inputs/submit are not disabled (keyboard Tab+Enter still possible -> generic 'Could not submit check-in' toast).", "selector": "[data-testid=checkin-submit]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Coach view dashboard", "issues": ["dash-pay-renewal 'Pay next month' button is shown to the coach in view-as-client mode; consider hiding in coachView.", "'Client not found' page for unknown id is unstyled plain text."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_coach_attention_portal_view.py", "/app/backend/tests/setup_coach_view_members.py", "/app/test_reports/pytest/pytest_coach_tools.xml"],
+  "action_items": [
+    "Optional: in coach view, distinguish lapsed vs tier-locked messaging on tiles/LockedModule",
+    "Optional: when readOnly, remove hover/title on calendar entries and set disabled on check-in inputs/submit",
+    "Optional: hide dash-pay-renewal in coach view"
+  ],
+  "critical_code_review_comments": [
+    "coach_attention is O(clients) with multiple awaits per client; also calls membership_state which applies payments (write side-effect) on a GET feed.",
+    "portal-view does not include weigh-ins; Progress uses separate coachWeighIns call - fine, but bundle protocol/checkins are static until reload (coach sees stale check-ins after replying elsewhere).",
+    "CoachClientDetail.jsx is 727 lines - exceeds 700-line guideline; split into subcomponents.",
+    "PortalLayout `has` is recreated every render and is a useEffect dependency in sections; works now but can cause repeat fetches if layout re-renders."
+  ],
+  "updated_files": ["/app/backend/tests/test_coach_attention_portal_view.py", "/app/backend/tests/setup_coach_view_members.py"],
+  "success_rate": {"backend": "100% (9/9 new + 18/18 regression)", "frontend": "100% of requested flows; 3 low-priority UX issues"},
+  "seed_data_creation": "Created TEST_attn_*, TEST_cv_gold_*, TEST_cv_lapsed_* clients, a TEST_ protocol and TEST_ resources; all deleted by id afterwards (clients via DELETE /coach/clients/{id}, resources via DELETE). Registered TEST_ user accounts remain (no delete endpoint used). Did not click pay buttons or touch payments_paused. Silver client 11af09ec only viewed (no changes).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run backend/tests/setup_coach_view_members.py to recreate gold+lapsed coach-view members (writes /tmp/coach_view_members.json with coach_token). Coach view route /coach/clients/:id/portal/*; calendar entries testid cal-entry-*, edit protocol via proto-edit-btn / proto-edit-save. Resources list loads async - wait for selector before counting."
+}
