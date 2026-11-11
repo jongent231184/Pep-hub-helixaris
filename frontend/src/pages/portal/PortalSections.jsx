@@ -134,7 +134,7 @@ export const PortalProgress = () => {
       <div className="space-y-4">
         <WeighInPanel readOnly={src.readOnly} coachFetch={src.weighIns} />
         <Card title="Progress photos" testId="photos-card">
-          <PhotosPanel readOnly={src.readOnly} fetchPhotos={src.coachView ? () => Coaches.coachPhotos(src.clientId) : undefined} />
+          <PhotosPanel readOnly={src.readOnly} showCompare fetchPhotos={src.coachView ? () => Coaches.coachPhotos(src.clientId) : undefined} />
         </Card>
         <Card title="Weekly ratings" testId="ratings-chart">
           {list.length === 0 ? <p className="text-sm text-slate-500">Submit a weekly check-in to see your ratings here.</p> : (

@@ -14,11 +14,12 @@ const OPTS = [
   ['include_photos', 'Before / after photos (pick up to 3 below)'],
   ['include_review', 'Review quote (written by you on their behalf)'],
   ['include_coach_note', "Coach's closing note"],
+  ['send_email', 'Email the certificate PDF to the client now (with your note)'],
 ];
 
 const CertificatePanel = ({ clientId }) => {
   const { toast } = useToast();
-  const [form, setForm] = useState({ headline: 'Certificate of Completion', include_identity: true, anonymise: false, include_results: true, include_photos: false, include_review: true, include_coach_note: true, review_text: '', coach_note: '' });
+  const [form, setForm] = useState({ headline: 'Certificate of Completion', include_identity: true, anonymise: false, include_results: true, include_photos: false, include_review: true, include_coach_note: true, send_email: true, review_text: '', coach_note: '' });
   const [photoIds, setPhotoIds] = useState([]);
   const [busy, setBusy] = useState(false);
   const [refresh, setRefresh] = useState(0);
@@ -29,7 +30,7 @@ const CertificatePanel = ({ clientId }) => {
     setBusy(true);
     try {
       const c = await Coaches.issueCertificate(clientId, { ...form, photo_ids: photoIds.slice(0, 3) });
-      toast({ title: 'Certificate generated', description: 'The client can now open it from their portal dashboard.' });
+      toast({ title: 'Certificate generated', description: c.emailed_at ? 'Emailed to the client with the PDF attached. Also on their portal dashboard.' : c.email_error ? `Saved to portal, but email failed: ${c.email_error}` : 'The client can now open it from their portal dashboard.' });
       setRefresh(r => r + 1);
       const url = await Coaches.certificateBlob(c.id); window.open(url, '_blank');
     } catch (e) { toast({ title: 'Could not generate', description: String(e.response?.data?.detail || e.message), variant: 'destructive' }); }

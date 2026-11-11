@@ -226,6 +226,7 @@ export const Coaches = {
   deleteCertificate: (id) => api.delete(`/coaching/coach/certificates/${id}`).then(r => r.data),
   myCertificates: () => api.get('/coaching/my/certificates').then(r => r.data),
   certificateBlob: (id) => api.get(`/coaching/certificates/${id}/pdf`, { responseType: 'blob' }).then(r => URL.createObjectURL(r.data)),
+  certificateImageBlob: (id) => api.get(`/coaching/certificates/${id}/image`, { responseType: 'blob' }).then(r => URL.createObjectURL(r.data)),
 };
 
 export const PayPal = {

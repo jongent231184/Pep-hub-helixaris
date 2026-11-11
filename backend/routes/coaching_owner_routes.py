@@ -195,12 +195,15 @@ class CertificateIn(BaseModel):
     include_coach_note: bool = True
     coach_note: str = ''
     headline: str = 'Certificate of Completion'
+    send_email: bool = True
 
 
 def _cert_out(c: dict) -> dict:
     d = doc_to_dict(c)
     d.pop('storage_path', None)
+    d.pop('image_path', None)
     d['pdf_url'] = f"/api/coaching/certificates/{c['id']}/pdf"
+    d['image_url'] = f"/api/coaching/certificates/{c['id']}/image" if c.get('image_path') else None
     return d
 
 
@@ -297,6 +300,80 @@ def _build_pdf(brand: str, accent_hex: str, name: str, plan_name: str, proto: Op
     return buf.getvalue()
 
 
+def _build_share_image(brand: str, name: str, plan_name: str, results: Optional[dict], photos: list[tuple[bytes, str]],
+                       review: str, coach_name: str, headline: str) -> bytes:
+    """1080x1080 PNG for Instagram / group chats."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    S = 1080
+    img = Image.new('RGB', (S, S), '#0b1528')
+    d = ImageDraw.Draw(img)
+    F = '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'
+    FR = '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf'
+    FI = '/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf'
+    font = lambda p, s: ImageFont.truetype(p, s)  # noqa: E731
+    accent = '#c8a24a'
+    d.rounded_rectangle((40, 40, S - 40, S - 40), radius=36, outline=accent, width=6)
+    d.text((S / 2, 110), f'{brand.upper()}  ·  COACHING', fill=accent, font=font(F, 26), anchor='mm')
+    d.text((S / 2, 180), headline.upper(), fill='white', font=font(F, 54), anchor='mm')
+    d.text((S / 2, 250), name, fill=accent, font=font(F, 64), anchor='mm')
+    d.text((S / 2, 310), f'completed the {plan_name} plan', fill='#cbd5e1', font=font(FR, 30), anchor='mm')
+    y = 370
+    if photos:
+        pw, ph = 300, (300 if review else 380)
+        n = min(len(photos), 2)
+        total = n * pw + (n - 1) * 30
+        x = (S - total) // 2
+        for data, _ in photos[:2]:
+            try:
+                p = Image.open(io.BytesIO(data)).convert('RGB')
+                p.thumbnail((pw, ph))
+                canvas_p = Image.new('RGB', (pw, ph), '#13223d')
+                canvas_p.paste(p, ((pw - p.width) // 2, (ph - p.height) // 2))
+                img.paste(canvas_p, (x, y))
+            except Exception as e:
+                logger.warning(f'share image photo skipped: {e}')
+            x += pw + 30
+        if n == 2:
+            d.text((S / 2 - 165 - 0, y + ph + 28), 'BEFORE', fill='#94a3b8', font=font(F, 22), anchor='mm')
+            d.text((S / 2 + 165, y + ph + 28), 'AFTER', fill='#94a3b8', font=font(F, 22), anchor='mm')
+        y += ph + 70
+    if results:
+        stats = []
+        if results.get('weight_change_kg') is not None:
+            stats.append((f"{results['weight_change_kg']:+.1f} kg", 'weight change'))
+        if results.get('checkins'):
+            stats.append((str(results['checkins']), 'check-ins'))
+        if results.get('doses_total'):
+            stats.append((f"{round(100 * results['doses_done'] / results['doses_total'])}%", 'doses done'))
+        if stats:
+            bw = 260; gap = 30; total = len(stats) * bw + (len(stats) - 1) * gap
+            x = (S - total) // 2
+            for big, small in stats:
+                d.rounded_rectangle((x, y, x + bw, y + 120), radius=20, fill='#13223d')
+                d.text((x + bw / 2, y + 48), big, fill='white', font=font(F, 44), anchor='mm')
+                d.text((x + bw / 2, y + 92), small, fill='#94a3b8', font=font(FR, 22), anchor='mm')
+                x += bw + gap
+            y += 150
+    if review and y < S - 220:
+        words = review.split(); lines = []; cur = ''
+        for w in words:
+            t = (cur + ' ' + w).strip()
+            if d.textlength(t, font=font(FI, 28)) > S - 200:
+                lines.append(cur); cur = w
+            else:
+                cur = t
+        if cur:
+            lines.append(cur)
+        for ln in lines[:4]:
+            d.text((S / 2, y), ('“' if ln == lines[0] else '') + ln + ('”' if ln == lines[min(3, len(lines) - 1)] else ''), fill='#e2e8f0', font=font(FI, 28), anchor='mm')
+            y += 38
+    d.text((S / 2, S - 95), f'Coach {coach_name}', fill='white', font=font(F, 26), anchor='mm')
+    d.text((S / 2, S - 62), 'peer-education programme · not medical advice', fill='#64748b', font=font(FR, 18), anchor='mm')
+    out = io.BytesIO(); img.save(out, 'PNG', optimize=True)
+    return out.getvalue()
+
+
 @router.post('/coach/clients/{client_id}/certificate')
 async def coach_issue_certificate(client_id: str, payload: CertificateIn, user: dict = Depends(require_coach)):
     client = await _get_coach_client(client_id, user['id'])
@@ -325,14 +402,28 @@ async def coach_issue_certificate(client_id: str, payload: CertificateIn, user: 
                      payload.coach_note.strip() if payload.include_coach_note else '', coach_name, payload.headline.strip() or 'Certificate of Completion')
     cid = str(uuid.uuid4())
     path = f"{APP_NAME}/coaching-certificates/{client_id}/{cid}.pdf"
+    img_path = f"{APP_NAME}/coaching-certificates/{client_id}/{cid}.png"
     try:
         put_object(path, pdf, 'application/pdf')
+        png = _build_share_image(brand, name, (plan or {}).get('name', 'Coaching'), results, photos,
+                                 payload.review_text.strip() if payload.include_review else '', coach_name,
+                                 payload.headline.strip() or 'Certificate of Completion')
+        put_object(img_path, png, 'image/png')
     except Exception as e:
         raise HTTPException(500, f'Storage upload failed: {e}')
-    doc = {'id': cid, 'client_id': client_id, 'coach_id': user['id'], 'storage_path': path, 'options': payload.model_dump(),
+    doc = {'id': cid, 'client_id': client_id, 'coach_id': user['id'], 'storage_path': path, 'image_path': img_path, 'options': payload.model_dump(),
            'name_shown': name, 'plan_name': (plan or {}).get('name'), 'tier': state['tier'], 'results': results,
            'created_at': datetime.utcnow()}
     await db.coaching_certificates.insert_one(dict(doc))
+    if payload.send_email and client.get('customer_email'):
+        try:
+            from email_service import send_certificate_email
+            await send_certificate_email(client, doc, pdf, payload.coach_note.strip(), coach_name)
+            await db.coaching_certificates.update_one({'id': cid}, {'$set': {'emailed_at': datetime.utcnow()}})
+            doc['emailed_at'] = datetime.utcnow()
+        except Exception as e:
+            logger.error(f'certificate email failed: {e}')
+            doc['email_error'] = str(e)[:200]
     return _cert_out(doc)
 
 
@@ -358,6 +449,18 @@ async def my_certificates(user: dict = Depends(get_current_user)):
         return []
     docs = await db.coaching_certificates.find({'client_id': client['id']}).sort('created_at', -1).to_list(50)
     return [_cert_out(c) for c in docs]
+
+
+@router.get('/certificates/{cert_id}/image')
+async def certificate_image(cert_id: str, user: dict = Depends(get_current_user)):
+    cert = await db.coaching_certificates.find_one({'id': cert_id})
+    if not cert or not cert.get('image_path'):
+        raise HTTPException(404, 'Share image not found')
+    if user.get('role') != 'admin' and not await _can_view_client(user, cert['client_id']):
+        raise HTTPException(404, 'Share image not found')
+    data, _ = get_object(cert['image_path'])
+    return Response(content=data, media_type='image/png',
+                    headers={'Content-Disposition': f'attachment; filename="certificate-{cert_id[:8]}.png"'})
 
 
 @router.get('/certificates/{cert_id}/pdf')

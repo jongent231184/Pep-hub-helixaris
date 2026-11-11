@@ -805,6 +805,33 @@ async def send_checkin_nudge_email(client: dict) -> None:
     logger.info(f'checkin nudge sent to {to}: {res.get("id")}')
 
 
+async def send_certificate_email(client: dict, cert: dict, pdf_bytes: bytes, coach_note: str, coach_name: str) -> None:
+    if not _init_resend():
+        raise RuntimeError('RESEND_API_KEY not set')
+    to = (client.get('customer_email') or '').strip()
+    first = (client.get('customer_name') or '').split(' ')[0] or 'there'
+    plan = cert.get('plan_name') or 'coaching'
+    note_html = f'<div style="margin:18px 0;padding:14px 16px;background:#fdf6e3;border-left:4px solid #c8a24a;border-radius:6px;font-size:14px;line-height:1.6;color:#334155"><strong>A note from {coach_name}:</strong><br/>{coach_note}</div>' if coach_note else ''
+    html = f"""
+    <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#0f172a">
+      <div style="border-bottom:3px solid #c8a24a;padding-bottom:16px;margin-bottom:20px">
+        <p style="font-size:11px;letter-spacing:2px;color:#b08a2e;font-weight:700;text-transform:uppercase;margin:0">{BUSINESS_NAME} · Coaching</p>
+        <h1 style="font-size:22px;font-weight:900;margin:6px 0 0">Congratulations, {first} — your certificate is attached</h1>
+      </div>
+      <p style="font-size:15px;line-height:1.6">You've completed your {plan} plan. Your certificate is attached as a PDF, and a square share image is in your portal if you'd like to post it in the group.</p>
+      {note_html}
+      <p style="text-align:center;margin:24px 0"><a href="{_site_base()}/portal" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:14px 28px;border-radius:6px">Open my portal</a></p>
+      <p style="font-size:11px;color:#94a3b8;margin-top:20px">Coaching is peer-to-peer education based on personal experience, not medical advice.</p>
+    </div>
+    """
+    res = await asyncio.to_thread(resend.Emails.send, {
+        'from': f'{BUSINESS_NAME} coaching <{FROM_EMAIL}>', 'to': [to],
+        'subject': f'Your {plan} completion certificate', 'html': html,
+        'attachments': [{'filename': f'{BUSINESS_NAME}-certificate.pdf', 'content': list(pdf_bytes)}],
+    })
+    logger.info(f'certificate email sent to {to}: {res.get("id")}')
+
+
 async def send_blocked_attempt_email(entry: dict, addr: dict, channel: str, hits: int) -> None:
     """Alert the admin that a blocklisted customer tried to order again."""
     if not _init_resend() or not ADMIN_NOTIFY_EMAIL:
