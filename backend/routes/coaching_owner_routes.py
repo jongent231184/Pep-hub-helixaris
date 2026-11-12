@@ -10,6 +10,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 
 from auth import get_current_user, require_admin, require_coach
+from certificate_render import build_pdf, build_share_image
 from db import db
 from routes.coaching_routes import _get_coach_client, _my_client
 from routes.coaching_plans_routes import membership_state, require_member, get_plan, feedback_pending
@@ -262,167 +263,6 @@ async def _results_for(client: dict, proto: Optional[dict], stats: Optional[list
     return out
 
 
-def _stat_rows(results: Optional[dict], short: bool = False) -> list[tuple[str, str]]:
-    if not results:
-        return []
-    stats = []
-    if results.get('weeks_completed'):
-        stats.append((f"{results['weeks_completed']}", 'weeks completed' if short else f"weeks completed of {results.get('weeks_total') or results['weeks_completed']}"))
-    if results.get('weight_change_kg') is not None:
-        stats.append((f"{results['weight_change_kg']:+.1f} kg", 'weight change' if short else f"{results['start_weight_kg']} → {results['end_weight_kg']} kg"))
-    if results.get('checkins'):
-        stats.append((str(results['checkins']), 'check-ins' if short else 'weekly check-ins'))
-    if results.get('doses_total'):
-        stats.append((f"{round(100 * results['doses_done'] / results['doses_total'])}%", 'doses done' if short else f"doses completed ({results['doses_done']}/{results['doses_total']})"))
-    return stats
-
-
-def _build_pdf(brand: str, accent_hex: str, name: str, plan_name: str, proto: Optional[dict], membership: dict,
-               results: Optional[dict], photos: list[tuple[bytes, str]], review: str, coach_note: str, coach_name: str, headline: str,
-               summary: str = '', review_by: str = '') -> bytes:
-    from reportlab.lib.pagesizes import A4, landscape
-    from reportlab.lib import colors
-    from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.utils import ImageReader
-    from reportlab.platypus import Paragraph
-    from reportlab.lib.styles import ParagraphStyle
-
-    buf = io.BytesIO()
-    W, H = landscape(A4)
-    c = canvas.Canvas(buf, pagesize=(W, H))
-    navy = colors.HexColor('#0b1528')
-    accent = colors.HexColor(accent_hex)
-    c.setFillColor(navy); c.rect(0, 0, W, H, fill=1, stroke=0)
-    c.setFillColor(colors.white); c.roundRect(14 * mm, 14 * mm, W - 28 * mm, H - 28 * mm, 6 * mm, fill=1, stroke=0)
-    c.setStrokeColor(accent); c.setLineWidth(3); c.roundRect(18 * mm, 18 * mm, W - 36 * mm, H - 36 * mm, 5 * mm, fill=0, stroke=1)
-
-    c.setFillColor(accent); c.setFont('Helvetica-Bold', 10)
-    c.drawCentredString(W / 2, H - 32 * mm, f'{brand.upper()}  ·  COACHING PROGRAMME')
-    c.setFillColor(navy); c.setFont('Helvetica-Bold', 30)
-    c.drawCentredString(W / 2, H - 46 * mm, headline)
-    c.setFont('Helvetica', 12); c.setFillColor(colors.HexColor('#475569'))
-    c.drawCentredString(W / 2, H - 56 * mm, 'This certifies that')
-    c.setFont('Helvetica-Bold', 26); c.setFillColor(navy)
-    c.drawCentredString(W / 2, H - 68 * mm, name)
-    c.setFont('Helvetica', 12); c.setFillColor(colors.HexColor('#475569'))
-    weeks = f" · {proto.get('duration_weeks')} weeks" if proto and proto.get('duration_weeks') else ''
-    started = membership.get('membership_started_at') or (proto or {}).get('created_at')
-    period = ''
-    if started:
-        period = f" · {started.strftime('%b %Y')} – {datetime.utcnow().strftime('%b %Y')}"
-    c.drawCentredString(W / 2, H - 78 * mm, f"completed the {plan_name} coaching plan{weeks}{period}")
-
-    y = H - 92 * mm
-    stats = _stat_rows(results)
-    if stats:
-        box_w = 52 * mm if len(stats) > 3 else 60 * mm; gap = 6 * mm; total_w = len(stats) * box_w + (len(stats) - 1) * gap
-        x = (W - total_w) / 2
-        for big, small in stats:
-            c.setFillColor(colors.HexColor('#f4f5f8')); c.roundRect(x, y - 22 * mm, box_w, 22 * mm, 3 * mm, fill=1, stroke=0)
-            c.setFillColor(navy); c.setFont('Helvetica-Bold', 20); c.drawCentredString(x + box_w / 2, y - 10 * mm, big)
-            c.setFillColor(colors.HexColor('#64748b')); c.setFont('Helvetica', 9); c.drawCentredString(x + box_w / 2, y - 17 * mm, small)
-            x += box_w + gap
-        y -= 30 * mm
-
-    if photos:
-        pw = 48 * mm; ph = 48 * mm; gap = 6 * mm
-        total_w = len(photos) * pw + (len(photos) - 1) * gap
-        x = (W - total_w) / 2
-        for data, _ct in photos[:3]:
-            try:
-                c.drawImage(ImageReader(io.BytesIO(data)), x, y - ph, pw, ph, preserveAspectRatio=True, anchor='c', mask='auto')
-            except Exception as e:
-                logger.warning(f'certificate photo skipped: {e}')
-            x += pw + gap
-        y -= ph + 6 * mm
-
-    style = ParagraphStyle('q', fontName='Helvetica-Oblique', fontSize=11, leading=15, textColor=colors.HexColor('#334155'), alignment=1)
-    if summary:
-        ss = ParagraphStyle('s', fontName='Helvetica', fontSize=10, leading=14, textColor=colors.HexColor('#334155'), alignment=1)
-        p = Paragraph(f'<b>The journey:</b> {summary}', ss); w, h = p.wrap(W - 80 * mm, 60 * mm); p.drawOn(c, 40 * mm, y - h); y -= h + 4 * mm
-    if review:
-        p = Paragraph(f'“{review}”' + (f' <font size="9" color="#64748b">— {review_by}</font>' if review_by else ''), style); w, h = p.wrap(W - 80 * mm, 60 * mm); p.drawOn(c, 40 * mm, y - h); y -= h + 4 * mm
-    if coach_note:
-        ns = ParagraphStyle('n', fontName='Helvetica', fontSize=10, leading=14, textColor=colors.HexColor('#475569'), alignment=1)
-        p = Paragraph(f'<b>From your coach:</b> {coach_note}', ns); w, h = p.wrap(W - 80 * mm, 60 * mm); p.drawOn(c, 40 * mm, y - h); y -= h
-
-    c.setStrokeColor(accent); c.setLineWidth(1); c.line(W / 2 - 40 * mm, 30 * mm, W / 2 + 40 * mm, 30 * mm)
-    c.setFillColor(navy); c.setFont('Helvetica-Bold', 11); c.drawCentredString(W / 2, 25 * mm, coach_name)
-    c.setFillColor(colors.HexColor('#64748b')); c.setFont('Helvetica', 8)
-    c.drawCentredString(W / 2, 21 * mm, f'Coach · {brand} · issued {datetime.utcnow().strftime("%d %B %Y")} · peer-education programme, not medical advice')
-    c.showPage(); c.save()
-    return buf.getvalue()
-
-
-def _build_share_image(brand: str, name: str, plan_name: str, results: Optional[dict], photos: list[tuple[bytes, str]],
-                       review: str, coach_name: str, headline: str) -> bytes:
-    """1080x1080 PNG for Instagram / group chats."""
-    from PIL import Image, ImageDraw, ImageFont
-
-    S = 1080
-    img = Image.new('RGB', (S, S), '#0b1528')
-    d = ImageDraw.Draw(img)
-    F = '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'
-    FR = '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf'
-    FI = '/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf'
-    font = lambda p, s: ImageFont.truetype(p, s)  # noqa: E731
-    accent = '#c8a24a'
-    d.rounded_rectangle((40, 40, S - 40, S - 40), radius=36, outline=accent, width=6)
-    d.text((S / 2, 110), f'{brand.upper()}  ·  COACHING', fill=accent, font=font(F, 26), anchor='mm')
-    d.text((S / 2, 180), headline.upper(), fill='white', font=font(F, 54), anchor='mm')
-    d.text((S / 2, 250), name, fill=accent, font=font(F, 64), anchor='mm')
-    d.text((S / 2, 310), f'completed the {plan_name} plan', fill='#cbd5e1', font=font(FR, 30), anchor='mm')
-    y = 370
-    if photos:
-        pw, ph = 300, (300 if review else 380)
-        n = min(len(photos), 2)
-        total = n * pw + (n - 1) * 30
-        x = (S - total) // 2
-        for data, _ in photos[:2]:
-            try:
-                p = Image.open(io.BytesIO(data)).convert('RGB')
-                p.thumbnail((pw, ph))
-                canvas_p = Image.new('RGB', (pw, ph), '#13223d')
-                canvas_p.paste(p, ((pw - p.width) // 2, (ph - p.height) // 2))
-                img.paste(canvas_p, (x, y))
-            except Exception as e:
-                logger.warning(f'share image photo skipped: {e}')
-            x += pw + 30
-        if n == 2:
-            d.text((S / 2 - 165 - 0, y + ph + 28), 'BEFORE', fill='#94a3b8', font=font(F, 22), anchor='mm')
-            d.text((S / 2 + 165, y + ph + 28), 'AFTER', fill='#94a3b8', font=font(F, 22), anchor='mm')
-        y += ph + 70
-    if results:
-        stats = _stat_rows(results, short=True)[:4]
-        if stats:
-            bw = 230 if len(stats) > 3 else 260; gap = 24; total = len(stats) * bw + (len(stats) - 1) * gap
-            x = (S - total) // 2
-            for big, small in stats:
-                d.rounded_rectangle((x, y, x + bw, y + 120), radius=20, fill='#13223d')
-                d.text((x + bw / 2, y + 48), big, fill='white', font=font(F, 44), anchor='mm')
-                d.text((x + bw / 2, y + 92), small, fill='#94a3b8', font=font(FR, 22), anchor='mm')
-                x += bw + gap
-            y += 150
-    if review and y < S - 220:
-        words = review.split(); lines = []; cur = ''
-        for w in words:
-            t = (cur + ' ' + w).strip()
-            if d.textlength(t, font=font(FI, 28)) > S - 200:
-                lines.append(cur); cur = w
-            else:
-                cur = t
-        if cur:
-            lines.append(cur)
-        for ln in lines[:4]:
-            d.text((S / 2, y), ('“' if ln == lines[0] else '') + ln + ('”' if ln == lines[min(3, len(lines) - 1)] else ''), fill='#e2e8f0', font=font(FI, 28), anchor='mm')
-            y += 38
-    d.text((S / 2, S - 95), f'Coach {coach_name}', fill='white', font=font(F, 26), anchor='mm')
-    d.text((S / 2, S - 62), 'peer-education programme · not medical advice', fill='#64748b', font=font(FR, 18), anchor='mm')
-    out = io.BytesIO(); img.save(out, 'PNG', optimize=True)
-    return out.getvalue()
-
-
 @router.post('/coach/clients/{client_id}/certificate')
 async def coach_issue_certificate(client_id: str, payload: CertificateIn, user: dict = Depends(require_coach)):
     client = await _get_coach_client(client_id, user['id'])
@@ -456,17 +296,17 @@ async def coach_issue_certificate(client_id: str, payload: CertificateIn, user: 
                 except Exception as e:
                     logger.warning(f'photo fetch failed: {e}')
     coach_name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or 'Your coach'
-    pdf = _build_pdf(brand, '#c8a24a', name, (plan or {}).get('name', 'Coaching'), proto, client, results, photos,
-                     review, payload.coach_note.strip() if payload.include_coach_note else '', coach_name,
-                     payload.headline.strip() or 'Certificate of Completion',
-                     summary=payload.summary_text.strip() if payload.include_summary else '', review_by=review_by)
     cid = str(uuid.uuid4())
+    pdf = build_pdf(brand, name, (plan or {}).get('name', 'Coaching'), proto, client, results, photos,
+                    review, payload.coach_note.strip() if payload.include_coach_note else '', coach_name,
+                    payload.headline.strip() or 'Certificate of Completion',
+                    summary=payload.summary_text.strip() if payload.include_summary else '', review_by=review_by, cert_id=cid)
     path = f"{APP_NAME}/coaching-certificates/{client_id}/{cid}.pdf"
     img_path = f"{APP_NAME}/coaching-certificates/{client_id}/{cid}.png"
     try:
         put_object(path, pdf, 'application/pdf')
-        png = _build_share_image(brand, name, (plan or {}).get('name', 'Coaching'), results, photos,
-                                 review, coach_name, payload.headline.strip() or 'Certificate of Completion')
+        png = build_share_image(brand, name, (plan or {}).get('name', 'Coaching'), results, photos,
+                                review, coach_name, payload.headline.strip() or 'Certificate of Completion')
         put_object(img_path, png, 'image/png')
     except Exception as e:
         raise HTTPException(500, f'Storage upload failed: {e}')
