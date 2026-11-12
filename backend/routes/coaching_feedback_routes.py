@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from auth import get_current_user, require_admin, require_coach
 from db import db
 from routes.coaching_routes import _get_coach_client
-from routes.coaching_plans_routes import require_member
+from routes.coaching_plans_routes import require_member, feedback_pending
 from utils import doc_to_dict
 
 logger = logging.getLogger('ghp.coaching.feedback')
@@ -46,9 +46,7 @@ def _request_state(client: dict) -> dict:
 @router.get('/my/feedback')
 async def my_feedback(client: dict = Depends(require_member)):
     docs = await db.coaching_feedback.find({'client_id': client['id']}).sort('created_at', -1).to_list(100)
-    pending = bool(client.get('feedback_requested_at')) and not await db.coaching_feedback.find_one(
-        {'client_id': client['id'], 'kind': 'end_of_plan', 'created_at': {'$gte': client['feedback_requested_at']}})
-    return {'items': [_fb_out(d) for d in docs], 'pending_request': pending, **_request_state(client)}
+    return {'items': [_fb_out(d) for d in docs], 'pending_request': await feedback_pending(client), **_request_state(client)}
 
 
 @router.post('/my/feedback')
@@ -61,7 +59,8 @@ async def submit_feedback(payload: FeedbackIn, bg: BackgroundTasks, client: dict
         payload.kind = 'general'
     doc = {'id': str(uuid.uuid4()), 'client_id': client['id'], 'coach_id': client.get('coach_id'),
            'customer_user_id': user['id'], 'client_name': client.get('customer_name', ''),
-           **payload.model_dump(), 'created_at': datetime.utcnow()}
+           **payload.model_dump(), 'went_well': payload.went_well.strip(), 'improve': payload.improve.strip(),
+           'testimonial': payload.testimonial.strip(), 'created_at': datetime.utcnow()}
     await db.coaching_feedback.insert_one(dict(doc))
     bg.add_task(_notify_feedback, client, doc)
     return _fb_out(doc)
@@ -110,9 +109,7 @@ async def coach_withdraw_feedback_request(client_id: str, user: dict = Depends(r
 async def coach_client_feedback(client_id: str, user: dict = Depends(require_coach)):
     client = await _get_coach_client(client_id, user['id'])
     docs = await db.coaching_feedback.find({'client_id': client_id}).sort('created_at', -1).to_list(100)
-    pending = bool(client.get('feedback_requested_at')) and not await db.coaching_feedback.find_one(
-        {'client_id': client_id, 'kind': 'end_of_plan', 'created_at': {'$gte': client['feedback_requested_at']}})
-    return {'items': [_fb_out(d) for d in docs], 'pending_request': pending, **_request_state(client)}
+    return {'items': [_fb_out(d) for d in docs], 'pending_request': await feedback_pending(client), **_request_state(client)}
 
 
 # ---------- owner ----------

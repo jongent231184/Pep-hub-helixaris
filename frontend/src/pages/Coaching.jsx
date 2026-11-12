@@ -97,6 +97,7 @@ const Coaching_ = () => {
           /* Auth gate — coaching is a paid, private service. Requiring an
              account keeps merchant underwriting reviews clean and blocks
              drive-by public exposure of the signup flow. */
+          <>
           <section
             className="mt-6 max-w-xl mx-auto bg-white border-2 border-sky-100 rounded-xl p-8 md:p-10 text-center"
             data-testid="coaching-auth-gate"
@@ -131,6 +132,8 @@ const Coaching_ = () => {
               Coaching is <strong>peer-to-peer education</strong> based on personal experience — <strong>not medical advice</strong>.
             </p>
           </section>
+          <div className="mt-12"><Testimonials /></div>
+          </>
         ) : (
           <>
         {/* Hero */}

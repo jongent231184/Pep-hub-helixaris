@@ -4,6 +4,7 @@ import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 import { StoreProvider } from './context/StoreContext';
 import { Toaster } from './components/ui/toaster';
+import { Toaster as SonnerToaster } from 'sonner';
 import ScrollToTop from './components/ScrollToTop';
 import PageViewTracker from './components/PageViewTracker';
 import SitePasswordGate from './components/SitePasswordGate';
@@ -198,6 +199,7 @@ function App() {
               </Routes>
             </SitePasswordGate>
             <Toaster />
+            <SonnerToaster richColors position="top-right" />
           </BrowserRouter>
         </CartProvider>
       </StoreProvider>

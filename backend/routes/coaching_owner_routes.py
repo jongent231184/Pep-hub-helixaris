@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from auth import get_current_user, require_admin, require_coach
 from db import db
 from routes.coaching_routes import _get_coach_client, _my_client
-from routes.coaching_plans_routes import membership_state, require_member, get_plan
+from routes.coaching_plans_routes import membership_state, require_member, get_plan, feedback_pending
 from storage import APP_NAME, get_object, put_object
 from utils import doc_to_dict
 
@@ -412,10 +412,8 @@ async def coach_issue_certificate(client_id: str, payload: CertificateIn, user: 
     name = full.split(' ')[0] if payload.anonymise else full
     if not payload.include_identity:
         name = 'A valued client'
-    if client.get('feedback_requested_at') and not payload.skip_feedback_check:
-        answered = await db.coaching_feedback.find_one({'client_id': client_id, 'kind': 'end_of_plan', 'created_at': {'$gte': client['feedback_requested_at']}})
-        if not answered:
-            raise HTTPException(409, "The client hasn't answered your end-of-plan feedback request yet. Wait for it, withdraw the request, or tick 'issue anyway'.")
+    if not payload.skip_feedback_check and await feedback_pending(client):
+        raise HTTPException(409, "The client hasn't answered your end-of-plan feedback request yet. Wait for it, withdraw the request, or tick 'issue anyway'.")
     results = await _results_for(client, proto, payload.stats) if payload.include_results else None
     review = payload.review_text.strip() if payload.include_review else ''
     review_by = ''

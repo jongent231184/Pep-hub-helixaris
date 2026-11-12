@@ -425,6 +425,14 @@ async def coach_attention(user: dict = Depends(require_coach)):
             'expiring': expiring, 'lapsed': lapsed, 'unpaid_first_month': unpaid, 'as_of': now}
 
 
+async def feedback_pending(client: dict) -> bool:
+    """A formal end-of-plan request is open until the client answers it."""
+    if not client.get('feedback_requested_at'):
+        return False
+    return not await db.coaching_feedback.find_one(
+        {'client_id': client['id'], 'kind': 'end_of_plan', 'created_at': {'$gte': client['feedback_requested_at']}})
+
+
 @router.get('/coach/clients/{client_id}/portal-view')
 async def coach_portal_view(client_id: str, user: dict = Depends(require_coach)):
     """Everything the client's portal shows, so the coach can view it as them."""
@@ -443,7 +451,7 @@ async def coach_portal_view(client_id: str, user: dict = Depends(require_coach))
     return {'client': doc_to_dict(client), 'membership': state, 'protocol': proto,
             'checkins': [doc_to_dict(c) for c in checkins], 'messages': [doc_to_dict(m) for m in messages],
             'resources': [doc_to_dict(r) for r in resources], 'broadcasts': await _broadcasts_for(user['id']),
-            'feedback': {'items': [doc_to_dict(f) for f in feedback], 'pending_request': bool(client.get('feedback_requested_at')),
+            'feedback': {'items': [doc_to_dict(f) for f in feedback], 'pending_request': await feedback_pending(client),
                          'feedback_requested_at': client.get('feedback_requested_at'), 'feedback_request_note': client.get('feedback_request_note', '')}}
 
 
