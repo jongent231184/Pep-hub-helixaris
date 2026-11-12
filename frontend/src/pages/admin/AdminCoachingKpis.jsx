@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Coaches } from '../../lib/api';
 import { Loader2, Users, PoundSterling, Award, CalendarCheck, MessageSquare, ClipboardList } from 'lucide-react';
+import { AdminFeedbackSection } from '../../components/coaching/FeedbackSummary';
 
 const Stat = ({ icon: Icon, label, value, sub, testId }) => (
   <div className="bg-white border border-slate-200 rounded-xl p-5" data-testid={testId}>
@@ -86,6 +87,7 @@ const AdminCoachingKpis = () => {
           </tbody>
         </table>
       </section>
+      <AdminFeedbackSection />
     </div>
   );
 };

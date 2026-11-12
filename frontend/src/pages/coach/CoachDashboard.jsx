@@ -4,6 +4,7 @@ import { Coaches } from '../../lib/api';
 import { Loader2, ClipboardList, Users, Clock, CheckCircle2 } from 'lucide-react';
 import AttentionPanel from '../../components/coaching/AttentionPanel';
 import BroadcastPanel from '../../components/coaching/BroadcastPanel';
+import { CoachFeedbackSection } from '../../components/coaching/FeedbackSummary';
 
 const CoachDashboard = () => {
   const [me, setMe] = useState(null);
@@ -39,6 +40,7 @@ const CoachDashboard = () => {
 
       <AttentionPanel />
       <BroadcastPanel />
+      <CoachFeedbackSection />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white border border-slate-200 rounded-xl p-5">

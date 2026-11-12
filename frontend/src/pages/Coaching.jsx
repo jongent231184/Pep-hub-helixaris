@@ -16,6 +16,7 @@ import {
 import { useToast } from '../hooks/use-toast';
 import { Users, Scale, ClipboardList, Calculator, BookOpen, ShieldAlert, Loader2, CheckCircle2, Sparkles, Lock } from 'lucide-react';
 import TierCards from '../components/coaching/TierCards';
+import Testimonials from '../components/coaching/Testimonials';
 import { Coaches } from '../lib/api';
 
 const AREAS = [
@@ -165,6 +166,7 @@ const Coaching_ = () => {
             </p>
           </section>
         )}
+        {!submitted && <Testimonials />}
         {submitted ? (
           <section className="max-w-2xl bg-white border-2 border-emerald-200 rounded-xl p-8 md:p-10" data-testid="coaching-success">
             <div className="flex items-start gap-4">

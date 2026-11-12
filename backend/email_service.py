@@ -832,6 +832,72 @@ async def send_certificate_email(client: dict, cert: dict, pdf_bytes: bytes, coa
     logger.info(f'certificate email sent to {to}: {res.get("id")}')
 
 
+def _coaching_shell(title: str, body_html: str) -> str:
+    return f"""
+    <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#0f172a">
+      <div style="border-bottom:3px solid #c8a24a;padding-bottom:16px;margin-bottom:20px">
+        <p style="font-size:11px;letter-spacing:2px;color:#b08a2e;font-weight:700;text-transform:uppercase;margin:0">{BUSINESS_NAME} · Coaching</p>
+        <h1 style="font-size:22px;font-weight:900;margin:6px 0 0">{title}</h1>
+      </div>
+      {body_html}
+      <p style="font-size:11px;color:#94a3b8;margin-top:20px">Coaching is peer-to-peer education based on personal experience, not medical advice.</p>
+    </div>
+    """
+
+
+async def send_feedback_request_email(client: dict, note: str, coach_name: str) -> None:
+    if not _init_resend():
+        return
+    to = (client.get('customer_email') or '').strip()
+    if not to:
+        return
+    first = (client.get('customer_name') or '').split(' ')[0] or 'there'
+    link = f"{_site_base()}/portal/feedback"
+    note_html = f'<div style="margin:18px 0;padding:14px 16px;background:#fdf6e3;border-left:4px solid #c8a24a;border-radius:6px;font-size:14px;line-height:1.6;color:#334155"><strong>From {coach_name}:</strong><br/>{note}</div>' if note else ''
+    body = f"""
+      <p style="font-size:15px;line-height:1.6">Hi {first},</p>
+      <p style="font-size:15px;line-height:1.6">You're at the end of your coaching plan — congratulations. Before your certificate is issued, {coach_name} would love two minutes of honest feedback: how it went, what could be better, and (optionally) a short quote for your certificate.</p>
+      {note_html}
+      <p style="text-align:center;margin:24px 0"><a href="{link}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:14px 28px;border-radius:6px">Leave my feedback</a></p>
+    """
+    res = await asyncio.to_thread(resend.Emails.send, {
+        'from': f'{BUSINESS_NAME} coaching <{FROM_EMAIL}>', 'to': [to],
+        'subject': 'Two minutes of feedback before your certificate', 'html': _coaching_shell('How did your coaching plan go?', body),
+    })
+    logger.info(f'feedback request sent to {to}: {res.get("id")}')
+
+
+async def send_feedback_received_email(client: dict, fb: dict, coach_email: Optional[str]) -> None:
+    """Owner + coach: a client has left feedback."""
+    if not _init_resend():
+        return
+    recipients = [e for e in {ADMIN_NOTIFY_EMAIL, (coach_email or '').strip()} if e]
+    if not recipients:
+        return
+    stars = lambda n: ('★' * int(n) + '☆' * (5 - int(n))) if n else '—'  # noqa: E731
+    kind = 'End-of-plan feedback' if fb.get('kind') == 'end_of_plan' else 'Feedback'
+    rows = [('Overall', stars(fb.get('rating_overall'))), ('Communication', stars(fb.get('rating_communication'))),
+            ('Plan clarity', stars(fb.get('rating_clarity'))), ('Value for money', stars(fb.get('rating_value'))),
+            ('Would recommend', f"{fb.get('nps')}/10" if fb.get('nps') is not None else '—'),
+            ('Goal achieved', (fb.get('goal_achieved') or '—').capitalize())]
+    table = ''.join(f'<tr><td style="padding:6px 0;color:#64748b;width:140px">{k}</td><td><strong>{v}</strong></td></tr>' for k, v in rows)
+    block = lambda t, v: f'<div style="margin-top:14px"><p style="margin:0 0 4px;color:#64748b;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700">{t}</p><p style="margin:0;font-size:14px;line-height:1.55">{v}</p></div>' if v else ''  # noqa: E731
+    perms = ', '.join(p for p, ok in (('certificate', fb.get('allow_certificate')), ('public coaching page', fb.get('allow_public'))) if ok) or 'private only'
+    body = f"""
+      <table cellpadding="0" cellspacing="0" style="width:100%;font-size:14px">{table}</table>
+      {block('What went well', fb.get('went_well'))}
+      {block('What could be better', fb.get('improve'))}
+      {block(f'Testimonial (may be used on: {perms})', fb.get('testimonial'))}
+      <p style="margin-top:24px;font-size:12px;color:#64748b">Review it in the <a href="{_site_base()}/admin/coaching-kpis">owner KPIs</a> or the coach's client page.</p>
+    """
+    res = await asyncio.to_thread(resend.Emails.send, {
+        'from': f'{BUSINESS_NAME} coaching <{FROM_EMAIL}>', 'to': recipients,
+        'subject': f"{kind} from {client.get('customer_name') or 'a client'} · {fb.get('rating_overall')}/5",
+        'html': _coaching_shell(f"{kind} from {client.get('customer_name') or 'a client'}", body),
+    })
+    logger.info(f'feedback received notice sent to {recipients}: {res.get("id")}')
+
+
 async def send_blocked_attempt_email(entry: dict, addr: dict, channel: str, hits: int) -> None:
     """Alert the admin that a blocklisted customer tried to order again."""
     if not _init_resend() or not ADMIN_NOTIFY_EMAIL:

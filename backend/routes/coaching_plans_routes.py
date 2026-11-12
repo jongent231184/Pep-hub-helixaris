@@ -439,9 +439,12 @@ async def coach_portal_view(client_id: str, user: dict = Depends(require_coach))
     resources = await db.coaching_resources.find().sort('created_at', -1).to_list(200)
     state['coach_name'] = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or 'Your coach'
     state['client_name'] = client.get('customer_name', '')
+    feedback = await db.coaching_feedback.find({'client_id': client_id}).sort('created_at', -1).to_list(100)
     return {'client': doc_to_dict(client), 'membership': state, 'protocol': proto,
             'checkins': [doc_to_dict(c) for c in checkins], 'messages': [doc_to_dict(m) for m in messages],
-            'resources': [doc_to_dict(r) for r in resources], 'broadcasts': await _broadcasts_for(user['id'])}
+            'resources': [doc_to_dict(r) for r in resources], 'broadcasts': await _broadcasts_for(user['id']),
+            'feedback': {'items': [doc_to_dict(f) for f in feedback], 'pending_request': bool(client.get('feedback_requested_at')),
+                         'feedback_requested_at': client.get('feedback_requested_at'), 'feedback_request_note': client.get('feedback_request_note', '')}}
 
 
 # ---------- coach broadcasts (announcements on every client dashboard) ----------

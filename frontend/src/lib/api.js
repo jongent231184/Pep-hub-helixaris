@@ -232,6 +232,15 @@ export const Coaches = {
   wallImageBlob: (id) => api.get(`/coaching/wall/${id}/image`, { responseType: 'blob' }).then(r => URL.createObjectURL(r.data)),
   shareMyCertificate: (id, shared) => api.patch(`/coaching/my/certificates/${id}/share`, { shared }).then(r => r.data),
   coachShareCertificate: (id, shared) => api.patch(`/coaching/coach/certificates/${id}/share`, { shared }).then(r => r.data),
+  // Feedback
+  myFeedback: () => api.get('/coaching/my/feedback').then(r => r.data),
+  submitFeedback: (data) => api.post('/coaching/my/feedback', data).then(r => r.data),
+  coachClientFeedback: (clientId) => api.get(`/coaching/coach/clients/${clientId}/feedback`).then(r => r.data),
+  requestFeedback: (clientId, note) => api.post(`/coaching/coach/clients/${clientId}/feedback-request`, { note }).then(r => r.data),
+  withdrawFeedbackRequest: (clientId) => api.delete(`/coaching/coach/clients/${clientId}/feedback-request`).then(r => r.data),
+  coachAllFeedback: () => api.get('/coaching/coach/feedback').then(r => r.data),
+  adminFeedback: () => api.get('/coaching/admin/feedback').then(r => r.data),
+  testimonials: () => api.get('/coaching/testimonials').then(r => r.data),
 };
 
 export const PayPal = {

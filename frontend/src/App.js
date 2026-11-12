@@ -54,6 +54,7 @@ import PortalLayout from './pages/portal/PortalLayout';
 import PortalDashboard from './pages/portal/PortalDashboard';
 import { PortalPlan, PortalCheckin, PortalProgress, PortalMessages, PortalResources } from './pages/portal/PortalSections';
 import PortalWall from './pages/portal/PortalWall';
+import PortalFeedback from './pages/portal/PortalFeedback';
 import AdminSales from './pages/admin/AdminSales';
 
 import CoachLayout from './pages/coach/CoachLayout';
@@ -144,6 +145,7 @@ function App() {
                 <Route path="messages" element={<PortalMessages />} />
                 <Route path="resources" element={<PortalResources />} />
                 <Route path="wall" element={<PortalWall />} />
+                <Route path="feedback" element={<PortalFeedback />} />
               </Route>
               {/* Coach: view a client's portal as they see it */}
               <Route path="/coach/clients/:clientId/portal" element={<PortalLayout />}>
@@ -154,6 +156,7 @@ function App() {
                 <Route path="messages" element={<PortalMessages />} />
                 <Route path="resources" element={<PortalResources />} />
                 <Route path="wall" element={<PortalWall />} />
+                <Route path="feedback" element={<PortalFeedback />} />
               </Route>
 
               {/* Coach portal */}

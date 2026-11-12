@@ -5,7 +5,7 @@ import { Coaches } from '../../lib/api';
 import { CertificateList } from '../../components/coaching/PhotosAndCertificates';
 import BRAND from '../../config/brand';
 import { TierBadge } from '../../components/coaching/TierCards';
-import { CalendarCheck, ClipboardList, MessageSquare, TrendingUp, ArrowRight, Lock, CheckCircle2, Megaphone } from 'lucide-react';
+import { CalendarCheck, ClipboardList, MessageSquare, TrendingUp, ArrowRight, Lock, CheckCircle2, Megaphone, MessageSquareHeart } from 'lucide-react';
 
 export const PortalHeader = ({ title, sub }) => (
   <div className="mb-6">
@@ -44,11 +44,13 @@ const PortalDashboard = () => {
   const [checkins, setCheckins] = useState([]);
   const [broadcasts, setBroadcasts] = useState([]);
   const [certs, setCerts] = useState([]);
+  const [fbPending, setFbPending] = useState(false);
   const fetchCerts = useCallback(() => (coachView ? Coaches.coachCertificates(src.clientId) : Coaches.myCertificates()), [coachView, src.clientId]);
   useEffect(() => {
     src.protocol().then(setProto).catch(() => {});
     src.broadcasts().then(setBroadcasts).catch(() => {});
     fetchCerts().then(setCerts).catch(() => {});
+    (coachView ? src.feedback() : Coaches.myFeedback()).then(d => setFbPending(!!d.pending_request)).catch(() => {});
     if (has('checkin')) src.checkins().then(setCheckins).catch(() => {});
   }, [has, src, fetchCerts]);
 
@@ -69,6 +71,12 @@ const PortalDashboard = () => {
   return (
     <div data-testid="portal-dashboard">
       <PortalHeader title={coachView ? `${m.client_name}'s portal` : 'Welcome back'} sub="Everything you need between coaching reviews." />
+      {fbPending && (
+        <Link to={`${base}/feedback`} className="flex items-center gap-3 mb-6 rounded-2xl border border-[#f3dc9a] bg-[#fdf8ea] p-4 md:p-5 hover:brightness-[0.99]" data-testid="dashboard-feedback-prompt">
+          <div className="h-10 w-10 rounded-full grid place-items-center text-[#0b1528] shrink-0" style={{ backgroundColor: BRAND.accent }}><MessageSquareHeart className="h-5 w-5" /></div>
+          <div className="flex-1"><p className="font-black text-slate-900">Your coach has asked for end-of-plan feedback</p><p className="text-sm text-slate-700">Two minutes, then your completion certificate can be issued →</p></div>
+        </Link>
+      )}
       {broadcasts.length > 0 && (
         <div className="space-y-3 mb-6" data-testid="broadcasts">
           {broadcasts.map(b => (

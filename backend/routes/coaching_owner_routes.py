@@ -188,14 +188,20 @@ class CertificateIn(BaseModel):
     include_identity: bool = True
     anonymise: bool = False
     include_results: bool = True
+    # Journey summary: which auto numbers to show (coach picks)
+    stats: list[str] = ['weight', 'checkins', 'doses', 'weeks']
     include_photos: bool = False
     photo_ids: list[str] = []
     include_review: bool = True
     review_text: str = ''
+    feedback_id: Optional[str] = None  # use the client's own testimonial instead of review_text
+    include_summary: bool = False
+    summary_text: str = ''  # coach's written journey summary
     include_coach_note: bool = True
     coach_note: str = ''
     headline: str = 'Certificate of Completion'
     send_email: bool = True
+    skip_feedback_check: bool = False
 
 
 def _cert_out(c: dict) -> dict:
@@ -207,20 +213,50 @@ def _cert_out(c: dict) -> dict:
     return d
 
 
-async def _results_for(client: dict, proto: Optional[dict]) -> dict:
+async def _results_for(client: dict, proto: Optional[dict], stats: Optional[list[str]] = None) -> dict:
     weigh = await db.weigh_ins.find({'client_id': client['id']}).sort('date', 1).to_list(500)
     checkins = await db.coaching_checkins.count_documents({'client_id': client['id']})
     done = await db.calendar_entries.count_documents({'client_id': client['id'], 'done': True}) if proto else 0
     total = await db.calendar_entries.count_documents({'client_id': client['id']}) if proto else 0
     start_w = weigh[0]['weight_kg'] if weigh else None
     end_w = weigh[-1]['weight_kg'] if weigh else None
-    return {'start_weight_kg': start_w, 'end_weight_kg': end_w,
-            'weight_change_kg': round(end_w - start_w, 1) if start_w is not None and end_w is not None else None,
-            'checkins': checkins, 'doses_done': done, 'doses_total': total}
+    weeks = None
+    if proto and proto.get('created_at'):
+        weeks = min(proto.get('duration_weeks') or 0, max(1, (datetime.utcnow() - proto['created_at']).days // 7 + 1))
+    out = {'start_weight_kg': start_w, 'end_weight_kg': end_w,
+           'weight_change_kg': round(end_w - start_w, 1) if start_w is not None and end_w is not None else None,
+           'checkins': checkins, 'doses_done': done, 'doses_total': total,
+           'weeks_completed': weeks, 'weeks_total': (proto or {}).get('duration_weeks')}
+    if stats is not None:
+        if 'weight' not in stats:
+            out['weight_change_kg'] = None
+        if 'checkins' not in stats:
+            out['checkins'] = 0
+        if 'doses' not in stats:
+            out['doses_total'] = 0
+        if 'weeks' not in stats:
+            out['weeks_completed'] = None
+    return out
+
+
+def _stat_rows(results: Optional[dict], short: bool = False) -> list[tuple[str, str]]:
+    if not results:
+        return []
+    stats = []
+    if results.get('weeks_completed'):
+        stats.append((f"{results['weeks_completed']}", 'weeks completed' if short else f"weeks completed of {results.get('weeks_total') or results['weeks_completed']}"))
+    if results.get('weight_change_kg') is not None:
+        stats.append((f"{results['weight_change_kg']:+.1f} kg", 'weight change' if short else f"{results['start_weight_kg']} → {results['end_weight_kg']} kg"))
+    if results.get('checkins'):
+        stats.append((str(results['checkins']), 'check-ins' if short else 'weekly check-ins'))
+    if results.get('doses_total'):
+        stats.append((f"{round(100 * results['doses_done'] / results['doses_total'])}%", 'doses done' if short else f"doses completed ({results['doses_done']}/{results['doses_total']})"))
+    return stats
 
 
 def _build_pdf(brand: str, accent_hex: str, name: str, plan_name: str, proto: Optional[dict], membership: dict,
-               results: Optional[dict], photos: list[tuple[bytes, str]], review: str, coach_note: str, coach_name: str, headline: str) -> bytes:
+               results: Optional[dict], photos: list[tuple[bytes, str]], review: str, coach_note: str, coach_name: str, headline: str,
+               summary: str = '', review_by: str = '') -> bytes:
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib import colors
     from reportlab.lib.units import mm
@@ -255,23 +291,16 @@ def _build_pdf(brand: str, accent_hex: str, name: str, plan_name: str, proto: Op
     c.drawCentredString(W / 2, H - 78 * mm, f"completed the {plan_name} coaching plan{weeks}{period}")
 
     y = H - 92 * mm
-    if results:
-        stats = []
-        if results.get('weight_change_kg') is not None:
-            stats.append((f"{results['weight_change_kg']:+.1f} kg", f"{results['start_weight_kg']} → {results['end_weight_kg']} kg"))
-        if results.get('checkins'):
-            stats.append((str(results['checkins']), 'weekly check-ins'))
-        if results.get('doses_total'):
-            stats.append((f"{round(100 * results['doses_done'] / results['doses_total'])}%", f"doses completed ({results['doses_done']}/{results['doses_total']})"))
-        if stats:
-            box_w = 60 * mm; gap = 6 * mm; total_w = len(stats) * box_w + (len(stats) - 1) * gap
-            x = (W - total_w) / 2
-            for big, small in stats:
-                c.setFillColor(colors.HexColor('#f4f5f8')); c.roundRect(x, y - 22 * mm, box_w, 22 * mm, 3 * mm, fill=1, stroke=0)
-                c.setFillColor(navy); c.setFont('Helvetica-Bold', 20); c.drawCentredString(x + box_w / 2, y - 10 * mm, big)
-                c.setFillColor(colors.HexColor('#64748b')); c.setFont('Helvetica', 9); c.drawCentredString(x + box_w / 2, y - 17 * mm, small)
-                x += box_w + gap
-            y -= 30 * mm
+    stats = _stat_rows(results)
+    if stats:
+        box_w = 52 * mm if len(stats) > 3 else 60 * mm; gap = 6 * mm; total_w = len(stats) * box_w + (len(stats) - 1) * gap
+        x = (W - total_w) / 2
+        for big, small in stats:
+            c.setFillColor(colors.HexColor('#f4f5f8')); c.roundRect(x, y - 22 * mm, box_w, 22 * mm, 3 * mm, fill=1, stroke=0)
+            c.setFillColor(navy); c.setFont('Helvetica-Bold', 20); c.drawCentredString(x + box_w / 2, y - 10 * mm, big)
+            c.setFillColor(colors.HexColor('#64748b')); c.setFont('Helvetica', 9); c.drawCentredString(x + box_w / 2, y - 17 * mm, small)
+            x += box_w + gap
+        y -= 30 * mm
 
     if photos:
         pw = 48 * mm; ph = 48 * mm; gap = 6 * mm
@@ -286,8 +315,11 @@ def _build_pdf(brand: str, accent_hex: str, name: str, plan_name: str, proto: Op
         y -= ph + 6 * mm
 
     style = ParagraphStyle('q', fontName='Helvetica-Oblique', fontSize=11, leading=15, textColor=colors.HexColor('#334155'), alignment=1)
+    if summary:
+        ss = ParagraphStyle('s', fontName='Helvetica', fontSize=10, leading=14, textColor=colors.HexColor('#334155'), alignment=1)
+        p = Paragraph(f'<b>The journey:</b> {summary}', ss); w, h = p.wrap(W - 80 * mm, 60 * mm); p.drawOn(c, 40 * mm, y - h); y -= h + 4 * mm
     if review:
-        p = Paragraph(f'“{review}”', style); w, h = p.wrap(W - 80 * mm, 60 * mm); p.drawOn(c, 40 * mm, y - h); y -= h + 4 * mm
+        p = Paragraph(f'“{review}”' + (f' <font size="9" color="#64748b">— {review_by}</font>' if review_by else ''), style); w, h = p.wrap(W - 80 * mm, 60 * mm); p.drawOn(c, 40 * mm, y - h); y -= h + 4 * mm
     if coach_note:
         ns = ParagraphStyle('n', fontName='Helvetica', fontSize=10, leading=14, textColor=colors.HexColor('#475569'), alignment=1)
         p = Paragraph(f'<b>From your coach:</b> {coach_note}', ns); w, h = p.wrap(W - 80 * mm, 60 * mm); p.drawOn(c, 40 * mm, y - h); y -= h
@@ -339,15 +371,9 @@ def _build_share_image(brand: str, name: str, plan_name: str, results: Optional[
             d.text((S / 2 + 165, y + ph + 28), 'AFTER', fill='#94a3b8', font=font(F, 22), anchor='mm')
         y += ph + 70
     if results:
-        stats = []
-        if results.get('weight_change_kg') is not None:
-            stats.append((f"{results['weight_change_kg']:+.1f} kg", 'weight change'))
-        if results.get('checkins'):
-            stats.append((str(results['checkins']), 'check-ins'))
-        if results.get('doses_total'):
-            stats.append((f"{round(100 * results['doses_done'] / results['doses_total'])}%", 'doses done'))
+        stats = _stat_rows(results, short=True)[:4]
         if stats:
-            bw = 260; gap = 30; total = len(stats) * bw + (len(stats) - 1) * gap
+            bw = 230 if len(stats) > 3 else 260; gap = 24; total = len(stats) * bw + (len(stats) - 1) * gap
             x = (S - total) // 2
             for big, small in stats:
                 d.rounded_rectangle((x, y, x + bw, y + 120), radius=20, fill='#13223d')
@@ -386,7 +412,19 @@ async def coach_issue_certificate(client_id: str, payload: CertificateIn, user: 
     name = full.split(' ')[0] if payload.anonymise else full
     if not payload.include_identity:
         name = 'A valued client'
-    results = await _results_for(client, proto) if payload.include_results else None
+    if client.get('feedback_requested_at') and not payload.skip_feedback_check:
+        answered = await db.coaching_feedback.find_one({'client_id': client_id, 'kind': 'end_of_plan', 'created_at': {'$gte': client['feedback_requested_at']}})
+        if not answered:
+            raise HTTPException(409, "The client hasn't answered your end-of-plan feedback request yet. Wait for it, withdraw the request, or tick 'issue anyway'.")
+    results = await _results_for(client, proto, payload.stats) if payload.include_results else None
+    review = payload.review_text.strip() if payload.include_review else ''
+    review_by = ''
+    if payload.include_review and payload.feedback_id:
+        fb = await db.coaching_feedback.find_one({'id': payload.feedback_id, 'client_id': client_id})
+        if not fb or not fb.get('allow_certificate') or not fb.get('testimonial'):
+            raise HTTPException(400, "That feedback can't be used — the client hasn't allowed their quote on the certificate.")
+        review = fb['testimonial'].strip()
+        review_by = (client.get('customer_name') or 'the client').split(' ')[0] if payload.include_identity else 'the client'
     photos = []
     if payload.include_photos and payload.photo_ids:
         for pid in payload.photo_ids[:3]:
@@ -398,20 +436,21 @@ async def coach_issue_certificate(client_id: str, payload: CertificateIn, user: 
                     logger.warning(f'photo fetch failed: {e}')
     coach_name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or 'Your coach'
     pdf = _build_pdf(brand, '#c8a24a', name, (plan or {}).get('name', 'Coaching'), proto, client, results, photos,
-                     payload.review_text.strip() if payload.include_review else '',
-                     payload.coach_note.strip() if payload.include_coach_note else '', coach_name, payload.headline.strip() or 'Certificate of Completion')
+                     review, payload.coach_note.strip() if payload.include_coach_note else '', coach_name,
+                     payload.headline.strip() or 'Certificate of Completion',
+                     summary=payload.summary_text.strip() if payload.include_summary else '', review_by=review_by)
     cid = str(uuid.uuid4())
     path = f"{APP_NAME}/coaching-certificates/{client_id}/{cid}.pdf"
     img_path = f"{APP_NAME}/coaching-certificates/{client_id}/{cid}.png"
     try:
         put_object(path, pdf, 'application/pdf')
         png = _build_share_image(brand, name, (plan or {}).get('name', 'Coaching'), results, photos,
-                                 payload.review_text.strip() if payload.include_review else '', coach_name,
-                                 payload.headline.strip() or 'Certificate of Completion')
+                                 review, coach_name, payload.headline.strip() or 'Certificate of Completion')
         put_object(img_path, png, 'image/png')
     except Exception as e:
         raise HTTPException(500, f'Storage upload failed: {e}')
-    doc = {'id': cid, 'client_id': client_id, 'coach_id': user['id'], 'storage_path': path, 'image_path': img_path, 'options': payload.model_dump(),
+    doc = {'id': cid, 'client_id': client_id, 'coach_id': user['id'], 'storage_path': path, 'image_path': img_path,
+           'options': {**payload.model_dump(), 'review_text': review},
            'name_shown': name, 'plan_name': (plan or {}).get('name'), 'tier': state['tier'], 'results': results,
            'created_at': datetime.utcnow()}
     await db.coaching_certificates.insert_one(dict(doc))

@@ -4,7 +4,7 @@ import { Coaches } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import BRAND from '../../config/brand';
 import { TierBadge } from '../../components/coaching/TierCards';
-import { LayoutDashboard, ClipboardList, CalendarCheck, TrendingUp, MessageSquare, BookOpen, Lock, Loader2, ArrowLeft, Menu, X, Eye, Trophy } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, CalendarCheck, TrendingUp, MessageSquare, BookOpen, Lock, Loader2, ArrowLeft, Menu, X, Eye, Trophy, MessageSquareHeart } from 'lucide-react';
 
 export const PortalContext = React.createContext(null);
 
@@ -16,6 +16,7 @@ const NAV = [
   { path: 'messages', label: 'Messages', icon: MessageSquare, module: 'messages' },
   { path: 'resources', label: 'Resources', icon: BookOpen, module: 'resources' },
   { path: 'wall', label: 'Wall of Wins', icon: Trophy, module: null },
+  { path: 'feedback', label: 'Feedback', icon: MessageSquareHeart, module: null },
 ];
 
 // Data source: the member's own endpoints, or (coach view) the per-client ones.
@@ -40,6 +41,7 @@ const coachSrc = (clientId, bundle) => ({
   sendMessage: (b) => Coaches.sendMessage(clientId, b),
   resources: async () => bundle.resources,
   broadcasts: async () => bundle.broadcasts || [],
+  feedback: async () => bundle.feedback || { items: [] },
   weighIns: () => Coaches.coachWeighIns(clientId),
 });
 
