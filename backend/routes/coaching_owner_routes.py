@@ -126,14 +126,37 @@ async def my_photos(client: dict = Depends(require_member)):
     return [_photo_out(p) for p in docs]
 
 
+def _normalise_photo(data: bytes, ct: str) -> tuple[bytes, str]:
+    """HEIC → JPEG (browsers/certificates can't read HEIC), fix EXIF rotation, cap at 2000px."""
+    from PIL import Image, ImageOps
+    try:
+        if ct == 'image/heic':
+            import pillow_heif
+            pillow_heif.register_heif_opener()
+        im = Image.open(io.BytesIO(data))
+        im = ImageOps.exif_transpose(im)
+        if ct == 'image/heic' or max(im.size) > 2000 or len(data) > 3 * 1024 * 1024:
+            im.thumbnail((2000, 2000))
+            out = io.BytesIO()
+            im.convert('RGB').save(out, 'JPEG', quality=88, optimize=True)
+            return out.getvalue(), 'image/jpeg'
+        return data, ct
+    except Exception as e:
+        logger.warning(f'photo normalise skipped: {e}')
+        return data, ct
+
+
 @router.post('/my/photos')
 async def my_upload_photo(file: UploadFile = File(...), caption: str = '', taken_on: str = '', client: dict = Depends(require_member)):
     ct = (file.content_type or '').lower()
+    if ct == 'image/heif':
+        ct = 'image/heic'
     if ct not in IMG_TYPES:
         raise HTTPException(400, 'Please upload a JPG, PNG, WEBP or HEIC image')
     data = await file.read()
     if len(data) > MAX_PHOTO:
         raise HTTPException(400, 'Photo too large (max 10MB)')
+    data, ct = _normalise_photo(data, ct)
     pid = str(uuid.uuid4())
     path = f"{APP_NAME}/coaching-photos/{client['id']}/{pid}{IMG_TYPES[ct]}"
     try:
