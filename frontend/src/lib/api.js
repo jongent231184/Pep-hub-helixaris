@@ -241,6 +241,8 @@ export const Coaches = {
   coachAllFeedback: () => api.get('/coaching/coach/feedback').then(r => r.data),
   adminFeedback: () => api.get('/coaching/admin/feedback').then(r => r.data),
   testimonials: () => api.get('/coaching/testimonials').then(r => r.data),
+  coachSetClientPhone: (clientId, phone) => api.patch(`/coaching/coach/clients/${clientId}/contact`, { phone }).then(r => r.data),
+  mySetPhone: (phone) => api.patch('/coaching/my/contact', { phone }).then(r => r.data),
 };
 
 export const PayPal = {

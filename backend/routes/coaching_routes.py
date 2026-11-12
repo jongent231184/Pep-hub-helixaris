@@ -200,6 +200,7 @@ async def coach_update_request(req_id: str, payload: CoachingRequestUpdate, user
                 'coach_id': user['id'],
                 'customer_user_id': customer_user['id'] if customer_user else None,
                 'customer_email': req.get('email', ''),
+                'customer_phone': (req.get('phone') or '').strip(),
                 'customer_name': f"{req.get('first_name', '')} {req.get('last_name', '')}".strip(),
                 'request_id': req_id,
                 'area': req.get('area', ''),
@@ -990,3 +991,43 @@ async def coach_set_target_weight(client_id: str, payload: TargetWeightIn, user:
         {'$set': {'target_weight_kg': payload.target_weight_kg}},
     )
     return {'ok': True, 'target_weight_kg': payload.target_weight_kg}
+
+
+class ContactIn(BaseModel):
+    phone: str = ''
+
+
+def _clean_phone(raw: str) -> str:
+    """Normalise to E.164-ish for WhatsApp links: '07700 900123' → '+447700900123'."""
+    p = ''.join(ch for ch in (raw or '') if ch.isdigit() or ch == '+')
+    if not p:
+        return ''
+    if p.startswith('00'):
+        p = '+' + p[2:]
+    if p.startswith('07') and len(p) == 11:
+        p = '+44' + p[1:]
+    elif p.startswith('44') and not p.startswith('+'):
+        p = '+' + p
+    if not p.startswith('+'):
+        p = '+' + p
+    if len(p) < 9 or len(p) > 16:
+        raise HTTPException(400, 'That phone number doesn’t look right — include the country code if outside the UK')
+    return p
+
+
+@router.patch('/coach/clients/{client_id}/contact')
+async def coach_set_client_phone(client_id: str, payload: ContactIn, user: dict = Depends(require_coach)):
+    await _get_coach_client(client_id, user['id'])
+    phone = _clean_phone(payload.phone)
+    await db.coaching_clients.update_one({'id': client_id}, {'$set': {'customer_phone': phone}})
+    return {'ok': True, 'customer_phone': phone}
+
+
+@router.patch('/my/contact')
+async def my_set_phone(payload: ContactIn, user: dict = Depends(get_current_user)):
+    client = await _my_client(user)
+    if not client:
+        raise HTTPException(404, 'No coaching record found')
+    phone = _clean_phone(payload.phone)
+    await db.coaching_clients.update_one({'id': client['id']}, {'$set': {'customer_phone': phone}})
+    return {'ok': True, 'customer_phone': phone}

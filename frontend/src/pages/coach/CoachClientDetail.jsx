@@ -11,6 +11,8 @@ import WeighInPanel from '../../components/WeighInPanel';
 import { MembershipPanel, CheckinsPanel } from '../../components/coaching/CoachMembershipPanels';
 import CertificatePanel from '../../components/coaching/CertificatePanel';
 import FeedbackPanel from '../../components/coaching/FeedbackPanel';
+import { ClientPhone } from '../../components/coaching/WhatsAppNudge';
+import { useAuth } from '../../context/AuthContext';
 
 const AREA_LABEL = { weightloss: 'Weight loss', peptide_info: 'Peptide Information', dosage_guide: 'Dosage Guide', how_to_guide: 'How-to Guide' };
 const DAY_CODES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -31,6 +33,7 @@ const shortDate = (d) => d.toLocaleDateString('en-GB', { weekday: 'short', day: 
 const CoachClientDetail = () => {
   const { clientId } = useParams();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
@@ -301,6 +304,10 @@ const CoachClientDetail = () => {
           </Link>
         </div>
         <p className="text-sm text-slate-600 mt-1">{client.customer_email} · <strong>{AREA_LABEL[client.area] || client.area || '—'}</strong></p>
+        <div className="mt-2">
+          <ClientPhone clientId={client.id} phone={client.customer_phone} firstName={(client.customer_name || '').split(' ')[0]} coachName={user?.first_name}
+            onChange={(p) => setData(d => ({ ...d, client: { ...d.client, customer_phone: p } }))} />
+        </div>
         <p className="text-xs text-slate-500 mt-1">Client since {new Date(client.started_at).toLocaleDateString('en-GB')}</p>
       </div>
 

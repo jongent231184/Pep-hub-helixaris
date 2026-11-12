@@ -9,7 +9,7 @@ import { PhotosPanel } from '../../components/coaching/PhotosAndCertificates';
 import { Coaches } from '../../lib/api';
 import { toast } from 'sonner';
 import BRAND from '../../config/brand';
-import { Loader2, Send, CheckCircle2, Clock, FileText, PlayCircle, HelpCircle, ExternalLink, LayoutGrid, Layers, FlaskConical, ClipboardCheck, Eye, MessageSquare, CalendarDays, ChevronRight } from 'lucide-react';
+import { Loader2, Send, CheckCircle2, Clock, FileText, PlayCircle, HelpCircle, ExternalLink, LayoutGrid, Layers, FlaskConical, ClipboardCheck, Eye, MessageSquare, CalendarDays, ChevronRight, Smartphone } from 'lucide-react';
 
 const PLAN_TABS = [['overview', 'Overview', LayoutGrid], ['supplements', 'Supplements', Layers], ['peptides', 'Peptide plan', FlaskConical], ['checkin', 'Check-in', ClipboardCheck]];
 const KIND_ICON = { guide: FileText, video: PlayCircle, faq: HelpCircle };
@@ -308,7 +308,33 @@ export const PortalMessages = () => {
   return (
     <div data-testid="portal-messages">
       <PortalHeader title="Messages" sub={src.coachView ? `Replying as coach to ${membership.client_name}.` : `Direct line to ${membership.coach_name}.`} />
+      {!src.coachView && <PhoneNudgeOptIn phone={membership.customer_phone} />}
       <Card><CoachMessages src={src} /></Card>
+    </div>
+  );
+};
+
+const PhoneNudgeOptIn = ({ phone: initial }) => {
+  const [phone, setPhone] = useState(initial || '');
+  const [saved, setSaved] = useState(initial || '');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setPhone(initial || ''); setSaved(initial || ''); }, [initial]);
+  const save = async () => {
+    setBusy(true);
+    try { const r = await Coaches.mySetPhone(phone); setSaved(r.customer_phone); setPhone(r.customer_phone); toast.success(r.customer_phone ? 'Mobile saved — your coach can ping you on WhatsApp' : 'Mobile removed'); }
+    catch (e) { toast.error(e.response?.data?.detail || 'Could not save'); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="mb-4 rounded-xl border bg-white px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3" data-testid="phone-nudge-optin">
+      <div className="flex-1 text-sm">
+        <p className="font-bold text-slate-900 inline-flex items-center gap-1.5"><Smartphone className="h-4 w-4 text-[#25D366]" /> WhatsApp nudges</p>
+        <p className="text-xs text-slate-600">{saved ? `Your coach can send a quick "you've got a message" nudge to ${saved}.` : 'Add your mobile so your coach can ping you on WhatsApp when a reply is waiting.'}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="07700 900123" className="border rounded-lg px-3 py-2 text-sm w-44" data-testid="my-phone-input" />
+        <button onClick={save} disabled={busy || phone === saved} className="text-xs font-bold px-3 py-2 rounded-lg text-[#0b1528] disabled:opacity-50" style={{ background: GOLD }} data-testid="my-phone-save">{busy ? '…' : 'Save'}</button>
+      </div>
     </div>
   );
 };

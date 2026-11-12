@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Coaches } from '../../lib/api';
-import { Loader2, Mail, UserX, Users } from 'lucide-react';
+import { Loader2, Mail, UserX, Users, Phone } from 'lucide-react';
+import { WhatsAppButton } from '../../components/coaching/WhatsAppNudge';
+import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
 
@@ -8,6 +10,7 @@ const AREA_LABEL = { weightloss: 'Weight loss', peptide_info: 'Peptide Informati
 
 const CoachClients = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,6 +52,7 @@ const CoachClients = () => {
               <h3 className="text-lg font-black">{c.customer_name}</h3>
               <p className="text-xs text-slate-500 mt-1"><strong>Area:</strong> {AREA_LABEL[c.area] || c.area || '—'}</p>
               <a href={`mailto:${c.customer_email}`} className="inline-flex items-center gap-1 text-sm text-sky-600 hover:underline mt-3"><Mail className="h-3.5 w-3.5" /> {c.customer_email}</a>
+              {c.customer_phone && <div className="mt-2 flex items-center gap-2 flex-wrap text-xs text-slate-600"><span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {c.customer_phone}</span><WhatsAppButton phone={c.customer_phone} firstName={(c.customer_name || '').split(' ')[0]} coachName={user?.first_name} size="xs" testId={`whatsapp-${c.id}`} /></div>}
               <div className="mt-4 pt-4 border-t flex items-center justify-between">
                 <a href={`/coach/clients/${c.id}`} className="text-sm font-bold text-sky-600 hover:underline uppercase tracking-wider">Open protocol →</a>
                 <button onClick={() => deactivate(c)} className="text-xs text-red-600 hover:underline inline-flex items-center gap-1">

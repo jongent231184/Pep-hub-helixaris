@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Coaches } from '../../lib/api';
 import { Loader2, Mail, Phone, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { WhatsAppButton, ukPhone } from '../../components/coaching/WhatsAppNudge';
+import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
 
@@ -14,6 +16,7 @@ const STATUS_META = {
 
 const CoachRequests = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('new');
@@ -104,6 +107,7 @@ const CoachRequests = () => {
                     <div className="flex flex-wrap gap-4 mt-2 text-xs">
                       <a href={`mailto:${r.email}`} className="inline-flex items-center gap-1 text-sky-600 hover:underline"><Mail className="h-3 w-3" />{r.email}</a>
                       {r.phone && <a href={`tel:${r.phone}`} className="inline-flex items-center gap-1 text-slate-700 hover:underline"><Phone className="h-3 w-3" />{r.phone}</a>}
+                      {r.phone && <WhatsAppButton phone={ukPhone(r.phone)} firstName={r.first_name} coachName={user?.first_name} kind="enquiry" label="WhatsApp" size="xs" testId={`whatsapp-req-${r.id}`} />}
                     </div>
                     {r.message && (
                       <div className="mt-3 p-3 bg-slate-50 rounded text-sm text-slate-700 whitespace-pre-wrap">{r.message}</div>

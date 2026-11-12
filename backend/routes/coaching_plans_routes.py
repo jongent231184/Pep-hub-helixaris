@@ -167,6 +167,7 @@ async def my_membership(user: dict = Depends(get_current_user)):
     state = await membership_state(client)
     coach = await db.users.find_one({'id': client['coach_id']}, {'first_name': 1, 'last_name': 1, 'bio': 1})
     state['coach_name'] = f"{(coach or {}).get('first_name', '')} {(coach or {}).get('last_name', '')}".strip() or 'Your coach'
+    state['customer_phone'] = client.get('customer_phone', '')
     return state
 
 
