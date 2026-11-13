@@ -225,7 +225,11 @@ def build_share_image(brand: str, name: str, plan_name: str, results: Optional[d
     d = ImageDraw.Draw(img)
     F = os.path.join(FONT_DIR, 'LiberationSans-Bold.ttf'); FR = os.path.join(FONT_DIR, 'LiberationSans-Regular.ttf')
     FS = os.path.join(FONT_DIR, 'LiberationSerif-Bold.ttf'); FI = os.path.join(FONT_DIR, 'LiberationSerif-Italic.ttf')
-    font = lambda p, s: ImageFont.truetype(p, s)  # noqa: E731
+    def font(p, s):
+        try:
+            return ImageFont.truetype(p, s)
+        except Exception:
+            return ImageFont.load_default(size=s)
     accent = T['accent']
     d.rounded_rectangle((36, 36, S - 36, S - 36), radius=40, outline=accent, width=5)
     y = 62
