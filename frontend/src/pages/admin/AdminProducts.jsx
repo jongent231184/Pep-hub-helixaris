@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Products, resolveImage } from '../../lib/api';
-import { Plus, Pencil, Trash2, Loader2, Eye, EyeOff, Check, Sparkles, Thermometer, PackagePlus } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Eye, EyeOff, Check, Sparkles, Thermometer, PackagePlus, Download } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useToast } from '../../hooks/use-toast';
@@ -236,6 +236,9 @@ const AdminProducts = () => {
           >
             {bulkGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {bulkGenerating ? 'Generating…' : 'AI-fill research profiles'}
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={async () => { const url = await Products.exportBlob('csv'); const a = document.createElement('a'); a.href = url; a.download = 'ghp-products.csv'; a.click(); }} data-testid="export-products-csv-btn">
+            <Download className="h-4 w-4" /> Export CSV
           </Button>
           <Link to="/admin/products/new">
             <Button className="bg-sky-500 hover:bg-sky-600 text-white gap-2"><Plus className="h-4 w-4" /> New Product</Button>

@@ -43,6 +43,7 @@ export const Categories = {
 export const Products = {
   list: (params = {}) => api.get('/products', { params }).then(r => r.data),
   listAll: () => api.get('/products/all').then(r => r.data),
+  exportBlob: (format = 'csv') => api.get('/products/export', { params: { format }, responseType: 'blob' }).then(r => URL.createObjectURL(r.data)),
   get: (slug) => api.get(`/products/${slug}`).then(r => r.data),
   getById: (id) => api.get(`/products/id/${id}`).then(r => r.data),
   create: (data) => api.post('/products', data).then(r => r.data),

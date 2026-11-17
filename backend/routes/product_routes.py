@@ -2,13 +2,25 @@
 from datetime import datetime
 import uuid
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from db import db
 from models import ProductCreate, ProductUpdate, ProductOut
 from auth import require_admin
 from utils import doc_to_dict
 
 router = APIRouter(prefix='/products', tags=['products'])
+
+
+@router.get('/export')
+async def export_products(request: Request, format: str = 'csv', _=Depends(require_admin)):
+    """Admin download of the full catalogue (prices, images, research profiles) as CSV or JSON."""
+    from export_products import build_rows, rows_to_csv
+    from fastapi.responses import Response, JSONResponse
+    base = str(request.headers.get('x-forwarded-host') and f"https://{request.headers['x-forwarded-host']}" or request.base_url).rstrip('/')
+    rows = await build_rows(db, base)
+    if format == 'json':
+        return JSONResponse(rows, headers={'Content-Disposition': 'attachment; filename="products.json"'})
+    return Response(rows_to_csv(rows), media_type='text/csv; charset=utf-8', headers={'Content-Disposition': 'attachment; filename="products.csv"'})
 
 
 @router.get('', response_model=list[ProductOut])
