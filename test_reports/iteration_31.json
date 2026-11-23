@@ -1,0 +1,43 @@
+{
+  "summary": "Tested the Niftipay hosted checkout end to end. Backend: 11 of 12 pytest tests pass (tests/test_niftipay.py). Everything in the brief works: config enabled:true; webhook test event returns 200 and invalid JSON returns 400; a paid event for an unknown order returns 200, with only a warning in the log and no traceback; create-payment returns 404 for an unknown order and 400 'not activated' for GHP-001; status returns 200 or 404; refund returns 401 without a token and 404 with the admin token; payments_paused=true makes create-payment return 503 'temporarily paused' (setting restored to false afterwards). The one failure is an extra robustness test: a JSON body that is not an object (e.g. [1,2]) makes the webhook return 500 with an AttributeError. Code review found a CRITICAL security flaw in the webhook (details below). Frontend: all flows pass. Payment step shows the compliance checkbox and niftipay-section; the 'Pay by Card · £44.99' button stays disabled until the box is ticked. No wallid or xoala buttons are present, and the bank transfer button is present. Clicking pay shows the destructive toast 'Could not start card payment' with the 'not activated' message and stays on /checkout. /checkout?niftipay=failed with a stashed order shows niftipay-failed-note and a 'Retry card payment' button. Admin /admin/orders/GHP-001 loads with no JS errors and no refund button.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/niftipay/webhook", "issue": "SECURITY: NIFTIPAY_WEBHOOK_SECRET is not set in the environment (only API_KEY and INTEGRATION_ID exist), so webhooks are accepted unsigned. Only 'paid' is re-checked against the Niftipay API. 'refunded', 'cancelled', 'expired', 'chargeback' and other events change orders with no verification. Worse, the order lookup is find_one({$or:[{niftipay_order_id: o.get('id')},{niftipay_reference: o.get('merchantReference')}]}). When the payload's order object lacks id or merchantReference, this becomes {niftipay_order_id: None}, which MongoDB matches against ANY order missing that field. I checked read-only: this query currently resolves to GHP-001. So an anonymous POST {\"event\":\"refunded\",\"order\":{\"x\":1}} would mark a real order refunded, 'cancelled' would mark it failed, and 'chargeback' would flag it. I did NOT execute this against data. Fix: (1) skip the lookup unless o.id or merchantReference is a non-empty string, and only add the clauses that are present; (2) require a valid signature for every state-changing event, or confirm the status through GET /api/fiat/orders/{key} for every event, not just 'paid'; (3) set NIFTIPAY_WEBHOOK_SECRET in preview and production.", "priority": "CRITICAL"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/niftipay/webhook", "issue": "A body that is valid JSON but not an object (array, string) crashes with 500 'list' object has no attribute 'get'. An 'order' value that is not a dict would crash the same way. Check isinstance(payload, dict) and return 400."},
+      {"endpoint": "POST /api/niftipay/webhook", "issue": "A bad signature returns HTTP 500. 401 or 400 is the conventional response (500 may be deliberate to trigger provider retries, but it also pollutes error monitoring)."},
+      {"endpoint": "POST /api/niftipay/admin/{id}/refund", "issue": "amount is not validated: a negative amount, or one above the order total, is passed straight to Niftipay. refunded_amount is overwritten rather than added to on partial refunds. The UI only shows the button for payment_status=='paid', so a second partial refund is impossible."},
+      {"endpoint": "POST /api/niftipay/create-payment", "issue": "The cached niftipay_pay_url is returned again on retry. It is only cleared by a cancelled or expired webhook. After a failureUrl redirect with no webhook, 'Retry card payment' sends the customer back to the same (possibly failed or expired) hosted session. Consider clearing or refreshing it when the user comes back via ?niftipay=failed, or checking its status first."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Checkout payment step", "issues": ["BankTrustBadges ('Connects securely to your bank · FCA-regulated' plus Lloyds/NatWest/Santander logos) is rendered inside niftipay-section, under the Pay by Card button. This is leftover Wallid pay-by-bank copy and is misleading for a card payment. Replace it with card or 3DS badges."]},
+      {"screen": "Footer (all pages)", "issues": ["footer-payment-methods still says 'PAY BY BANK · Instant · Secure · No card fees'. This contradicts card being the only online provider now. Update it to Visa/Mastercard."]},
+      {"screen": "Checkout code", "issues": ["PENDING_ORDER_STORAGE_KEY is still named 'ghp_pending_wallid_order'. The comments, the wallidFailed state, the Square code path (payWithSquare, the square config fetch) and the wallid-failed-banner are dead code now. Consider cleaning them up."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_niftipay.py", "/app/test_reports/pytest/pytest_results_iter31.xml"],
+  "action_items": [
+    "CRITICAL: Harden the /api/niftipay/webhook order lookup so a missing or None id/merchantReference never matches arbitrary orders. Require a signature or an API confirmation for every state-changing event. Set NIFTIPAY_WEBHOOK_SECRET.",
+    "Return 400 for webhook bodies that are not objects instead of crashing with 500.",
+    "Validate the refund amount (0 < amount <= total - already refunded) and add partial refunds together.",
+    "Replace the bank-trust badges under the Pay by Card button and the 'Pay by Bank' footer badge with card branding."
+  ],
+  "critical_code_review_comments": [
+    "niftipay_routes.webhook: the $or lookup with None values matches any order lacking the field. Combined with unsigned webhooks, this is an unauthenticated order-state tampering vector.",
+    "niftipay_routes.create_payment: a 409 reference conflict calls itself recursively with no depth limit. Cap the retries.",
+    "niftipay_routes._frontend_base trusts the x-forwarded-host header to build returnUrl and failureUrl. Prefer a configured FRONTEND_URL env var so the redirect target cannot be spoofed.",
+    "_verify: int(ts) raises ValueError on a timestamp that is not numeric, which gives a 500. Wrap it in try/except."
+  ],
+  "updated_files": ["/app/backend/tests/test_niftipay.py"],
+  "success_rate": {"backend": "92% (11/12; all 11 requested checks pass, the extra robustness test fails)", "frontend": "100% (all requested flows pass)"},
+  "seed_data_creation": "The UI flow created order GHP-068 (id f575cc81-7b7d-492f-b1c1-9e6a7ae3c408, email TEST_niftipay@example.com); it was deleted by id. The niftipay_events docs from my webhook tests were deleted, but my cleanup filter (event=='test' in the last 20 min) also deleted one 'test' event from 11:11:37 that predates my run and probably came from the main agent. This was a log-only record. payments_paused was toggled to true and restored to false (verified false). The settings PUT round-trip used the full admin settings doc, so no other fields changed except updated_at. GHP-001 is unchanged (pending, payment_provider paypal).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run: cd /app/backend && python -m pytest tests/test_niftipay.py -v -p no:randomly. Checkout UI: set sessionStorage ghp_age_verified='true' and ghp_site_unlocked='1', and seed localStorage ghp_cart with an in-stock product (e.g. ahkcu-100mg id 7d26a5aa-6bf1-4b81-ae84-8fcc08b394f3, price 40). The address inputs have no testids: use #email and '#details-form input[required]'. Submit via button[form='details-form']. Each checkout creates a real order, so delete it by id afterwards. The pending-order stash key is 'ghp_pending_wallid_order'. Do NOT send state-changing webhooks without order ids until the lookup bug is fixed: they would hit GHP-001.",
+  "rca of the issue": "Webhook tampering: niftipay_routes.py line 123 builds {'$or':[{'niftipay_order_id': o.get('id')},{'niftipay_reference': o.get('merchantReference')}]}. In MongoDB, {field: null} matches documents where the field is missing, so any payload without these keys resolves to the first order in the collection. Line 111 skips signature verification when WEBHOOK_SECRET is empty (the current state), and only 'paid' (line 128) has a fallback API check. Reproduction (read-only): db.orders.find_one({'$or':[{'niftipay_order_id':None},{'niftipay_reference':None}]}) returns GHP-001."
+}

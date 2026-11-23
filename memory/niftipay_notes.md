@@ -31,3 +31,9 @@ Retries: 3 attempts, 15 min apart, 15s timeout. Redirects not followed (register
 - Webhook: production https://www.ghp-health.com/api/niftipay/webhook . Our route: POST /api/niftipay/webhook (raw body HMAC).
 - Un-pause: user wants payments un-paused once live checkout verified — agent CANNOT write prod DB; user flips Admin→Settings payments_paused, or add admin button. Remind user.
 - Secrets to collect via secrets_request: NIFTIPAY_API_KEY, NIFTIPAY_INTEGRATION_ID, NIFTIPAY_WEBHOOK_SECRET
+
+## Status 23/11/2026
+- Implemented: backend/routes/niftipay_routes.py (config, create-payment, webhook w/ HMAC + API-confirm fallback, status poll, admin refund), Checkout.jsx Niftipay-only card button (Wallid/Xoala removed, bank transfer kept), OrderConfirmation polling (?niftipay=1), AdminOrderDetail refund.
+- Integration ID + API key set via secrets. NIFTIPAY_WEBHOOK_SECRET still NOT set -> webhook falls back to confirming every event against Niftipay API.
+- Live create-payment currently returns Niftipay 403 account_not_activated (contract unsigned). Payments remain PAUSED in production until live checkout verified.
+- Preview DB payments_paused=false for testing.

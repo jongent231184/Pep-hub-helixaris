@@ -165,3 +165,11 @@ Phased plan:
 ## Environment variables
 - Frontend: `REACT_APP_BACKEND_URL`, `REACT_APP_BRAND`.
 - Backend: `MONGO_URL`, `DB_NAME`, `EMERGENT_LLM_KEY`, `RESEND_API_KEY`, Square keys, Wallid keys, `SITE_BASE_URL` (defaults to `https://ghp-health.com`).
+
+
+## 2026-11-23 — Niftipay hosted card checkout (sole online provider)
+- New `backend/routes/niftipay_routes.py`: `GET /api/niftipay/config`, `POST /api/niftipay/create-payment` (503 while paused), `POST /api/niftipay/webhook` (HMAC v1 signature; unsigned events confirmed against Niftipay API), `GET /api/niftipay/status/{id}` (poll fallback), `POST /api/niftipay/admin/{id}/refund` (partial refunds accumulate).
+- Checkout now shows only the Niftipay "Pay by Card" button + manual bank transfer; Wallid/Xoala buttons removed from checkout (routes kept for history/refunds). Order confirmation polls Niftipay status when `?niftipay=1`.
+- Secrets set: NIFTIPAY_API_KEY, NIFTIPAY_INTEGRATION_ID. Pending: NIFTIPAY_WEBHOOK_SECRET.
+- Blocker: Niftipay account not activated (contract pending) → live checkout cannot be verified yet. Production payments remain PAUSED; un-pause once a live test payment succeeds (user approved).
+- Tested: testing agent iteration 31 (backend + frontend pass); security findings fixed (strict order lookup, verification for all state-changing events, non-object bodies → 400).

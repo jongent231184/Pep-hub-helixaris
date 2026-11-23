@@ -202,7 +202,7 @@ const AdminOrderDetail = () => {
             {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Email invoice
           </Button>
-          {((order.payment_provider === 'xoala' && order.xoala_payment_id) || (order.payment_provider === 'niftipay' && order.niftipay_order_key)) && order.payment_status === 'paid' && (
+          {((order.payment_provider === 'xoala' && order.xoala_payment_id) || (order.payment_provider === 'niftipay' && order.niftipay_order_key)) && ['paid', 'partially_refunded'].includes(order.payment_status) && (
             <Button
               variant="outline"
               className="gap-2 border-amber-300 text-amber-800 hover:bg-amber-50"

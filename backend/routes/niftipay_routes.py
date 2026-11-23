@@ -97,48 +97,57 @@ def _verify(secret: str, ts: str, sig: str, raw: bytes) -> bool:
     return hmac.compare_digest(sig[3:], expected)
 
 
-async def _confirmed_paid(order_key: str) -> bool:
+async def _remote_status(order_key: str) -> str:
     if not order_key:
-        return False
+        return ''
     code, data = await _api('GET', f'/api/fiat/orders/{order_key}')
-    return code == 200 and ((data.get('order') or {}).get('status') or '').lower() in ('paid', 'completed')
+    return ((data.get('order') or {}).get('status') or '').lower() if code == 200 else ''
 
 
 @router.post('/webhook')
 async def webhook(request: Request):
     raw = await request.body()
     secret = _cfg()['WEBHOOK_SECRET']
-    if secret and not _verify(secret, request.headers.get('x-timestamp', ''), request.headers.get('x-signature', ''), raw):
+    signed = bool(secret) and _verify(secret, request.headers.get('x-timestamp', ''), request.headers.get('x-signature', ''), raw)
+    if secret and not signed:
         logger.warning('niftipay webhook: bad signature')
         return JSONResponse({'ok': False, 'error': 'signature'}, status_code=500)
     try:
         payload = await request.json()
     except Exception:
+        payload = None
+    if not isinstance(payload, dict):
         return JSONResponse({'ok': False}, status_code=400)
     event = (payload.get('event') or '').lower()
-    o = payload.get('order') or {}
-    await db.niftipay_events.insert_one({'event': event, 'order_id': o.get('id'), 'reference': o.get('merchantReference'), 'received_at': datetime.utcnow(), 'payload': payload})
-    if event == 'test' or not o:
+    o = payload.get('order') if isinstance(payload.get('order'), dict) else {}
+    nid, ref = o.get('id'), o.get('merchantReference')
+    await db.niftipay_events.insert_one({'event': event, 'order_id': nid, 'reference': ref, 'signed': signed, 'received_at': datetime.utcnow(), 'payload': payload})
+    clauses = [{'niftipay_order_id': v} for v in [nid] if isinstance(v, str) and v] + [{'niftipay_reference': v} for v in [ref] if isinstance(v, str) and v]
+    if event == 'test' or not clauses:
         return {'ok': True}
-    order = await db.orders.find_one({'$or': [{'niftipay_order_id': o.get('id')}, {'niftipay_reference': o.get('merchantReference')}]})
+    order = await db.orders.find_one({'$or': clauses})
     if not order:
-        logger.warning(f'niftipay webhook: no order for {o.get("id")} / {o.get("merchantReference")}')
+        logger.warning(f'niftipay webhook: no order for {nid} / {ref}')
         return {'ok': True}
-    if event == 'paid':
-        if not secret and not await _confirmed_paid(order.get('niftipay_order_key')):
-            logger.warning(f'niftipay webhook: unsigned paid event not confirmed by API for {order["id"]}')
+    if not signed:
+        # Unsigned (no secret configured): trust only what Niftipay's API confirms.
+        remote = await _remote_status(order.get('niftipay_order_key'))
+        if event == 'paid' and remote not in ('paid', 'completed') or event != 'paid' and remote != event:
+            logger.warning(f'niftipay webhook: unsigned {event} not confirmed by API ({remote!r}) for {order["id"]}')
             return {'ok': True}
-        await mark_order_paid(order_id=order['id'], payment_id=str(o.get('pspOrderId') or o.get('id')), payment_provider='niftipay',
+    now = datetime.utcnow()
+    if event == 'paid':
+        await mark_order_paid(order_id=order['id'], payment_id=str(o.get('pspOrderId') or nid), payment_provider='niftipay',
                               extra_fields={'niftipay_status': 'paid', 'niftipay_amount_cents': o.get('amountCents')}, payment_source='webhook')
     elif event in ('cancelled', 'expired'):
         await db.orders.update_one({'id': order['id'], 'payment_status': {'$ne': 'paid'}},
-                                   {'$set': {'payment_status': 'failed', 'niftipay_status': event, 'niftipay_pay_url': None, 'updated_at': datetime.utcnow()}})
+                                   {'$set': {'payment_status': 'failed', 'niftipay_status': event, 'niftipay_pay_url': None, 'updated_at': now}})
     elif event == 'refunded':
-        await db.orders.update_one({'id': order['id']}, {'$set': {'payment_status': 'refunded', 'niftipay_status': 'refunded', 'refunded_at': datetime.utcnow(), 'updated_at': datetime.utcnow()}})
+        await db.orders.update_one({'id': order['id']}, {'$set': {'payment_status': 'refunded', 'niftipay_status': 'refunded', 'refunded_at': now, 'updated_at': now}})
     elif event in ('chargeback', 'risk_alert'):
-        await db.orders.update_one({'id': order['id']}, {'$set': {'niftipay_status': event, 'flagged': True, 'flag_reason': f'Niftipay {event}', 'updated_at': datetime.utcnow()}})
+        await db.orders.update_one({'id': order['id']}, {'$set': {'niftipay_status': event, 'flagged': True, 'flag_reason': f'Niftipay {event}', 'updated_at': now}})
     else:
-        await db.orders.update_one({'id': order['id']}, {'$set': {'niftipay_status': event, 'updated_at': datetime.utcnow()}})
+        await db.orders.update_one({'id': order['id']}, {'$set': {'niftipay_status': event, 'updated_at': now}})
     return {'ok': True}
 
 
@@ -162,13 +171,17 @@ async def refund(order_id: str, payload: dict = Body(default={}), _=Depends(requ
     order = await db.orders.find_one({'id': order_id})
     if not order or not order.get('niftipay_order_key'):
         raise HTTPException(404, 'No Niftipay payment on this order')
-    amount = float(payload.get('amount') or order['total'])
+    already = float(order.get('refunded_amount') or 0)
+    amount = float(payload.get('amount') or (float(order['total']) - already))
+    if amount <= 0 or amount > float(order['total']) - already + 0.005:
+        raise HTTPException(400, 'Refund amount exceeds remaining balance')
     code, data = await _api('POST', f"/api/fiat/orders/{order['niftipay_order_key']}/refunds",
                             json={'amountCents': int(round(amount * 100)), 'description': payload.get('reason') or f"Refund order {order.get('order_number', '')}"})
     if code >= 400:
         raise HTTPException(400, data.get('error') or 'Refund failed')
-    full = amount >= float(order['total']) - 0.005
-    await db.orders.update_one({'id': order_id}, {'$set': {'payment_status': 'refunded' if full else 'partially_refunded', 'refunded_amount': amount,
+    total_refunded = already + amount
+    full = total_refunded >= float(order['total']) - 0.005
+    await db.orders.update_one({'id': order_id}, {'$set': {'payment_status': 'refunded' if full else 'partially_refunded', 'refunded_amount': round(total_refunded, 2),
                                                            'refunded_at': datetime.utcnow(), 'updated_at': datetime.utcnow()}})
     try:
         from email_service import send_refund_email
