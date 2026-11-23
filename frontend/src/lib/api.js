@@ -86,6 +86,13 @@ export const Orders = {
   setPaylinkAddress: (id, addr) => api.put(`/orders/pay/${id}/address`, addr).then(r => r.data),
 };
 
+export const Niftipay = {
+  config: () => api.get('/niftipay/config').then(r => r.data),
+  createPayment: (orderId) => api.post('/niftipay/create-payment', { order_id: orderId }).then(r => r.data),
+  status: (orderId) => api.get(`/niftipay/status/${orderId}`).then(r => r.data),
+  refund: (orderId, amount, reason) => api.post(`/niftipay/admin/${orderId}/refund`, { amount, reason }).then(r => r.data),
+};
+
 export const Xoala = {
   config: () => api.get('/xoala/config').then(r => r.data),
   createPayment: (orderId) => api.post('/xoala/create-payment', { order_id: orderId }).then(r => r.data),

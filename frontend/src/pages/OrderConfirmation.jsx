@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { CheckCircle2, Loader2, Clock, MessageCircle } from 'lucide-react';
-import { Orders, Wallid, Settings } from '../lib/api';
+import { Orders, Wallid, Settings , Niftipay } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import PaymentSuccessSplash from '../components/PaymentSuccessSplash';
@@ -29,7 +29,8 @@ const OrderConfirmation = () => {
   }, []);
 
   const cameFromWallid = searchParams.get('wallid') === '1';
-  const cameFromXoala = searchParams.get('xoala') === '1';
+  const cameFromXoala = searchParams.get('xoala') === '1' || searchParams.get('niftipay') === '1';
+  const cameFromNiftipay = searchParams.get('niftipay') === '1';
 
   const applyOrder = (o) => {
     setOrder(o);
@@ -149,6 +150,7 @@ const OrderConfirmation = () => {
     const iv = setInterval(async () => {
       attempts += 1;
       try {
+        if (cameFromNiftipay) await Niftipay.status(order.id).catch(() => null);
         const fresh = await Orders.get(order.id);
         if (fresh.payment_status === 'paid' || attempts >= 6) {
           applyOrder(fresh);

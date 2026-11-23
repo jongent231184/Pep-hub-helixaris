@@ -38,6 +38,7 @@ from routes.research_profile_routes import router as research_profile_router  # 
 from routes.blocklist_routes import router as blocklist_router  # noqa: E402
 from routes.analytics_routes import router as analytics_router  # noqa: E402
 from routes.xoala_routes import router as xoala_router  # noqa: E402
+from routes.niftipay_routes import router as niftipay_router  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s - %(message)s')
 logger = logging.getLogger('ghp')
@@ -123,6 +124,7 @@ api_router.include_router(research_profile_router)
 api_router.include_router(blocklist_router)
 api_router.include_router(analytics_router)
 api_router.include_router(xoala_router)
+api_router.include_router(niftipay_router)
 
 app.include_router(api_router)
 

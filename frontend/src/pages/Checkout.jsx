@@ -15,7 +15,7 @@ import BankTrustBadges from '../components/BankTrustBadges';
 import RedirectingOverlay from '../components/RedirectingOverlay';
 import BankTransferPanel, { BankTransferDetails } from '../components/BankTransferPanel';
 import { useAuth } from '../context/AuthContext';
-import { Orders, Promos, Addresses, Wallid, Xoala, resolveImage } from '../lib/api';
+import { Orders, Promos, Addresses, Wallid, Niftipay, resolveImage } from '../lib/api';
 
 import { BRAND } from '../config/brand';
 
@@ -37,9 +37,9 @@ const Checkout = () => {
   const [wallidFailed, setWallidFailed] = useState(false);
   const [complianceConfirmed, setComplianceConfirmed] = useState(false);
   const [squareConfig, setSquareConfig] = useState(null);
-  const [xoalaConfig, setXoalaConfig] = useState(null);
-  const [xoalaLoading, setXoalaLoading] = useState(false);
-  const [xoalaFailed, setXoalaFailed] = useState(false);
+  const [niftipayConfig, setNiftipayConfig] = useState(null);
+  const [niftipayLoading, setNiftipayLoading] = useState(false);
+  const [niftipayFailed, setNiftipayFailed] = useState(false);
   const [squareLoading, setSquareLoading] = useState(false);
   const [bankChosen, setBankChosen] = useState(false);
 
@@ -131,9 +131,9 @@ const Checkout = () => {
   // creating a duplicate order.
   useEffect(() => {
     const wallidParam = searchParams.get('wallid');
-    const xoalaParam = searchParams.get('xoala');
-    if (wallidParam !== 'failed' && xoalaParam !== 'failed') return;
-    const viaXoala = xoalaParam === 'failed';
+    const niftipayParam = searchParams.get('niftipay');
+    if (wallidParam !== 'failed' && niftipayParam !== 'failed') return;
+    const viaNiftipay = niftipayParam === 'failed';
     let stashed = null;
     try {
       const raw = localStorage.getItem(PENDING_ORDER_STORAGE_KEY);
@@ -147,12 +147,12 @@ const Checkout = () => {
           if (fresh?.payment_status === 'paid') {
             // Already paid via webhook / poller — jump straight to confirmation
             localStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
-            navigate(`/order-confirmation/${fresh.order_number}?${viaXoala ? 'xoala' : 'wallid'}=1`, { replace: true });
+            navigate(`/order-confirmation/${fresh.order_number}?${viaNiftipay ? 'niftipay' : 'wallid'}=1`, { replace: true });
             return;
           }
           setCreatedOrder(fresh);
           setStep('payment');
-          if (viaXoala) setXoalaFailed(true); else setWallidFailed(true);
+          if (viaNiftipay) setNiftipayFailed(true); else setWallidFailed(true);
           // Strip the ?wallid=failed from the URL so a refresh doesn't retrigger
           setSearchParams({}, { replace: true });
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -240,7 +240,7 @@ const Checkout = () => {
 
   useEffect(() => {
     Wallid.config().then(setWallidConfig).catch(() => setWallidConfig({ configured: false }));
-    Xoala.config().then(setXoalaConfig).catch(() => setXoalaConfig({ configured: false }));
+    Niftipay.config().then(setNiftipayConfig).catch(() => setNiftipayConfig({ enabled: false }));
   }, []);
 
   const submitDetails = async (e) => {
@@ -355,37 +355,24 @@ const Checkout = () => {
     }
   };
 
-  // Xoala card payment: server signs the form, the browser POSTs it to Xoala's
-  // hosted card page. Xoala POSTs the result back to our API which 303s here.
-  const payWithXoala = async () => {
+  // Niftipay hosted card checkout: server creates the order, browser is redirected to payUrl.
+  const payWithNiftipay = async () => {
     if (!createdOrder) return;
-    setXoalaLoading(true);
-    setXoalaFailed(false);
+    setNiftipayLoading(true);
+    setNiftipayFailed(false);
     try {
-      const res = await Xoala.createPayment(createdOrder.id);
-      if (!res?.action || !res?.fields) throw new Error('No payment form returned');
+      const res = await Niftipay.createPayment(createdOrder.id);
+      if (!res?.pay_url) throw new Error('No payment link returned');
       try {
         localStorage.setItem(PENDING_ORDER_STORAGE_KEY, JSON.stringify({
           id: createdOrder.id, order_number: createdOrder.order_number, created_at: Date.now(),
         }));
       } catch (_) { /* ignore */ }
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = res.action;
-      form.style.display = 'none';
-      Object.entries(res.fields).forEach(([name, value]) => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = name;
-        input.value = value;
-        form.appendChild(input);
-      });
-      document.body.appendChild(form);
-      form.submit();
+      window.location.assign(res.pay_url);
     } catch (err) {
       const detail = err.response?.data?.detail;
       toast({ title: 'Could not start card payment', description: detail || err.message, variant: 'destructive' });
-      setXoalaLoading(false);
+      setNiftipayLoading(false);
     }
   };
 
@@ -599,140 +586,67 @@ const Checkout = () => {
                 )}
 
                 <div className={paymentsPaused ? 'opacity-40 grayscale pointer-events-none select-none' : ''} aria-disabled={paymentsPaused} data-testid="payment-options">
-                {wallidConfig?.configured ? (
-                  <div data-testid="wallid-section">
-                    {/* Compliance confirmation — underwriters look for this
-                        checkbox on high-risk research merchant sites. */}
-                    <label
-                      className="flex items-start gap-3 cursor-pointer select-none mb-4 border border-slate-200 bg-slate-50 rounded-md p-3"
-                      data-testid="checkout-compliance-label"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={complianceConfirmed}
-                        onChange={(e) => setComplianceConfirmed(e.target.checked)}
-                        className="h-4 w-4 mt-0.5 accent-sky-500 cursor-pointer shrink-0"
-                        data-testid="checkout-compliance-checkbox"
-                      />
-                      <span className="text-[13px] text-slate-800 leading-snug">
-                        I confirm the products in this order are for <strong>research or educational use only</strong> and will not be used for human or animal consumption. I am 18 or older and reside in a jurisdiction where the sale of laboratory research chemicals is not restricted. I have read and accept the <Link to="/terms" target="_blank" className="underline text-sky-600 hover:text-sky-700">Terms &amp; Conditions</Link>, <Link to="/refund-policy" target="_blank" className="underline text-sky-600 hover:text-sky-700">Returns &amp; Refund Policy</Link>, <Link to="/shipping-policy" target="_blank" className="underline text-sky-600 hover:text-sky-700">Shipping Policy</Link> and <Link to="/privacy-policy" target="_blank" className="underline text-sky-600 hover:text-sky-700">Privacy Policy</Link>.
-                      </span>
-                    </label>
+                {/* Compliance confirmation — underwriters look for this checkbox on research merchant sites. */}
+                <label
+                  className="flex items-start gap-3 cursor-pointer select-none mb-4 border border-slate-200 bg-slate-50 rounded-md p-3"
+                  data-testid="checkout-compliance-label"
+                >
+                  <input
+                    type="checkbox"
+                    checked={complianceConfirmed}
+                    onChange={(e) => setComplianceConfirmed(e.target.checked)}
+                    className="h-4 w-4 mt-0.5 accent-sky-500 cursor-pointer shrink-0"
+                    data-testid="checkout-compliance-checkbox"
+                  />
+                  <span className="text-[13px] text-slate-800 leading-snug">
+                    I confirm the products in this order are for <strong>research or educational use only</strong> and will not be used for human or animal consumption. I am 18 or older and reside in a jurisdiction where the sale of laboratory research chemicals is not restricted. I have read and accept the <Link to="/terms" target="_blank" className="underline text-sky-600 hover:text-sky-700">Terms &amp; Conditions</Link>, <Link to="/refund-policy" target="_blank" className="underline text-sky-600 hover:text-sky-700">Returns &amp; Refund Policy</Link>, <Link to="/shipping-policy" target="_blank" className="underline text-sky-600 hover:text-sky-700">Shipping Policy</Link> and <Link to="/privacy-policy" target="_blank" className="underline text-sky-600 hover:text-sky-700">Privacy Policy</Link>.
+                  </span>
+                </label>
 
+                {niftipayConfig?.enabled ? (
+                  <div data-testid="niftipay-section">
                     <Button
-                      onClick={payWithWallid}
-                      disabled={wallidLoading || !complianceConfirmed}
-                      className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-wider text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                      data-testid="wallid-pay-btn"
+                      onClick={payWithNiftipay}
+                      disabled={niftipayLoading || !complianceConfirmed}
+                      className="w-full h-14 bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-wider text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                      data-testid="niftipay-pay-btn"
                     >
-                      {wallidLoading
+                      {niftipayLoading
                         ? <Loader2 className="h-5 w-5 animate-spin" />
                         : (
                           <>
-                            {wallidFailed ? <RefreshCw className="h-4 w-4 mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
-                            {wallidFailed ? 'Retry payment · ' : 'Pay by Bank · '}
+                            {niftipayFailed ? <RefreshCw className="h-4 w-4 mr-2" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                            {niftipayFailed ? 'Retry card payment · ' : 'Pay by Card · '}
                             £{Number(createdOrder?.total || 0).toFixed(2)}
                           </>
                         )}
                     </Button>
-                    <p className="text-xs text-slate-500 mt-2 text-center">
-                      Instant secure transfer from your bank · No card details required
+                    <p className="text-xs text-slate-500 mt-2 text-center" data-testid="niftipay-note">
+                      Visa &amp; Mastercard · 3-D Secure · card details are entered on our payment partner's secure page
                     </p>
+                    <p className="text-[11px] text-slate-500 mt-1 text-center" data-testid="billing-descriptor-note">
+                      This charge will appear on your card statement as <strong className="text-slate-700">{(settings?.site_name || BRAND.name).toUpperCase().replace(/\s+/g, '-')}</strong>
+                    </p>
+                    {niftipayFailed && (
+                      <p className="text-xs text-red-600 mt-2 text-center" data-testid="niftipay-failed-note">
+                        The card payment didn't complete. You can try again or use bank transfer below.
+                      </p>
+                    )}
                     <BankTrustBadges />
-
-                    {xoalaConfig?.configured && (
-                      <div data-testid="xoala-section">
-                        <div className="relative my-6">
-                          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
-                          <div className="relative flex justify-center">
-                            <span className="bg-white px-3 text-[11px] uppercase tracking-widest text-slate-500 font-bold">or pay by card</span>
-                          </div>
-                        </div>
-                        <Button
-                          onClick={payWithXoala}
-                          disabled={xoalaLoading || !complianceConfirmed}
-                          variant="outline"
-                          className="w-full h-14 border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white font-bold uppercase tracking-wider text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                          data-testid="xoala-pay-btn"
-                        >
-                          {xoalaLoading
-                            ? <Loader2 className="h-5 w-5 animate-spin" />
-                            : (
-                              <>
-                                {xoalaFailed ? <RefreshCw className="h-4 w-4 mr-2" /> : <CreditCard className="h-4 w-4 mr-2" />}
-                                {xoalaFailed ? 'Retry card payment · ' : 'Pay by Card · '}
-                                £{Number(createdOrder?.total || 0).toFixed(2)}
-                              </>
-                            )}
-                        </Button>
-                        <p className="text-xs text-slate-500 mt-2 text-center" data-testid="xoala-note">
-                          Visa &amp; Mastercard · 3-D Secure · card details are entered on our payment partner's secure page
-                          {xoalaConfig?.sandbox ? ' · TEST MODE — no real charge' : ''}
-                        </p>
-                        <p className="text-[11px] text-slate-500 mt-1 text-center" data-testid="billing-descriptor-note">
-                          This charge will appear on your card statement as <strong className="text-slate-700">{(settings?.site_name || BRAND.name).toUpperCase().replace(/\s+/g, '-')}</strong>
-                        </p>
-                        {xoalaFailed && (
-                          <p className="text-xs text-red-600 mt-2 text-center" data-testid="xoala-failed-note">
-                            The card payment didn't complete. You can try again or use Pay by Bank.
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    <BankTransferPanel
-                      order={createdOrder}
-                      settings={settings}
-                      disabled={!complianceConfirmed}
-                      onChosen={(o) => { setCreatedOrder(o); setBankChosen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                    />
-
-                    {/* Alternative: Pay by Card / Apple Pay / Google Pay via Square */}
-                    {/* TEMPORARILY DISABLED — waiting on merchant compliance sign-off.
-                        Re-enable by restoring the original <Button onClick={payWithSquare} /> block. */}
-                    {squareConfig?.configured && (
-                      <>
-                        <div className="relative my-6" data-testid="checkout-payment-divider">
-                          <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-slate-200"></div>
-                          </div>
-                          <div className="relative flex justify-center">
-                            <span className="bg-white px-3 text-[11px] uppercase tracking-widest text-slate-500 font-bold">
-                              or
-                            </span>
-                          </div>
-                        </div>
-                        <Button
-                          disabled
-                          variant="outline"
-                          className="w-full h-14 border-2 border-slate-300 bg-slate-100 text-slate-400 font-bold uppercase tracking-wider text-base cursor-not-allowed"
-                          data-testid="square-pay-btn-disabled"
-                          aria-disabled="true"
-                          title="Card payments are temporarily unavailable"
-                        >
-                          <CreditCard className="h-4 w-4 mr-2" />
-                          Pay by Card · Coming soon
-                        </Button>
-                        <p className="text-xs text-slate-500 mt-2 text-center" data-testid="square-disabled-note">
-                          Card / Apple Pay / Google Pay temporarily unavailable — please use Pay by Bank or bank transfer.
-                        </p>
-                      </>
-                    )}
                   </div>
                 ) : (
-                  <div className="border border-amber-200 bg-amber-50 rounded p-4 text-sm text-amber-900">
-                    <p className="font-semibold mb-1">Payment temporarily unavailable.</p>
-                    <p>Your order <span className="font-mono">{createdOrder?.order_number}</span> has been saved. Please contact us at <a href={`mailto:${settings?.contact_email || 'GHP-Health@outlook.com'}`} className="underline">{settings?.contact_email || 'GHP-Health@outlook.com'}</a> for an invoice link.</p>
+                  <div className="border border-amber-200 bg-amber-50 rounded p-4 text-sm text-amber-900" data-testid="card-unavailable-note">
+                    <p className="font-semibold mb-1">Card payment temporarily unavailable.</p>
+                    <p>Your order <span className="font-mono">{createdOrder?.order_number}</span> has been saved. You can pay by bank transfer below, or contact us at <a href={`mailto:${settings?.contact_email || 'GHP-Health@outlook.com'}`} className="underline">{settings?.contact_email || 'GHP-Health@outlook.com'}</a>.</p>
                   </div>
                 )}
-                {!wallidConfig?.configured && (
-                  <BankTransferPanel
-                    order={createdOrder}
-                    settings={settings}
-                    disabled={false}
-                    onChosen={(o) => { setCreatedOrder(o); setBankChosen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                  />
-                )}
+
+                <BankTransferPanel
+                  order={createdOrder}
+                  settings={settings}
+                  disabled={!complianceConfirmed}
+                  onChosen={(o) => { setCreatedOrder(o); setBankChosen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                />
                 </div>
 
                 <button onClick={() => setStep('details')} className="mt-6 text-sm text-sky-600 hover:text-sky-700">← Edit details</button>
