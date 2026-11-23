@@ -97,6 +97,13 @@ def _verify(secret: str, ts: str, sig: str, raw: bytes) -> bool:
     return hmac.compare_digest(sig[3:], expected)
 
 
+async def _confirmed_paid(order_key: str) -> bool:
+    if not order_key:
+        return False
+    code, data = await _api('GET', f'/api/fiat/orders/{order_key}')
+    return code == 200 and ((data.get('order') or {}).get('status') or '').lower() in ('paid', 'completed')
+
+
 @router.post('/webhook')
 async def webhook(request: Request):
     raw = await request.body()
@@ -118,6 +125,9 @@ async def webhook(request: Request):
         logger.warning(f'niftipay webhook: no order for {o.get("id")} / {o.get("merchantReference")}')
         return {'ok': True}
     if event == 'paid':
+        if not secret and not await _confirmed_paid(order.get('niftipay_order_key')):
+            logger.warning(f'niftipay webhook: unsigned paid event not confirmed by API for {order["id"]}')
+            return {'ok': True}
         await mark_order_paid(order_id=order['id'], payment_id=str(o.get('pspOrderId') or o.get('id')), payment_provider='niftipay',
                               extra_fields={'niftipay_status': 'paid', 'niftipay_amount_cents': o.get('amountCents')}, payment_source='webhook')
     elif event in ('cancelled', 'expired'):

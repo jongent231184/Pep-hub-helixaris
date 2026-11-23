@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Orders, Wallid, Square, Blocklist, Xoala, resolveImage } from '../../lib/api';
+import { Orders, Wallid, Square, Blocklist, Xoala, Niftipay, resolveImage } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
@@ -28,8 +28,9 @@ const AdminOrderDetail = () => {
   const [refunding, setRefunding] = useState(false);
 
   const refundCard = async () => {
+    const isNifti = order.payment_provider === 'niftipay';
     const paid = Number(order.xoala_amount || order.total || 0);
-    const already = Number(order.xoala_refunded_total || 0);
+    const already = Number(isNifti ? (order.refunded_amount || 0) : (order.xoala_refunded_total || 0));
     const remaining = (paid - already).toFixed(2);
     const input = window.prompt(`Refund amount for ${order.order_number} (max ${remaining}, in ${order.xoala_currency || 'GBP'}). Leave as-is for a full refund.`, remaining);
     if (input === null) return;
@@ -41,8 +42,13 @@ const AdminOrderDetail = () => {
     if (!window.confirm(`Send a refund of ${amount.toFixed(2)} to the customer's card? This cannot be undone.`)) return;
     setRefunding(true);
     try {
-      const r = await Xoala.refund(order.id, amount);
-      toast({ title: r.full ? 'Fully refunded' : 'Partial refund sent', description: `${r.refunded} refunded (${r.refunded_total} in total). Confirmation emailed to ${r.email_sent_to || 'the customer'}.` });
+      if (isNifti) {
+        await Niftipay.refund(order.id, amount);
+        toast({ title: 'Refund sent', description: `£${amount.toFixed(2)} refund requested through Niftipay. Confirmation emailed to the customer.` });
+      } else {
+        const r = await Xoala.refund(order.id, amount);
+        toast({ title: r.full ? 'Fully refunded' : 'Partial refund sent', description: `${r.refunded} refunded (${r.refunded_total} in total). Confirmation emailed to ${r.email_sent_to || 'the customer'}.` });
+      }
       const fresh = await Orders.get(order.id);
       setOrder(fresh);
     } catch (e) {
@@ -196,14 +202,14 @@ const AdminOrderDetail = () => {
             {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Email invoice
           </Button>
-          {order.payment_provider === 'xoala' && order.xoala_payment_id && order.payment_status === 'paid' && (
+          {((order.payment_provider === 'xoala' && order.xoala_payment_id) || (order.payment_provider === 'niftipay' && order.niftipay_order_key)) && order.payment_status === 'paid' && (
             <Button
               variant="outline"
               className="gap-2 border-amber-300 text-amber-800 hover:bg-amber-50"
               onClick={refundCard}
               disabled={refunding}
               data-testid="xoala-refund-btn"
-              title="Refund this card payment through Xoala"
+              title={`Refund this card payment through ${order.payment_provider === 'niftipay' ? 'Niftipay' : 'Xoala'}`}
             >
               {refunding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}
               Refund card payment
