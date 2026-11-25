@@ -153,8 +153,25 @@ async def seed_settings():
     print('[seed] settings seeded')
 
 
+AMINO_PEN = {
+    'slug': '5-amino-1mq-50mg-pen', 'name': '5 Amino-1MQ 50mg Pen', 'category': 'pens', 'price': 55.0,
+    'image': '/pens/5-amino-1mq-50mg-pen.png', 'images': ['/pens/5-amino-1mq-50mg-pen.png'],
+    'description': '5 Amino-1MQ is a research small-molecule investigated for NNMT inhibition and metabolic pathways relevant to body-composition and cellular energetics. Supplied as a 50mg pre-filled dosing pen with needle tips. For in-vitro laboratory research use only — not for human consumption.',
+    'short_description': 'NNMT inhibitor · 50mg dosing pen', 'tagline': '', 'badge': 'New', 'options': [], 'variants': [],
+    'stock': 5, 'visible': True, 'featured': False,
+}
+
+
+async def seed_amino_pen():
+    if await db.products.find_one({'slug': AMINO_PEN['slug']}):
+        return
+    now = datetime.utcnow()
+    await db.products.insert_one({**AMINO_PEN, 'id': str(uuid.uuid4()), 'created_at': now, 'updated_at': now})
+
+
 async def run_all():
     await seed_admin()
     await seed_categories()
     await seed_products()
+    await seed_amino_pen()
     await seed_settings()
