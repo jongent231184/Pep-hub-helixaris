@@ -186,7 +186,8 @@ const Checkout = () => {
   };
 
   const flat = settings?.flat_shipping ?? 4.99;
-  const paymentsPaused = Boolean(settings?.payments_paused);
+  const paymentsPaused = Boolean(settings?.payments_paused) && user?.role !== 'admin';
+  const adminTestMode = Boolean(settings?.payments_paused) && user?.role === 'admin';
   const threshold = settings?.free_shipping_threshold ?? 50;
   const baseShipping = subtotal >= threshold ? 0 : flat;
 
@@ -575,6 +576,11 @@ const Checkout = () => {
 
                 <p className="text-sm text-slate-600 mb-6">Order <span className="font-mono font-bold">{createdOrder?.order_number}</span> {wallidFailed ? 'is ready to retry' : 'created'}. Complete payment below.</p>
 
+                {adminTestMode && (
+                  <div className="border-2 border-sky-300 bg-sky-50 rounded-lg p-3 mb-5 text-sm text-sky-900" data-testid="admin-test-mode-banner">
+                    <strong>Admin test mode:</strong> payments are paused for customers, but you can complete a live card payment to verify the checkout.
+                  </div>
+                )}
                 {paymentsPaused && (
                   <div className="flex items-start gap-3 border-2 border-amber-300 bg-amber-50 rounded-lg p-4 mb-5" data-testid="payments-paused-banner">
                     <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />

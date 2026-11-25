@@ -10,7 +10,7 @@ import httpx
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from auth import require_admin
+from auth import get_current_user_optional, require_admin
 from db import db
 from order_helpers import mark_order_paid
 
@@ -49,10 +49,11 @@ async def niftipay_config():
 
 
 @router.post('/create-payment')
-async def create_payment(payload: dict = Body(...), request: Request = None):
+async def create_payment(payload: dict = Body(...), request: Request = None, user: dict = Depends(get_current_user_optional)):
     if not _configured():
         raise HTTPException(503, 'Card payments are not available yet')
-    if (await db.settings.find_one({'_singleton': True}) or {}).get('payments_paused'):
+    is_admin = bool(user) and user.get('role') == 'admin'
+    if not is_admin and (await db.settings.find_one({'_singleton': True}) or {}).get('payments_paused'):
         raise HTTPException(503, 'Payments are temporarily paused')
     order = await db.orders.find_one({'id': payload.get('order_id', '')})
     if not order:
