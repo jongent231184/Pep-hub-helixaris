@@ -232,7 +232,7 @@ class OrderOut(BaseModel):
     discount: float = 0
     promo_code: Optional[str] = None
     currency: str = 'GBP'
-    payment_status: Literal['pending', 'paid', 'failed', 'refunded'] = 'pending'
+    payment_status: Literal['pending', 'paid', 'failed', 'refunded', 'partially_refunded'] = 'pending'
     payment_provider: str = 'paypal'
     payment_id: Optional[str] = ''
     payment_source: Optional[str] = None  # 'webhook' | 'polling' | 'manual'
@@ -250,13 +250,22 @@ class OrderOut(BaseModel):
     xoala_status: Optional[str] = None
     xoala_refunded_total: Optional[float] = None
     xoala_refunds: Optional[list] = None
+    niftipay_order_id: Optional[str] = None
+    niftipay_order_key: Optional[str] = None
+    niftipay_reference: Optional[str] = None
+    niftipay_status: Optional[str] = None
+    niftipay_pay_url: Optional[str] = None
+    niftipay_total_charged: Optional[str] = None
+    niftipay_amount_cents: Optional[int] = None
+    refunded_amount: Optional[float] = None
+    refunded_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
 
 class OrderStatusUpdate(BaseModel):
     status: Optional[Literal['pending', 'processing', 'shipped', 'delivered', 'cancelled']] = None
-    payment_status: Optional[Literal['pending', 'paid', 'failed', 'refunded']] = None
+    payment_status: Optional[Literal['pending', 'paid', 'failed', 'refunded', 'partially_refunded']] = None
     notes: Optional[str] = None
     order_number: Optional[str] = None  # admin-only renumber
 

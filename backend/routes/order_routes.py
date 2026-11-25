@@ -147,7 +147,7 @@ async def all_orders(_=Depends(require_admin), limit: int = 500, skip: int = 0, 
         flt = {'$or': [
             {'order_number': rx}, {'shipping_address.email': rx},
             {'shipping_address.first_name': rx}, {'shipping_address.last_name': rx},
-            {'xoala_payment_id': rx}, {'wallid_api_payment_id': rx},
+            {'xoala_payment_id': rx}, {'wallid_api_payment_id': rx}, {'niftipay_reference': rx},
         ]}
         parts = q.split()
         if len(parts) >= 2:

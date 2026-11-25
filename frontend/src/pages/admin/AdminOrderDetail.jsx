@@ -10,7 +10,7 @@ import PaymentSourceBadge from '../../components/PaymentSourceBadge';
 import { useToast } from '../../hooks/use-toast';
 
 const STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-const PAY_STATUSES = ['pending', 'paid', 'failed', 'refunded'];
+const PAY_STATUSES = ['pending', 'paid', 'failed', 'partially_refunded', 'refunded'];
 
 const AdminOrderDetail = () => {
   const { orderId } = useParams();
