@@ -182,7 +182,7 @@ async def refund(order_id: str, payload: dict = Body(default={}), _=Depends(requ
         raise HTTPException(400, data.get('error') or 'Refund failed')
     total_refunded = already + amount
     full = total_refunded >= float(order['total']) - 0.005
-    await db.orders.update_one({'id': order_id}, {'$set': {'payment_status': 'refunded' if full else 'partially_refunded', 'refunded_amount': round(total_refunded, 2),
+    await db.orders.update_one({'id': order_id}, {'$set': {'payment_status': 'refunded' if full else 'partially_refunded', 'refunded_amount': round(total_refunded, 2), 'niftipay_status': 'refunded' if full else 'paid',
                                                            'refunded_at': datetime.utcnow(), 'updated_at': datetime.utcnow()}})
     try:
         from email_service import send_refund_email
@@ -190,3 +190,9 @@ async def refund(order_id: str, payload: dict = Body(default={}), _=Depends(requ
     except Exception as e:
         logger.warning(f'refund email skipped: {e}')
     return {'ok': True, 'refund': data}
+
+
+@router.get('/admin/events')
+async def recent_events(_=Depends(require_admin)):
+    rows = await db.niftipay_events.find({}, {'_id': 0, 'payload': 0}).sort('received_at', -1).to_list(50)
+    return [{**r, 'received_at': r['received_at'].isoformat() if r.get('received_at') else None} for r in rows]
