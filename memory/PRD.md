@@ -186,3 +186,4 @@ Phased plan:
 - 2026-11-26: Public GET /api/shipping-restrictions (from area blocks, prefix→area labels). ShippingNotice component ('UK mainland only — unable to deliver to …') on Cart, Checkout address form; Shipping Policy lists excluded areas; checkout country dropdown hides blocked countries. Self-tested via screenshot.
 - 2026-11-26: Coaching pay links confirmed on Niftipay (shared /paylink page); portal 'Pay by Card' wording, membership email copy, BankTrustBadges now card-scheme badges (Visa/MC/Amex/Apple/Google Pay).
 - 2026-11-26: WhatsApp share (components/WhatsAppShare.jsx) on pay-link success screen (admin+ambassador) and ambassador link rows; wa.me prefilled message with items/total/discount/link. Tested iteration 35.
+- 2026-11-26: Helixaris-branded images for the 3 new products added to /brands/helixaris/products and mirrored (init_helixaris.py picks them up by slug).
