@@ -1,0 +1,20 @@
+{
+  "summary": "Frontend-only retest of ambassador pay-link modal fix. PASS. Ambassador (amb.test, token injected after real /api/auth/login) -> /ambassador/paylinks -> New pay link: product dropdown populated with 82 catalogue products (from public GET /api/products?limit=500), no 'Other (custom line)' option; green note shows 'AMYTEST ... 10% off'; no Promo code input (Notes input also hidden). Picked '10 x 0.3ml Insulin Syringe' qty 1 -> success state with /pay/{id} URL, summary Subtotal £4.50, Discount (AMYTEST) -£0.45, Shipping £4.99, Total £9.04. Closed modal -> list refreshed (2 rows, counters 2/2), new row GHP-076 'Awaiting payment', £9.04, '−£0.45 code applied', Copy link button. Anonymous /pay/{id}: discount + total £9.04 shown; after filling shipping form (pay-continue-btn), paylink-niftipay-pay-btn 'PAY BY CARD · £9.04' present and visually greyed under 'Payments temporarily paused' banner.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "PayLinkPage", "issues": ["Pay-by-card button is greyed via wrapper styling but the button element itself is not `disabled` (is_disabled()=false); confirm clicks are actually blocked while payments_paused (minor, may be intentional with pointer-events-none on wrapper)."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": ["Optional: set disabled attribute on paylink-niftipay-pay-btn when payments_paused for accessibility/robustness"],
+  "critical_code_review_comments": ["CreatePaylinkModal: Products.list({limit:500}) silently caps catalogue at 500 and errors are swallowed to an empty list with no user-facing message — consider a toast/empty state if the fetch fails."],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "Created pay-link order GHP-076 (id 64d59f5f-0e9a-4a87-8fb5-1283e03b4a64, shipping TEST_Ann TEST_Buyer) — deleted afterwards via admin DELETE /api/orders/{id} (verified 404). Pre-existing GHP-069 untouched. payments_paused not toggled.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "UI auth: POST /api/auth/login, then localStorage ghp_token + sessionStorage ghp_age_verified='true', ghp_site_unlocked='1'. Radix options are [role=option]. On /pay/{id} the pay button only appears after filling pay-* shipping fields and clicking pay-continue-btn."
+}
