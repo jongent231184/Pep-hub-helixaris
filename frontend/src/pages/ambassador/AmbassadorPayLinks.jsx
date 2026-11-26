@@ -3,6 +3,7 @@ import { Ambassadors } from '../../lib/api';
 import { Loader2, Plus, Copy, Check, Link as LinkIcon, CheckCircle2, Clock } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import CreatePaylinkModal from '../admin/CreatePaylinkModal';
+import { WhatsAppShareButton } from '../../components/WhatsAppShare';
 
 const StatusPill = ({ status }) => (
   status === 'paid'
@@ -12,7 +13,7 @@ const StatusPill = ({ status }) => (
       : <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5"><Clock className="h-3 w-3" /> Awaiting payment</span>
 );
 
-const PayLinkRow = ({ o }) => {
+const PayLinkRow = ({ o, discountPct }) => {
   const [copied, setCopied] = useState(false);
   const url = `${window.location.origin}/pay/${o.id}`;
   const copy = async () => {
@@ -38,9 +39,12 @@ const PayLinkRow = ({ o }) => {
           {Number(o.discount) > 0 && <p className="text-[11px] text-emerald-700">−£{Number(o.discount).toFixed(2)} code applied</p>}
         </div>
         {o.payment_status !== 'paid' && (
-          <Button variant="outline" size="sm" onClick={copy} className="gap-1.5" data-testid={`amb-paylink-copy-${o.order_number}`}>
-            {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />} {copied ? 'Copied' : 'Copy link'}
-          </Button>
+          <>
+            <Button variant="outline" size="sm" onClick={copy} className="gap-1.5" data-testid={`amb-paylink-copy-${o.order_number}`}>
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />} {copied ? 'Copied' : 'Copy link'}
+            </Button>
+            <WhatsAppShareButton order={o} url={url} discountPct={discountPct} testId={`amb-paylink-whatsapp-${o.order_number}`} />
+          </>
         )}
       </div>
     </div>
@@ -66,7 +70,7 @@ export default function AmbassadorPayLinks() {
           <p className="text-[11px] uppercase tracking-[0.2em] text-emerald-600 font-bold">Sell directly</p>
           <h1 className="text-2xl lg:text-3xl font-black text-slate-900 mt-1">Pay links</h1>
           <p className="text-sm text-slate-600 mt-2 max-w-xl">
-            Build an order, send the link by WhatsApp or email, and the customer pays by card. Your code
+            Build an order, share it straight to WhatsApp (or copy the link), and the customer pays by card. Your code
             {me?.ambassador_code && <span className="font-mono font-bold text-slate-900"> {me.ambassador_code}</span>} is applied automatically so every sale counts towards your commission.
           </p>
         </div>
@@ -92,7 +96,7 @@ export default function AmbassadorPayLinks() {
           No pay links yet — create your first one above.
         </div>
       ) : (
-        <div className="space-y-3">{links.map(o => <PayLinkRow key={o.id} o={o} />)}</div>
+        <div className="space-y-3">{links.map(o => <PayLinkRow key={o.id} o={o} discountPct={me?.customer_discount} />)}</div>
       )}
 
       <CreatePaylinkModal open={open} onClose={() => setOpen(false)} onCreated={() => load()} ambassador={me} />

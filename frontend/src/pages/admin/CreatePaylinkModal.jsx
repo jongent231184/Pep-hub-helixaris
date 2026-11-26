@@ -6,6 +6,7 @@ import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { useToast } from '../../hooks/use-toast';
+import { WhatsAppShareButton } from '../../components/WhatsAppShare';
 
 const CreatePaylinkModal = ({ open, onClose, onCreated, initialData, ambassador = null }) => {
   const { toast } = useToast();
@@ -162,7 +163,9 @@ const CreatePaylinkModal = ({ open, onClose, onCreated, initialData, ambassador 
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 {copied ? 'Copied' : 'Copy'}
               </Button>
+              <WhatsAppShareButton order={createdOrder} url={payUrl} discountPct={ambassador?.customer_discount} size="md" className="shrink-0" testId="paylink-whatsapp-btn" />
             </div>
+            <p className="text-xs text-slate-500">WhatsApp opens with a ready-written message containing the link — just pick the contact and send.</p>
             <div className="border rounded p-4 text-sm space-y-1 bg-slate-50">
               <p className="font-semibold text-slate-800 mb-2">Order summary</p>
               {createdOrder.items.map((it, i) => (
