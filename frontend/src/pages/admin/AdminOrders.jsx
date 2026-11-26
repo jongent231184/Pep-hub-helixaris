@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Orders, Wallid, Blocklist } from '../../lib/api';
+import { Orders, Wallid, Niftipay, Blocklist } from '../../lib/api';
 import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw, CreditCard, FileText, ShieldBan, Send } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -33,6 +33,7 @@ const AdminOrders = () => {
   const [blockingId, setBlockingId] = useState(null);
   const [resendingId, setResendingId] = useState(null);
   const [cardMailId, setCardMailId] = useState(null);
+  const [syncingNifti, setSyncingNifti] = useState(false);
   const [total, setTotal] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -160,6 +161,19 @@ const AdminOrders = () => {
 
   const hasEmail = (o) => o.shipping_address?.email && o.shipping_address.email !== 'pending@ghp-health.com';
 
+  const handleSyncFromNiftipay = async () => {
+    setSyncingNifti(true);
+    try {
+      const r = await Niftipay.syncPending();
+      toast({ title: `Checked ${r.checked} pending card order${r.checked === 1 ? '' : 's'}`, description: r.changes.length ? r.changes.map(c => `${c.order_number} → ${c.to}`).join(', ') : 'No status changes.' });
+      if (r.changes.length) await load();
+    } catch (e) {
+      toast({ title: 'Sync failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally {
+      setSyncingNifti(false);
+    }
+  };
+
   const handleCardLiveEmail = async (order) => {
     if (order.card_live_email_at && !window.confirm(`Already sent to ${order.shipping_address?.email} on ${new Date(order.card_live_email_at).toLocaleDateString()}. Send again?`)) return;
     setCardMailId(order.id);
@@ -229,6 +243,17 @@ const AdminOrders = () => {
           >
             {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Sync from Wallid
+          </Button>
+          <Button
+            onClick={handleSyncFromNiftipay}
+            disabled={syncingNifti}
+            variant="outline"
+            className="gap-2"
+            data-testid="sync-all-niftipay-btn"
+            title="Re-check every pending card order with Niftipay and update its payment status"
+          >
+            {syncingNifti ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+            Sync from Niftipay
           </Button>
           <Button
             onClick={() => setPaylinkOpen(true)}

@@ -38,7 +38,7 @@ from routes.research_profile_routes import router as research_profile_router  # 
 from routes.blocklist_routes import router as blocklist_router  # noqa: E402
 from routes.analytics_routes import router as analytics_router  # noqa: E402
 from routes.xoala_routes import router as xoala_router  # noqa: E402
-from routes.niftipay_routes import router as niftipay_router  # noqa: E402
+from routes.niftipay_routes import router as niftipay_router, start_niftipay_poller  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s - %(message)s')
 logger = logging.getLogger('ghp')
@@ -156,4 +156,5 @@ async def on_startup():
 
     asyncio.create_task(_background_init())
     asyncio.create_task(start_wallid_poller())
+    asyncio.create_task(start_niftipay_poller())
     logger.info('Startup: background init scheduled; server ready to accept requests')

@@ -4,7 +4,7 @@ import hmac
 import logging
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import httpx
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
@@ -196,3 +196,48 @@ async def refund(order_id: str, payload: dict = Body(default={}), _=Depends(requ
 async def recent_events(_=Depends(require_admin)):
     rows = await db.niftipay_events.find({}, {'_id': 0, 'payload': 0}).sort('received_at', -1).to_list(50)
     return [{**r, 'received_at': r['received_at'].isoformat() if r.get('received_at') else None} for r in rows]
+
+
+async def sync_pending(max_age_hours: int = 48) -> dict:
+    """Safety net: re-check every pending Niftipay order against the API and mark paid/failed."""
+    since = datetime.utcnow() - timedelta(hours=max_age_hours)
+    cur = db.orders.find({'niftipay_order_key': {'$exists': True, '$ne': None}, 'payment_status': 'pending', 'created_at': {'$gte': since}},
+                         {'_id': 0, 'id': 1, 'order_number': 1, 'niftipay_order_key': 1})
+    checked, changes = 0, []
+    async for o in cur:
+        checked += 1
+        code, data = await _api('GET', f"/api/fiat/orders/{o['niftipay_order_key']}")
+        if code != 200:
+            continue
+        ro = data.get('order') or {}
+        st = (ro.get('status') or '').lower()
+        await db.orders.update_one({'id': o['id']}, {'$set': {'niftipay_status': st, 'niftipay_psp_status': ro.get('pspStatus'), 'niftipay_card_brand': ro.get('pspPaymentMethodBrand')}})
+        if st in ('paid', 'completed'):
+            await mark_order_paid(order_id=o['id'], payment_id=str(ro.get('pspOrderId') or ''), payment_provider='niftipay',
+                                  extra_fields={'niftipay_status': 'paid', 'niftipay_amount_cents': ro.get('amountCents')}, payment_source='poller')
+            changes.append({'order_number': o['order_number'], 'to': 'paid'})
+        elif st in ('cancelled', 'expired'):
+            await db.orders.update_one({'id': o['id'], 'payment_status': 'pending'}, {'$set': {'payment_status': 'failed', 'niftipay_pay_url': None, 'updated_at': datetime.utcnow()}})
+            changes.append({'order_number': o['order_number'], 'to': 'failed'})
+    return {'checked': checked, 'now_paid': sum(c['to'] == 'paid' for c in changes), 'changes': changes}
+
+
+@router.post('/admin/sync-pending')
+async def admin_sync_pending(_=Depends(require_admin)):
+    return await sync_pending()
+
+
+async def start_niftipay_poller():
+    import asyncio
+    if not _configured():
+        logger.info('[niftipay poller] not configured — disabled')
+        return
+    logger.info('[niftipay poller] started (interval=180s, max_age=48h)')
+    while True:
+        try:
+            await asyncio.sleep(180)
+            r = await sync_pending()
+            if r['changes']:
+                logger.info('[niftipay poller] ' + ', '.join(f"{c['order_number']} -> {c['to']}" for c in r['changes']))
+        except Exception as e:
+            logger.warning(f'[niftipay poller] error: {e}')

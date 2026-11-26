@@ -258,6 +258,8 @@ class OrderOut(BaseModel):
     niftipay_pay_url: Optional[str] = None
     niftipay_total_charged: Optional[str] = None
     niftipay_amount_cents: Optional[int] = None
+    niftipay_psp_status: Optional[str] = None
+    niftipay_card_brand: Optional[str] = None
     refunded_amount: Optional[float] = None
     refunded_at: Optional[datetime] = None
     created_at: datetime
