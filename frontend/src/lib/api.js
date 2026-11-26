@@ -299,6 +299,10 @@ export const Ambassadors = {
   paylinks: () => api.get('/ambassadors/paylinks').then(r => r.data),
 };
 
+export const ShippingRestrictions = {
+  get: () => api.get('/shipping-restrictions').then(r => r.data),
+};
+
 export const Settings = {
   get: () => api.get('/settings').then(r => r.data),
   update: (data) => api.put('/settings', data).then(r => r.data),

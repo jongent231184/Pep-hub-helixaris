@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { ShippingNotice } from '../components/ShippingNotice';
 import { Button } from '../components/ui/button';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -68,6 +69,7 @@ const Cart = () => {
                 <span>Shipping</span>
                 <span className="text-slate-500">Calculated at checkout</span>
               </div>
+              <ShippingNotice className="mt-3" />
               <div className="flex justify-between mt-4 pt-4 border-t font-bold text-lg">
                 <span>Total</span>
                 <span>£{subtotal.toFixed(2)}</span>

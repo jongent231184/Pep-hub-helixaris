@@ -2,11 +2,14 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { PolicyPage, PolicySection, usePolicyBrand } from '../components/PolicyPage';
+import { useShippingRestrictions } from '../components/ShippingNotice';
 
 const ShippingPolicy = () => {
   const { brandName, supportEmail } = usePolicyBrand();
   const { settings = {} } = useStore();
   const s = settings || {};
+  const restrictions = useShippingRestrictions();
+  const excluded = [...restrictions.countries, ...restrictions.areas];
   const flat = Number(s.flat_shipping ?? 0);
   const freeOver = Number(s.free_shipping_threshold ?? 0);
   return (
@@ -17,7 +20,10 @@ const ShippingPolicy = () => {
       testId="shipping-policy-page"
     >
       <PolicySection number="1" title="Where we deliver">
-        <p>We ship to <strong>United Kingdom addresses only</strong>. Orders to addresses outside the UK, PO boxes or freight forwarders are not accepted and will be refunded in full.</p>
+        <p>We ship to <strong>UK mainland addresses only</strong>. Orders to addresses outside the UK, PO boxes or freight forwarders are not accepted and will be refunded in full.</p>
+        {excluded.length > 0 && (
+          <p data-testid="shipping-policy-excluded">We are currently unable to deliver to: <strong>{excluded.join(', ')}</strong>. Checkout will not accept addresses in these areas.</p>
+        )}
       </PolicySection>
 
       <PolicySection number="2" title="Delivery costs">

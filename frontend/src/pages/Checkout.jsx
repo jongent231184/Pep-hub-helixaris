@@ -16,6 +16,7 @@ import RedirectingOverlay from '../components/RedirectingOverlay';
 import BankTransferPanel, { BankTransferDetails } from '../components/BankTransferPanel';
 import { useAuth } from '../context/AuthContext';
 import { Orders, Promos, Addresses, Wallid, Niftipay, resolveImage } from '../lib/api';
+import { ShippingNotice, useShippingRestrictions } from '../components/ShippingNotice';
 
 import { BRAND } from '../config/brand';
 
@@ -24,6 +25,8 @@ const PENDING_ORDER_STORAGE_KEY = 'ghp_pending_wallid_order';
 const Checkout = () => {
   const { items, subtotal } = useCart();
   const { settings } = useStore();
+  const restrictions = useShippingRestrictions();
+  const countryOptions = ['United Kingdom', 'Ireland'].filter(c => !restrictions.countries.some(b => b.toLowerCase() === c.toLowerCase()));
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -430,7 +433,8 @@ const Checkout = () => {
                 </section>
 
                 <section className="border rounded-lg p-6 bg-white">
-                  <h2 className="text-lg font-bold uppercase mb-4">Shipping Address</h2>
+                  <h2 className="text-lg font-bold uppercase mb-2">Shipping Address</h2>
+                  <ShippingNotice className="mb-4" />
                   {user && savedAddresses.length > 0 && (
                     <div className="mb-5 pb-5 border-b" data-testid="saved-shipping-picker">
                       <Label className="text-xs uppercase tracking-wider text-slate-500">Use a saved address</Label>
@@ -459,8 +463,7 @@ const Checkout = () => {
                       <Select value={form.country} onValueChange={v => setForm(f => ({ ...f, country: v }))}>
                         <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="United Kingdom">United Kingdom</SelectItem>
-                          <SelectItem value="Ireland">Ireland</SelectItem>
+                          {countryOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -522,8 +525,7 @@ const Checkout = () => {
                         <Select value={billing.country} onValueChange={v => setBilling(b => ({ ...b, country: v }))}>
                           <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="United Kingdom">United Kingdom</SelectItem>
-                            <SelectItem value="Ireland">Ireland</SelectItem>
+                            {countryOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>

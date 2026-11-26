@@ -9,6 +9,19 @@ from utils import doc_to_dict
 from blocklist import entry_matches
 
 router = APIRouter(prefix='/admin/blocklist', tags=['blocklist'])
+public_router = APIRouter(prefix='/shipping-restrictions', tags=['blocklist'])
+
+PREFIX_LABELS = {'BT': 'Northern Ireland', 'GY': 'Guernsey', 'JE': 'Jersey', 'IM': 'Isle of Man', 'HS': 'Outer Hebrides', 'ZE': 'Shetland', 'KW': 'Orkney & Caithness'}
+
+
+@public_router.get('')
+async def shipping_restrictions():
+    docs = await db.blocklist.find({'kind': 'area'}, {'_id': 0, 'country': 1, 'postcode_prefix': 1}).to_list(200)
+    countries = sorted({(d.get('country') or '').strip() for d in docs if (d.get('country') or '').strip()})
+    prefixes = sorted({(d.get('postcode_prefix') or '').strip().upper() for d in docs if (d.get('postcode_prefix') or '').strip()})
+    areas = [PREFIX_LABELS.get(p, f'{p} postcodes') for p in prefixes]
+    return {'countries': countries, 'postcode_prefixes': prefixes, 'areas': areas}
+
 
 
 def _has_criteria(e: dict) -> bool:

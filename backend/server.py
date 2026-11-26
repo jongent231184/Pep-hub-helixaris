@@ -35,7 +35,7 @@ from routes.portal_routes import router as portal_router, ensure_default_portal_
 from routes.wallid_routes import start_wallid_poller  # noqa: E402
 from routes.seo_routes import router as seo_router  # noqa: E402
 from routes.research_profile_routes import router as research_profile_router  # noqa: E402
-from routes.blocklist_routes import router as blocklist_router  # noqa: E402
+from routes.blocklist_routes import router as blocklist_router, public_router as shipping_restrictions_router  # noqa: E402
 from routes.analytics_routes import router as analytics_router  # noqa: E402
 from routes.xoala_routes import router as xoala_router  # noqa: E402
 from routes.niftipay_routes import router as niftipay_router, start_niftipay_poller  # noqa: E402
@@ -122,6 +122,7 @@ api_router.include_router(portal_router)
 api_router.include_router(seo_router)
 api_router.include_router(research_profile_router)
 api_router.include_router(blocklist_router)
+api_router.include_router(shipping_restrictions_router)
 api_router.include_router(analytics_router)
 api_router.include_router(xoala_router)
 api_router.include_router(niftipay_router)
