@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Instagram, Landmark, Lock } from 'lucide-react';
+import { Instagram, CreditCard, Lock } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import BRAND from '../config/brand';
 
@@ -57,14 +57,14 @@ const Footer = () => {
         <div>
           <h4 className="text-white font-bold uppercase tracking-wider mb-4">Payments</h4>
           <div className="flex items-center gap-3 bg-slate-800 rounded-lg px-4 py-3" data-testid="footer-payment-methods">
-            <Landmark className="h-6 w-6 text-emerald-400 shrink-0" />
+            <CreditCard className="h-6 w-6 text-emerald-400 shrink-0" />
             <div>
-              <p className="text-white text-sm font-bold uppercase tracking-wider leading-tight">Pay by Bank</p>
-              <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Instant · Secure · No card fees</p>
+              <p className="text-white text-sm font-bold uppercase tracking-wider leading-tight">Pay by Card</p>
+              <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Visa · Mastercard · Amex · Apple Pay · Google Pay</p>
             </div>
           </div>
           <p className="text-[11px] text-slate-500 mt-3 flex items-center gap-1.5">
-            <Lock className="h-3 w-3" /> Bank-grade encryption
+            <Lock className="h-3 w-3" /> 3-D Secure · PCI DSS compliant
           </p>
         </div>
       </div>

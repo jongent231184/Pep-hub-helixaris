@@ -737,7 +737,7 @@ async def send_membership_paylink_email(client: dict, order: dict, plan: dict, r
       <p style="text-align:center;margin:24px 0">
         <a href="{link}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:14px 28px;border-radius:6px">Pay {amount} now</a>
       </p>
-      <p style="font-size:12px;color:#64748b;line-height:1.6">No card is stored and nothing is taken automatically — you pay each month using the link we send. Once paid, open your portal at <a href="{_site_base()}/portal">{_site_base().replace('https://', '')}/portal</a>.</p>
+      <p style="font-size:12px;color:#64748b;line-height:1.6">Pay securely by card, Apple Pay or Google Pay. No card is stored and nothing is taken automatically — you pay each month using the link we send. Once paid, open your portal at <a href="{_site_base()}/portal">{_site_base().replace('https://', '')}/portal</a>.</p>
       <p style="font-size:11px;color:#94a3b8;margin-top:20px">Coaching is peer-to-peer education based on personal experience, not medical advice.</p>
     </div>
     """

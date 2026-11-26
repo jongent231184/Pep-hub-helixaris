@@ -8,11 +8,11 @@ import { ShieldCheck } from 'lucide-react';
  * both light and slate backgrounds.
  */
 const BANKS = [
-  { slug: 'barclays',     label: 'Barclays' },
-  { slug: 'hsbc',         label: 'HSBC' },
-  { slug: 'monzo',        label: 'Monzo' },
-  { slug: 'starlingbank', label: 'Starling' },
-  { slug: 'revolut',      label: 'Revolut' },
+  { slug: 'visa',            label: 'Visa' },
+  { slug: 'mastercard',      label: 'Mastercard' },
+  { slug: 'americanexpress', label: 'American Express' },
+  { slug: 'applepay',        label: 'Apple Pay' },
+  { slug: 'googlepay',       label: 'Google Pay' },
 ];
 
 // Slate-500 hex without the leading '#'
@@ -26,7 +26,7 @@ const BankTrustBadges = ({ compact = false }) => {
     >
       <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-2">
         <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-        <span>Connects securely to your bank · FCA-regulated</span>
+        <span>Secure card checkout · 3-D Secure · PCI DSS compliant</span>
       </div>
       <div className={`flex flex-wrap items-center justify-center ${compact ? 'gap-3' : 'gap-4'}`}>
         {BANKS.map((b) => (
@@ -40,7 +40,7 @@ const BankTrustBadges = ({ compact = false }) => {
           />
         ))}
         <span className="text-[11px] font-medium text-slate-400 ml-1">
-          + Lloyds, NatWest, Santander & 50+ more
+          Card details are never stored by us
         </span>
       </div>
     </div>

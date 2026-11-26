@@ -142,7 +142,7 @@ const AdminSettings = () => {
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-base font-bold uppercase tracking-wide">Pause all payments</h2>
-              <p className="text-xs text-slate-500 mt-1">Greys out Pay by Bank, card and bank-transfer at checkout and on pay links, and blocks payments server-side. Orders can still be placed and are saved as unpaid.</p>
+              <p className="text-xs text-slate-500 mt-1">Greys out card and bank-transfer payment at checkout and on pay links, and blocks payments server-side. Orders can still be placed and are saved as unpaid.</p>
             </div>
             <Switch checked={!!form.payments_paused} onCheckedChange={v => setForm(f => ({ ...f, payments_paused: v }))} data-testid="settings-payments-paused" />
           </div>

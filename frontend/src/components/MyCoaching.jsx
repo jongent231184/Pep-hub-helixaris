@@ -96,7 +96,7 @@ const MyCoaching = ({ hideMessages = false, hideWeighIns = false, protoOverride,
         <p className="text-sm text-slate-700 mt-2">Your coach {proto.coach_id ? 'has prepared' : 'is preparing'} a personalised plan. It unlocks once payment is complete (£{Number(proto.price || 9.99).toFixed(2)}).</p>
         {payUrl && (
           <Link to={payUrl} className="mt-4 inline-flex bg-sky-500 hover:bg-sky-600 text-white font-bold uppercase tracking-wider text-sm px-5 py-2.5 rounded" data-testid="pay-coaching-btn">
-            Pay by Bank · £{Number(proto.price || 9.99).toFixed(2)} →
+            Pay by Card · £{Number(proto.price || 9.99).toFixed(2)} →
           </Link>
         )}
         {!payUrl && <p className="text-xs text-slate-500 mt-3">Your coach will share the payment link shortly.</p>}

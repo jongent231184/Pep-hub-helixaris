@@ -570,7 +570,7 @@ const Checkout = () => {
                         Payment didn&apos;t complete
                       </p>
                       <p className="text-red-800">
-                        No charge was taken. Your order is still saved — click <strong>Pay by Bank</strong> below to try again with the same order (no duplicate order will be created).
+                        No charge was taken. Your order is still saved — click <strong>Pay by Card</strong> below to try again with the same order (no duplicate order will be created).
                       </p>
                     </div>
                   </div>
