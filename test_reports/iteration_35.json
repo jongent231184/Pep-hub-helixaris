@@ -1,0 +1,27 @@
+{
+  "summary": "Frontend-only test of the WhatsApp share button for pay links. Ambassador /ambassador/paylinks: the unpaid row GHP-069 shows both Copy link and a green WhatsApp anchor (bg #25D366, target=_blank). Its href starts with https://wa.me/?text= and the decoded message has the item ('2× Cartalax 20mg'), '£72.00', '(10% discount of £8.00 already applied)', the /pay/{id} URL and the research-use line. Creating a new ambassador pay link (GHP-079): the success screen shows paylink-whatsapp-btn next to Copy; its href has the same /pay/{id} as the paylink-url input plus the 10% discount mention, and the helper text is visible. The new row also appeared in the list with a WhatsApp button. Admin regression (/admin/orders → Create pay link, GHP-080, no promo): paylink-whatsapp-btn is shown, the message has no discount mention, the URL matches, the helper text is visible, no ambassador note shows, and 'Create another' and Cancel both work. Both test orders were deleted afterwards (DELETE returned 200, then GET returned 404). Nothing was clicked through to wa.me.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Pay link success modal", "issues": ["The WhatsApp button (size md, h-10, 40px) is 4px taller than the Copy button next to it (36px). Use the same height on both."]},
+      {"screen": "WhatsApp buttons (list + modal)", "issues": ["White text on #25D366 has a contrast ratio of about 2:1, below WCAG AA. Consider a darker green such as #128C7E or #075E54 for the text background, or dark text."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: make the WhatsApp button the same height as the Copy button in the CreatePaylinkModal success row",
+    "Optional: improve contrast on the WhatsApp button"
+  ],
+  "critical_code_review_comments": [
+    "WhatsAppShare.jsx whatsappHref: a phone number starting with '+44' is fine, but a number with a leading 0 that also contains a country code such as '0044…' becomes '44044…'. Not used yet (no phone passed), so low risk.",
+    "The message uses order.discount > 0 together with discountPct. For admin links with a promo code, discountPct is undefined, so the message says 'discount of £X'. That is correct, just noting it."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "Created pay-link orders GHP-079 (ambassador, id b2955c85-...) and GHP-080 (admin, id e92a5ba8-...), then deleted both by id. GHP-069 (Bob Buyer) was already there and was not touched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Auth works with page.request.post /api/auth/login → localStorage ghp_token plus sessionStorage ghp_age_verified='true' and ghp_site_unlocked='1'. In the ambassador modal the first product option needs an option combobox (nth(1)). Admin product list option 0 is 'Other (custom line)'. Clean up test pay-link orders with admin DELETE /api/orders/{id}."
+}
