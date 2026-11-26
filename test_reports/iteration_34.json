@@ -1,0 +1,35 @@
+{
+  "summary": "Area blocklist (country / postcode prefix) feature tested end-to-end. Backend: 12/12 pytest pass. Tests cover POST area with no criteria → 400, prefix ' im ' stored as 'IM', GET returns kind/country/postcode_prefix with no _id, customer blocks still get kind='customer', delete then 404, admin auth required, checkout 403 with the area message for BT1 1AA, bt11aa, Ireland/D02 X285 and a billing address in BT, the customer-block message is kept separate, and a UK SW1A 1AA order succeeds. Frontend admin: the Blocklist tab shows area-block-form, both existing Ireland and BT rows have amber 'Area' badges and the BT row reads 'Postcodes starting BT'. Adding prefix 'im' turns it into IM, the row appears with a badge, and deleting it via unblock-{id} (confirm dialog) removes it; it stays gone after reload. The empty-form check shows a toast. Frontend guest checkout: BT1 1AA (UK) and D02 X285 (Ireland) both show the destructive toast 'Order not accepted — Sorry — we don't currently ship to this area…', the API returns 403, no order is created and the page stays on the details step. SW1A 1AA (UK) creates order GHP-078 and moves to the Payment step. The paylink address endpoint (PUT /api/orders/pay/{id}/address) was only code-reviewed: it uses the same find_block_match / blocked_message path. It was not run.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/admin/blocklist/matching-orders", "issue": "Uses entry_matches only, so area entries never flag existing orders. Orders already placed from BT or Ireland are not highlighted as blocked in the admin orders list. Use area_matches for kind=='area' as find_block_match does."},
+      {"endpoint": "blocklist.area_matches", "issue": "Country matches by substring (e_country in a_country). Blocking 'Niger' would also block 'Nigeria', and 'Ireland' also blocks 'Northern Ireland', which is probably intended but implicit. Prefix match is on the raw postcode start regardless of country, so a prefix like 'B' would also block BT, BA and so on. No problem with the current entries."},
+      {"endpoint": "POST /api/admin/blocklist", "issue": "'kind' is not validated. Any value other than 'area' is silently treated as 'customer'. Consider Literal['customer','area']."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin > Orders > Blocked customers", "issues": ["The 'How blocking works' info box doesn't mention area blocks. Add a bullet about country / postcode-prefix blocks.", "Tab label 'Blocked customers' now also holds area blocks; consider 'Blocklist'."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_area_blocklist.py", "/app/test_reports/pytest/pytest_area_blocklist.xml"],
+  "action_items": [
+    "Optional: make /api/admin/blocklist/matching-orders honour area entries (area_matches)",
+    "Optional: add data-testids to checkout address inputs, the country select and the 'Continue to payment' button (tests currently rely on #email, positional inputs and the button role/name)",
+    "Optional: validate kind as Literal and tighten country matching to exact match"
+  ],
+  "critical_code_review_comments": [
+    "Checkout.jsx is 774 lines (>700); consider splitting the address form and payment sections",
+    "Checkout shipping form inputs and the submit button have no data-testid",
+    "record_hit on area entries overwrites last_hit_details with customer PII (name/email/postcode). That is fine, but no notification email is sent for area hits (by design)"
+  ],
+  "updated_files": ["/app/backend/tests/test_area_blocklist.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None kept. Test-created IM/ZZ area blocks, the TEST_Bad customer block, the API test order and UI order GHP-078 were all deleted by id. Side effect: the hits counter / last_hit_at / last_hit_details on the existing BT (now 5) and Ireland (now 3) entries went up because of the blocked test attempts. The order counter also moved forward.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Order items need {product_id, slug, name, price, qty}. UI auth: page.request.post /api/auth/login (urllib gets a 403 from the CDN), then localStorage ghp_token + sessionStorage ghp_age_verified='true', ghp_site_unlocked='1'. For guest checkout, seed localStorage ghp_cart. The country select is the last role=combobox in the 'Shipping Address' section; options are [role=option]. Payments are currently paused on the payment step (banner). Do not delete the Ireland/BT area entries."
+}
