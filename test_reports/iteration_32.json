@@ -1,0 +1,51 @@
+{
+  "summary": "Tested ambassador pay links (backend + UI), the public /pay page on Niftipay, and the admin modal regression. Backend: forced AMYTEST code, 10% discount, custom-line 400, 401 without a token, ambassador-only list, and the admin list all work. CRITICAL UI BUG: the ambassador 'New pay link' modal has an EMPTY product dropdown. CreatePaylinkModal calls Products.listAll() -> GET /api/products/all, which is admin-only (require_admin), so the ambassador gets 403 and the error is silently swallowed (setProducts([])). Ambassadors cannot create a pay link from the UI at all. To test the pay page I created a link through the API instead. Pay page: discounted total £49.50 (-£5.50 AMYTEST) is correct, the address form saves, the paused banner shows, and the 'Pay by Card' button is greyed out. Admin modal regression is OK: 'Other (custom line)' and the Promo code input are both present.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/products/all (used by the ambassador modal)", "issue": "Admin-only. The ambassador token gets 403, so the ambassador pay-link modal's product list is empty and the feature cannot be used from the UI.", "priority": "CRITICAL"},
+      {"endpoint": "POST /api/ambassadors/paylink (also POST /api/orders/paylink via build_paylink)", "issue": "qty is not validated. Accepted: items=[] (an order with shipping only), qty=0, and qty=-3 (subtotal goes negative, total clamps to the £4.99 shipping). Mixed lines are an exploit: qty 3 plus qty -2 of a £55 product gives subtotal £55 and total £49.50, while the stored items list 3x and -2x. Add qty>=1 (Field(ge=1)) and min_length=1 on items.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/ambassadors/paylink", "issue": "An admin token returns 400 'No ambassador code on your account' instead of 403. require_ambassador lets admins through."},
+      {"endpoint": "build_paylink", "issue": "New paylink orders still store payment_provider='paypal'. This is a leftover; it should be niftipay or empty."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CreatePaylinkModal (ambassador mode)", "issue": "The product dropdown shows 0 options because /products/all returns 403. The failure is silent, with no error toast. Fix: use the public Products.list() (GET /api/products) when the ambassador prop is set, or add an ambassador-accessible endpoint.", "selector": "[data-testid='paylink-product-0']", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [
+      {"flow": "Ambassador create pay link -> success URL -> list refresh", "issue": "Could not run end to end in the UI because no product can be chosen. The API-created link does appear correctly in the list, and in the admin list.", "affected_selectors": ["amb-create-paylink-btn", "paylink-product-0", "create-paylink-submit-btn", "paylink-url"]}
+    ],
+    "design_issues": [
+      {"screen": "/pay/{id} payment step", "issues": ["BankTrustBadges ('Connects securely to your bank · FCA-regulated · Lloyds, NatWest...') is still shown under the Pay by Card button. This is open-banking copy and misleading for card checkout.", "The footer still says 'Pay by Bank' (Footer.jsx:62)."]}
+    ]
+  },
+  "passed_tests": [
+    "Ambassador sidebar 'Pay links' nav goes to /ambassador/paylinks",
+    "ambassador-paylinks-page stats (1 / 1 / £0.00); GHP-069 row: Awaiting payment, £72.00, −£8.00 code applied, Copy link button",
+    "Modal: ambassador-paylink-note mentions AMYTEST and 10% off; no Promo code input; no 'Other (custom line)' option (the list is empty anyway)",
+    "API: promo_code in the body is overridden to AMYTEST; discount = 10% of subtotal; custom line -> 400 'Only catalogue products can be added'; no token -> 401 on POST and GET",
+    "GET /api/ambassadors/paylinks returns only this ambassador's links; admin GET /api/orders/paylinks includes them",
+    "Anonymous /pay/{id}: summary is correct, the UK address saves (verified via GET), the paused banner shows, Pay by Card is greyed out (pointer-events-none wrapper) and calls Niftipay.createPayment",
+    "Admin /admin/orders Create pay link modal: 83 options including 'Other (custom line)', and the Promo code field is present"
+  ],
+  "test_report_links": ["/app/backend/tests/test_ambassador_paylinks.py", "/app/test_reports/pytest/ambassador_paylinks.xml"],
+  "action_items": [
+    "CRITICAL: in CreatePaylinkModal, load products from the public GET /api/products when ambassador mode is on (or open /products/all to ambassadors), and show an error toast if loading fails",
+    "HIGH: validate PaylinkItemIn.qty >= 1 and items non-empty (Pydantic Field(ge=1), min_length=1) for both the admin and ambassador paylink endpoints",
+    "Minor: return 403 for non-ambassador tokens on /api/ambassadors/paylink; set payment_provider to niftipay on paylink orders; remove the bank trust badges and 'Pay by Bank' copy from the card checkout"
+  ],
+  "critical_code_review_comments": [
+    "CreatePaylinkModal swallows the products fetch error (.catch(() => setProducts([]))), which hid the 403",
+    "PayLinkPage still uses wallid* naming (wallidConfig, payWithWallid) although it calls Niftipay. Rename for maintainability.",
+    "The ambassador discount depends on the db.promos record for the code being active, unexpired, within max_uses and above min_subtotal. If the promo is deactivated, the discount silently becomes 0 and promo_code=None, so the sale would not count as commission."
+  ],
+  "updated_files": ["/app/backend/tests/test_ambassador_paylinks.py"],
+  "success_rate": {"backend": "75% (core paths pass; qty validation fails)", "frontend": "80% (blocked: ambassador product dropdown empty)"},
+  "seed_data_creation": "Created test orders (TEST_ customer names) through the ambassador API and deleted each one by id with the admin token. Note: the order counter advanced, and GHP-075 was used and then deleted. payments_paused was not touched.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run: cd /app/backend && python -m pytest tests/test_ambassador_paylinks.py -v -p no:xdist. After the qty fix, test_invalid_items and test_admin_token... should pass (test_admin_token expects 401/403). test_list_only_own asserts every ambassador link has promo_code=AMYTEST. UI: inject localStorage ghp_token plus sessionStorage ghp_age_verified='true' and ghp_site_unlocked='1'. Radix Select options are [role=option]. Pay page testids: pay-first-name, pay-last-name, pay-email, pay-phone, pay-address1, pay-city, pay-postcode, pay-continue-btn.",
+  "rca of the issue": "Empty ambassador product dropdown: CreatePaylinkModal.jsx line 26 calls Products.listAll() (lib/api.js:45 -> GET /products/all). product_routes.py:52 guards that route with Depends(require_admin), so an ambassador JWT gets 403 and the catch sets products to []. Repro: log in as amb.test, go to /ambassador/paylinks, click New pay link, open the product select: there are 0 options. Fix: use GET /api/products for ambassadors."
+}

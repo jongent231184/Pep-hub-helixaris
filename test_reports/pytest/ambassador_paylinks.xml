@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="9" time="2.979" timestamp="2026-11-26T10:32:29.331730+00:00" hostname="agent-env-88862064-3e8c-4477-aca6-66c47b2eecbe"><testcase classname="tests.test_ambassador_paylinks" name="test_create_forces_code_and_discount" time="1.300" /><testcase classname="tests.test_ambassador_paylinks" name="test_custom_line_rejected" time="0.113" /><testcase classname="tests.test_ambassador_paylinks" name="test_no_token_401" time="0.113" /><testcase classname="tests.test_ambassador_paylinks" name="test_admin_token_cannot_use_ambassador_endpoint" time="0.123"><failure message="assert 400 in (401, 403)&#10; +  where 400 = &lt;Response [400]&gt;.status_code">tests/test_ambassador_paylinks.py:91: in test_admin_token_cannot_use_ambassador_endpoint
+    assert r.status_code in (401, 403)
+E   assert 400 in (401, 403)
+E    +  where 400 = &lt;Response [400]&gt;.status_code</failure></testcase><testcase classname="tests.test_ambassador_paylinks" name="test_invalid_items[items0]" time="0.135"><failure message="assert 200 in (400, 422)&#10; +  where 200 = &lt;Response [200]&gt;.status_code">tests/test_ambassador_paylinks.py:105: in test_invalid_items
+    assert r.status_code in (400, 422)
+E   assert 200 in (400, 422)
+E    +  where 200 = &lt;Response [200]&gt;.status_code</failure></testcase><testcase classname="tests.test_ambassador_paylinks" name="test_invalid_items[zero]" time="0.159"><failure message="assert 200 in (400, 422)&#10; +  where 200 = &lt;Response [200]&gt;.status_code">tests/test_ambassador_paylinks.py:105: in test_invalid_items
+    assert r.status_code in (400, 422)
+E   assert 200 in (400, 422)
+E    +  where 200 = &lt;Response [200]&gt;.status_code</failure></testcase><testcase classname="tests.test_ambassador_paylinks" name="test_invalid_items[neg]" time="0.114"><failure message="assert 200 in (400, 422)&#10; +  where 200 = &lt;Response [200]&gt;.status_code">tests/test_ambassador_paylinks.py:105: in test_invalid_items
+    assert r.status_code in (400, 422)
+E   assert 200 in (400, 422)
+E    +  where 200 = &lt;Response [200]&gt;.status_code</failure></testcase><testcase classname="tests.test_ambassador_paylinks" name="test_list_only_own" time="0.136"><failure message="assert False&#10; +  where False = all(&lt;generator object test_list_only_own.&lt;locals&gt;.&lt;genexpr&gt; at 0xfd12e37c1c40&gt;)">tests/test_ambassador_paylinks.py:116: in test_list_only_own
+    assert all(l.get('promo_code') == 'AMYTEST' for l in links)
+E   assert False
+E    +  where False = all(&lt;generator object test_list_only_own.&lt;locals&gt;.&lt;genexpr&gt; at 0xfd12e37c1c40&gt;)</failure></testcase><testcase classname="tests.test_ambassador_paylinks" name="test_list_no_token" time="0.672" /></testsuite></testsuites>

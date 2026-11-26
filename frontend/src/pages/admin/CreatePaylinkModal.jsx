@@ -23,7 +23,7 @@ const CreatePaylinkModal = ({ open, onClose, onCreated, initialData, ambassador 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    Products.listAll()
+    (ambassador ? Products.list({ limit: 500 }) : Products.listAll())
       .then((all) => setProducts(all.filter(p => p.visible !== false).sort((a, b) => a.name.localeCompare(b.name))))
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
