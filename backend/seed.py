@@ -162,11 +162,27 @@ AMINO_PEN = {
 }
 
 
+NEW_PRODUCTS = [AMINO_PEN, {
+    'slug': 'mvd-1-sana-100mg', 'name': 'MVD-1 (SANA) 100mg', 'category': 'oral-peptides', 'price': 85.0,
+    'image': '/orals/mvd-1-sana-100mg.png', 'images': ['/orals/mvd-1-sana-100mg.png'],
+    'description': 'MVD-1 (SANA, salicylate-derived nitroalkene) is a research small-molecule studied in vitro for mitochondrial uncoupling, thermogenesis and metabolic signalling pathways. Supplied as 100mg capsules, 30 per tub. For in-vitro laboratory research use only — not for human consumption.',
+    'short_description': '100mg × 30 capsules', 'tagline': '', 'badge': 'New', 'options': [], 'variants': [],
+    'stock': 5, 'visible': True, 'featured': False,
+}, {
+    'slug': 'cartalax-20mg', 'name': 'Cartalax 20mg', 'category': 'vials', 'price': 40.0,
+    'image': '/vials/cartalax-20mg.png', 'images': ['/vials/cartalax-20mg.png'],
+    'description': 'Cartalax (Ala-Glu-Asp) is a short synthetic tripeptide bioregulator from the Khavinson series, investigated in vitro for cartilage and connective-tissue cell signalling. Supplied as 20mg lyophilised powder per vial (≥98% purity). Store at -20°C. For in-vitro laboratory research use only — not for human consumption.',
+    'short_description': 'Tripeptide bioregulator (AED) · 20mg per vial', 'tagline': '', 'badge': 'New', 'options': [], 'variants': [],
+    'stock': 5, 'visible': True, 'featured': False,
+}]
+
+
 async def seed_amino_pen():
-    if await db.products.find_one({'slug': AMINO_PEN['slug']}):
-        return
     now = datetime.utcnow()
-    await db.products.insert_one({**AMINO_PEN, 'id': str(uuid.uuid4()), 'created_at': now, 'updated_at': now})
+    for prod in NEW_PRODUCTS:
+        if await db.products.find_one({'slug': prod['slug']}):
+            continue
+        await db.products.insert_one({**prod, 'id': str(uuid.uuid4()), 'created_at': now, 'updated_at': now})
 
 
 async def run_all():
