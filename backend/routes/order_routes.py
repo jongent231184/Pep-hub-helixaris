@@ -197,7 +197,13 @@ def _placeholder_address() -> dict:
 async def create_paylink(payload: PaylinkCreate, _=Depends(require_admin)):
     """Create a pending order with no shipping address. Returns the order so
     the admin can share `/pay/{order_id}` with the customer."""
+    return await build_paylink(payload)
+
+
+async def build_paylink(payload: PaylinkCreate, allow_custom: bool = True, forced_promo: str = None, extra: dict = None) -> OrderOut:
     now = datetime.utcnow()
+    if forced_promo:
+        payload.promo_code = forced_promo
 
     # Server-side pricing from the catalog (mirrors POST /orders). Custom
     # "Other" lines (no product_id) use the admin-supplied name/price directly.
@@ -225,6 +231,8 @@ async def create_paylink(payload: PaylinkCreate, _=Depends(require_admin)):
             }
         else:
             # Custom "Other" line — description + price provided by admin
+            if not allow_custom:
+                raise HTTPException(400, 'Only catalogue products can be added')
             if not it.name or not it.name.strip():
                 raise HTTPException(400, 'Custom line item requires a description')
             if it.price is None or float(it.price) < 0:
@@ -306,6 +314,7 @@ async def create_paylink(payload: PaylinkCreate, _=Depends(require_admin)):
         'notes': payload.notes or '',
         'created_at': now,
         'updated_at': now,
+        **(extra or {}),
     }
     await db.orders.insert_one(doc)
     return OrderOut(**doc_to_dict(doc))

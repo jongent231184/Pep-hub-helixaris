@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Orders, Wallid } from '../lib/api';
+import { Orders, Niftipay } from '../lib/api';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
@@ -35,7 +35,7 @@ const PayLinkPage = () => {
       try {
         const [o, cfg] = await Promise.all([
           Orders.getPaylink(orderId),
-          Wallid.config().catch(() => null),
+          Niftipay.config().catch(() => null),
         ]);
         setOrder(o);
         setWallidConfig(cfg);
@@ -65,9 +65,9 @@ const PayLinkPage = () => {
     if (!order) return;
     setWallidLoading(true);
     try {
-      const res = await Wallid.createPayment(order.id);
-      if (!res?.payment_link) throw new Error('No payment link returned');
-      window.location.href = res.payment_link;
+      const res = await Niftipay.createPayment(order.id);
+      if (!res?.pay_url) throw new Error('No payment link returned');
+      window.location.href = res.pay_url;
     } catch (err) {
       const detail = err.response?.data?.detail;
       toast({ title: 'Could not start payment', description: detail || err.message, variant: 'destructive' });
@@ -207,21 +207,21 @@ const PayLinkPage = () => {
                   </div>
                 )}
                 <div className={settings?.payments_paused ? 'opacity-40 grayscale pointer-events-none select-none' : ''}>
-                {wallidConfig?.configured ? (
+                {wallidConfig?.enabled ? (
                   <div>
                     <p className="text-sm text-slate-700 mb-3">Complete your payment:</p>
                     <Button
                       onClick={payWithWallid}
                       disabled={wallidLoading || processing}
-                      className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-wider text-base"
-                      data-testid="paylink-wallid-pay-btn"
+                      className="w-full h-14 bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-wider text-base"
+                      data-testid="paylink-niftipay-pay-btn"
                     >
                       {wallidLoading
                         ? <Loader2 className="h-5 w-5 animate-spin" />
-                        : <><Lock className="h-4 w-4 mr-2" /> Pay by Bank · £{Number(order.total).toFixed(2)}</>}
+                        : <><Lock className="h-4 w-4 mr-2" /> Pay by Card · £{Number(order.total).toFixed(2)}</>}
                     </Button>
                     <p className="text-xs text-slate-500 mt-2 text-center">
-                      Instant secure transfer from your bank · No card details required
+                      Visa, Mastercard, Amex, Apple Pay &amp; Google Pay · 3-D Secure · card details entered on our payment partner's secure page
                     </p>
                     <BankTrustBadges />
                   </div>

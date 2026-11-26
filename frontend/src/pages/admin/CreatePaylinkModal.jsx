@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Orders, Products } from '../../lib/api';
+import { Orders, Products, Ambassadors } from '../../lib/api';
 import { Loader2, Plus, X, Copy, Check, Link as LinkIcon } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { useToast } from '../../hooks/use-toast';
 
-const CreatePaylinkModal = ({ open, onClose, onCreated, initialData }) => {
+const CreatePaylinkModal = ({ open, onClose, onCreated, initialData, ambassador = null }) => {
   const { toast } = useToast();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -92,13 +92,14 @@ const CreatePaylinkModal = ({ open, onClose, onCreated, initialData }) => {
     }
     setCreating(true);
     try {
-      const order = await Orders.createPaylink({
+      const body = {
         items,
         customer_name: customerName || undefined,
         customer_email: customerEmail || undefined,
         notes: notes || '',
         promo_code: promoCode ? promoCode.trim().toUpperCase() : undefined,
-      });
+      };
+      const order = ambassador ? await Ambassadors.createPaylink(body) : await Orders.createPaylink(body);
       setCreatedOrder(order);
       onCreated?.(order);
     } catch (err) {
@@ -230,9 +231,11 @@ const CreatePaylinkModal = ({ open, onClose, onCreated, initialData }) => {
                         <Select value={row.product_id} onValueChange={v => updateRow(i, { product_id: v, option: '', name: '', price: '' })}>
                           <SelectTrigger data-testid={`paylink-product-${i}`}><SelectValue placeholder="Choose product..." /></SelectTrigger>
                           <SelectContent className="max-h-72">
-                            <SelectItem value="__custom__" data-testid="paylink-custom-option">
-                              <span className="font-semibold text-sky-700">Other (custom line)</span>
-                            </SelectItem>
+                            {!ambassador && (
+                              <SelectItem value="__custom__" data-testid="paylink-custom-option">
+                                <span className="font-semibold text-sky-700">Other (custom line)</span>
+                              </SelectItem>
+                            )}
                             {products.map(p => (
                               <SelectItem key={p.id} value={p.id}>
                                 {p.name} <span className="text-slate-400 text-xs">({p.category})</span>
@@ -303,6 +306,11 @@ const CreatePaylinkModal = ({ open, onClose, onCreated, initialData }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {ambassador ? (
+                <div className="md:col-span-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900" data-testid="ambassador-paylink-note">
+                  Your code <span className="font-mono font-bold">{ambassador.ambassador_code}</span> is applied automatically — the customer gets {ambassador.customer_discount}% off and the sale counts towards your commission.
+                </div>
+              ) : (<>
               <div>
                 <Label>Promo code (optional)</Label>
                 <Input value={promoCode} onChange={e => setPromoCode(e.target.value.toUpperCase())} placeholder="LAUNCH10" className="mt-1 font-mono uppercase" />
@@ -311,6 +319,7 @@ const CreatePaylinkModal = ({ open, onClose, onCreated, initialData }) => {
                 <Label>Notes (optional, internal only)</Label>
                 <Input value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. Wholesale customer" className="mt-1" />
               </div>
+              </>)}
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t">

@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, ShoppingBag, PoundSterling, LogOut, Loader2, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, PoundSterling, LogOut, Loader2, ExternalLink, Link2 } from 'lucide-react';
 
 const NAV = [
   { to: '/ambassador', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/ambassador/orders', label: 'Orders', icon: ShoppingBag },
+  { to: '/ambassador/paylinks', label: 'Pay links', icon: Link2 },
   { to: '/ambassador/payouts', label: 'Payouts', icon: PoundSterling },
 ];
 

@@ -244,6 +244,8 @@ class OrderOut(BaseModel):
     invoice_resent_at: Optional[datetime] = None
     invoice_resend_count: Optional[int] = None
     card_live_email_at: Optional[datetime] = None
+    paylink_created_by: Optional[str] = None
+    paylink_creator_role: Optional[str] = None
     xoala_payment_id: Optional[str] = None
     xoala_amount: Optional[str] = None
     xoala_currency: Optional[str] = None

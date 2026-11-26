@@ -21,6 +21,8 @@ import uuid
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from db import db
+from models import PaylinkCreate
+from routes.order_routes import build_paylink
 from auth import require_admin, require_ambassador, hash_password
 from utils import doc_to_dict
 from models import (
@@ -392,6 +394,23 @@ async def ambassador_order_detail(order_id: str, user: dict = Depends(require_am
     if not doc:
         raise HTTPException(404, 'Order not found')
     return doc_to_dict(doc)
+
+
+@router.post('/paylink')
+async def ambassador_create_paylink(payload: PaylinkCreate, user: dict = Depends(require_ambassador)):
+    code = (user.get('ambassador_code') or '').upper()
+    if not code:
+        raise HTTPException(400, 'No ambassador code on your account')
+    payload.shipping = None
+    payload.notes = f"Ambassador pay link ({code})"
+    order = await build_paylink(payload, allow_custom=False, forced_promo=code, extra={'paylink_created_by': user['id'], 'paylink_creator_role': 'ambassador'})
+    return order.model_dump()
+
+
+@router.get('/paylinks')
+async def ambassador_paylinks(user: dict = Depends(require_ambassador)):
+    docs = await db.orders.find({'paylink_created_by': user['id']}).sort('created_at', -1).to_list(500)
+    return [doc_to_dict(d) for d in docs]
 
 
 @router.get('/payouts')

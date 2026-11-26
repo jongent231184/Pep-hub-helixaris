@@ -295,6 +295,8 @@ export const Ambassadors = {
   orders: () => api.get('/ambassadors/orders').then(r => r.data),
   order: (id) => api.get(`/ambassadors/orders/${id}`).then(r => r.data),
   payouts: () => api.get('/ambassadors/payouts').then(r => r.data),
+  createPaylink: (data) => api.post('/ambassadors/paylink', data).then(r => r.data),
+  paylinks: () => api.get('/ambassadors/paylinks').then(r => r.data),
 };
 
 export const Settings = {

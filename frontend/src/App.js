@@ -74,6 +74,7 @@ import AmbassadorDashboard from './pages/ambassador/AmbassadorDashboard';
 import AmbassadorOrders from './pages/ambassador/AmbassadorOrders';
 import AmbassadorOrderDetail from './pages/ambassador/AmbassadorOrderDetail';
 import AmbassadorPayouts from './pages/ambassador/AmbassadorPayouts';
+import AmbassadorPayLinks from './pages/ambassador/AmbassadorPayLinks';
 import BRAND from './config/brand';
 
 import './App.css';
@@ -135,6 +136,7 @@ function App() {
                 <Route path="orders" element={<AmbassadorOrders />} />
                 <Route path="orders/:orderId" element={<AmbassadorOrderDetail />} />
                 <Route path="payouts" element={<AmbassadorPayouts />} />
+                <Route path="paylinks" element={<AmbassadorPayLinks />} />
               </Route>
 
               {/* Coaching client portal (paid members only) */}
