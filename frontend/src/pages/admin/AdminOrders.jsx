@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Orders, Wallid, Square, Blocklist } from '../../lib/api';
-import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw, CreditCard, FileText, ShieldBan, Send } from 'lucide-react';
+import { Orders, Wallid, Blocklist } from '../../lib/api';
+import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw, FileText, ShieldBan, Send } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
@@ -27,13 +27,11 @@ const AdminOrders = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [paylinkOpen, setPaylinkOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [syncingSquare, setSyncingSquare] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
   const [tab, setTab] = useState('orders');
   const [blockedIds, setBlockedIds] = useState(new Set());
   const [blockingId, setBlockingId] = useState(null);
   const [resendingId, setResendingId] = useState(null);
-  const [bulkSending, setBulkSending] = useState(false);
   const [total, setTotal] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -117,32 +115,6 @@ const AdminOrders = () => {
     }
   };
 
-  const handleSyncFromSquare = async () => {
-    setSyncingSquare(true);
-    try {
-      const res = await Square.syncPending();
-      const changesText = (res.changes || [])
-        .map(c => `${c.order_number}: ${c.from} → ${c.to}`)
-        .join(', ');
-      toast({
-        title: `Checked ${res.checked} pending Square order${res.checked !== 1 ? 's' : ''}`,
-        description: res.updated
-          ? `${res.now_paid} newly paid · ${res.updated} updated${changesText ? ` (${changesText})` : ''}`
-          : res.checked === 0
-            ? 'No pending Square orders to sync.'
-            : 'No changes — all pending orders are still awaiting payment.',
-      });
-      if (res.updated > 0) load();
-    } catch (e) {
-      toast({
-        title: 'Sync failed',
-        description: String(e.response?.data?.detail || e.message),
-        variant: 'destructive',
-      });
-    } finally {
-      setSyncingSquare(false);
-    }
-  };
 
   const handleDelete = async (order) => {
     if (!window.confirm(`Delete order ${order.order_number}? This cannot be undone.`)) return;
@@ -186,7 +158,6 @@ const AdminOrders = () => {
   });
 
   const hasEmail = (o) => o.shipping_address?.email && o.shipping_address.email !== 'pending@ghp-health.com';
-  const unpaidWithEmail = filtered.filter(o => o.payment_status !== 'paid' && hasEmail(o));
 
   const handleResendInvoice = async (order) => {
     setResendingId(order.id);
@@ -206,25 +177,6 @@ const AdminOrders = () => {
     }
   };
 
-  const handleResendAllUnpaid = async () => {
-    const n = unpaidWithEmail.length;
-    if (!n) return;
-    if (!window.confirm(`Email a fresh invoice to ${n} unpaid order${n === 1 ? '' : 's'}? Unpaid orders will include your bank-transfer details as a new payment option.`)) return;
-    setBulkSending(true);
-    try {
-      const r = await Orders.resendInvoices(unpaidWithEmail.map(o => o.id));
-      toast({
-        title: `${r.sent.length} invoice${r.sent.length === 1 ? '' : 's'} emailed`,
-        description: r.failed.length ? `${r.failed.length} failed: ${r.failed.map(f => f.error).slice(0, 2).join('; ')}` : 'All sent successfully.',
-        variant: r.failed.length ? 'destructive' : undefined,
-      });
-      load();
-    } catch (e) {
-      toast({ title: 'Bulk send failed', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
-    } finally {
-      setBulkSending(false);
-    }
-  };
 
   const exportCSV = () => {
     const rows = [
@@ -264,17 +216,6 @@ const AdminOrders = () => {
             Sync from Wallid
           </Button>
           <Button
-            onClick={handleSyncFromSquare}
-            disabled={syncingSquare}
-            variant="outline"
-            className="gap-2"
-            data-testid="sync-all-square-btn"
-            title="Poll Square for every pending card / Apple-Pay / Google-Pay order and update its payment status"
-          >
-            {syncingSquare ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-            Sync from Square
-          </Button>
-          <Button
             onClick={() => setPaylinkOpen(true)}
             className="bg-sky-500 hover:bg-sky-600 text-white gap-2"
             data-testid="create-paylink-btn"
@@ -282,19 +223,6 @@ const AdminOrders = () => {
             <LinkIcon className="h-4 w-4" /> Create pay link
           </Button>
           <Button onClick={exportCSV} variant="outline" className="gap-2"><Download className="h-4 w-4" /> Export CSV</Button>
-          {tab === 'orders' && unpaidWithEmail.length > 0 && (
-            <Button
-              onClick={handleResendAllUnpaid}
-              disabled={bulkSending}
-              variant="outline"
-              className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-              data-testid="resend-all-unpaid-btn"
-              title="Email every unpaid order a fresh invoice with your bank-transfer details"
-            >
-              {bulkSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Email invoices to unpaid ({unpaidWithEmail.length})
-            </Button>
-          )}
         </div>
       </div>
       <CreatePaylinkModal
