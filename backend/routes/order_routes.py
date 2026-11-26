@@ -433,6 +433,20 @@ async def resend_invoice(order_id: str, payload: Optional[dict] = Body(default=N
     return await _resend_one(order_id, settings, note=(payload or {}).get('note', ''))
 
 
+@router.post('/admin/{order_id}/card-live-email')
+async def card_live_email(order_id: str, _=Depends(require_admin)):
+    order = await db.orders.find_one({'id': order_id})
+    if not order:
+        raise HTTPException(404, 'Order not found')
+    from email_service import send_card_live_email
+    try:
+        r = await send_card_live_email(order)
+    except RuntimeError as e:
+        raise HTTPException(400, str(e))
+    await db.orders.update_one({'id': order_id}, {'$set': {'card_live_email_at': datetime.utcnow()}})
+    return r
+
+
 @router.post('/admin/resend-invoices')
 async def resend_invoices_bulk(payload: dict, _=Depends(require_admin)):
     ids = [str(i) for i in (payload.get('order_ids') or [])][:200]

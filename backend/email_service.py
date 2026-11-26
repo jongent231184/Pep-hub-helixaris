@@ -1000,6 +1000,49 @@ async def send_refund_email(order: dict, amount: str, refunded_total: str, full:
         logger.error(f'refund email failed for {order_number}: {e}')
 
 
+# --------------------------------------------------------- CARD PAYMENTS LIVE
+
+async def send_card_live_email(order: dict) -> dict:
+    """One-off announcement: card / Apple Pay / Google Pay checkout is live again."""
+    if not _init_resend():
+        raise RuntimeError('Email is not configured')
+    customer_email = (order.get('shipping_address') or {}).get('email', '')
+    if not customer_email or customer_email == 'pending@ghp-health.com':
+        raise RuntimeError('Order has no customer email')
+    first = (order.get('shipping_address') or {}).get('first_name') or 'there'
+    site = _site_base()
+    html = f"""
+    <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#0f172a">
+      <div style="border-bottom:3px solid #0ea5e9;padding-bottom:16px;margin-bottom:20px">
+        <p style="font-size:11px;letter-spacing:2px;color:#0284c7;font-weight:700;text-transform:uppercase;margin:0">{BUSINESS_NAME} · Update</p>
+        <h1 style="font-size:22px;font-weight:900;margin:6px 0 0">Card payments are back</h1>
+      </div>
+      <p style="font-size:14px;line-height:1.6;margin:0 0 14px">Hi {first},</p>
+      <p style="font-size:14px;line-height:1.6;margin:0 0 18px">Good news — <strong>card payments are now live again on {BUSINESS_NAME}</strong>. You can check out instantly with:</p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;background:#f0f9ff;border-radius:8px;padding:10px 14px;margin-bottom:18px">
+        <tr><td style="padding:6px 0">✔ &nbsp;Visa, Mastercard and American Express</td></tr>
+        <tr><td style="padding:6px 0">✔ &nbsp;<strong>Apple Pay</strong> and <strong>Google Pay</strong> — one tap on your phone</td></tr>
+        <tr><td style="padding:6px 0">✔ &nbsp;Secure 3-D Secure checkout on an encrypted, PCI-compliant page</td></tr>
+      </table>
+      <p style="font-size:14px;line-height:1.6;margin:0 0 18px">No more waiting on bank transfers or payment links — add to basket, pay by card, and your order is confirmed on the spot. We never see or store your card details.</p>
+      <p style="text-align:center;margin:24px 0">
+        <a href="{site}" style="display:inline-block;background:#0ea5e9;color:#fff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:6px;letter-spacing:1px;text-transform:uppercase;font-size:13px">Shop now</a>
+      </p>
+      <p style="font-size:14px;line-height:1.6;margin:0 0 18px">Thank you for your patience while we moved to a new payment provider — we really appreciate you sticking with us.</p>
+      <p style="font-size:14px;line-height:1.6;margin:0">Best regards,<br><strong>{BUSINESS_NAME}</strong></p>
+      <p style="margin-top:22px;font-size:11px;color:#64748b;line-height:1.5">All products are supplied strictly for in-vitro laboratory research use only. Not for human or animal consumption.</p>
+    </div>
+    """
+    res = await asyncio.to_thread(resend.Emails.send, {
+        'from': f'{BUSINESS_NAME} <{FROM_EMAIL}>',
+        'to': [customer_email],
+        'subject': 'Card payments are back — Apple Pay, Google Pay & all major cards now live',
+        'html': html,
+    })
+    logger.info(f'card-live email sent to {customer_email}: {res.get("id")}')
+    return {'sent_to': customer_email}
+
+
 # --------------------------------------------------------- AMBASSADOR WELCOME
 
 async def send_ambassador_welcome(user: dict, temp_password: Optional[str] = None) -> Optional[str]:

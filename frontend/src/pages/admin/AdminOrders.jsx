@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Orders, Wallid, Blocklist } from '../../lib/api';
-import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw, FileText, ShieldBan, Send } from 'lucide-react';
+import { Loader2, Download, Trash2, Link as LinkIcon, RefreshCw, CreditCard, FileText, ShieldBan, Send } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
@@ -32,6 +32,7 @@ const AdminOrders = () => {
   const [blockedIds, setBlockedIds] = useState(new Set());
   const [blockingId, setBlockingId] = useState(null);
   const [resendingId, setResendingId] = useState(null);
+  const [cardMailId, setCardMailId] = useState(null);
   const [total, setTotal] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -158,6 +159,20 @@ const AdminOrders = () => {
   });
 
   const hasEmail = (o) => o.shipping_address?.email && o.shipping_address.email !== 'pending@ghp-health.com';
+
+  const handleCardLiveEmail = async (order) => {
+    if (order.card_live_email_at && !window.confirm(`Already sent to ${order.shipping_address?.email} on ${new Date(order.card_live_email_at).toLocaleDateString()}. Send again?`)) return;
+    setCardMailId(order.id);
+    try {
+      const r = await Orders.cardLiveEmail(order.id);
+      toast({ title: 'Card payments email sent', description: `Sent to ${r.sent_to}.` });
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, card_live_email_at: new Date().toISOString() } : o));
+    } catch (e) {
+      toast({ title: 'Could not send', description: String(e.response?.data?.detail || e.message), variant: 'destructive' });
+    } finally {
+      setCardMailId(null);
+    }
+  };
 
   const handleResendInvoice = async (order) => {
     setResendingId(order.id);
@@ -337,6 +352,20 @@ const AdminOrders = () => {
                         {resendingId === o.id
                           ? <Loader2 className="h-4 w-4 animate-spin" />
                           : <Send className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleCardLiveEmail(o)}
+                        disabled={cardMailId === o.id || !hasEmail(o)}
+                        title={o.card_live_email_at ? `"Card payments are back" email sent ${new Date(o.card_live_email_at).toLocaleDateString()}` : 'Email "Card payments are back" announcement'}
+                        data-testid={`card-live-email-${o.order_number}`}
+                        className={`h-8 w-8 ${o.card_live_email_at ? 'text-slate-300 hover:text-slate-400' : 'text-sky-600 hover:text-sky-700 hover:bg-sky-50'}`}
+                      >
+                        {cardMailId === o.id
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <CreditCard className="h-4 w-4" />}
                       </Button>
                       {!blockedIds.has(o.id) && (
                         <Button
