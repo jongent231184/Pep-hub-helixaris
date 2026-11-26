@@ -183,6 +183,8 @@ async def seed_amino_pen():
         if await db.products.find_one({'slug': prod['slug']}):
             continue
         await db.products.insert_one({**prod, 'id': str(uuid.uuid4()), 'created_at': now, 'updated_at': now})
+    from research_profiles_new import apply_new_profiles
+    await apply_new_profiles()
 
 
 async def run_all():
