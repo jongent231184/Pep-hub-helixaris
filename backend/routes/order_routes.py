@@ -15,7 +15,7 @@ from auth import get_current_user_optional, get_current_user, require_admin
 from utils import doc_to_dict
 from email_service import build_invoice_pdf, send_invoice_email
 from order_helpers import mark_order_paid
-from blocklist import find_block_match, record_hit, BLOCKED_MESSAGE
+from blocklist import find_block_match, record_hit, blocked_message
 
 router = APIRouter(prefix='/orders', tags=['orders'])
 
@@ -46,7 +46,7 @@ async def create_order(payload: OrderCreate, user: Optional[dict] = Depends(get_
     blocked = await find_block_match([ship, bill])
     if blocked:
         await record_hit(blocked, ship)
-        raise HTTPException(403, BLOCKED_MESSAGE)
+        raise HTTPException(403, blocked_message(blocked))
 
     # Server-side price re-computation from the catalog so a client can't
     # fabricate an item price by editing the payload. For each item we use
@@ -344,7 +344,7 @@ async def set_paylink_address(order_id: str, payload: PaylinkAddress):
     blocked = await find_block_match([addr])
     if blocked:
         await record_hit(blocked, addr, channel='paylink')
-        raise HTTPException(403, BLOCKED_MESSAGE)
+        raise HTTPException(403, blocked_message(blocked))
     res = await db.orders.find_one_and_update(
         {'id': order_id, 'source': 'paylink', 'payment_status': {'$ne': 'paid'}},
         {'$set': {

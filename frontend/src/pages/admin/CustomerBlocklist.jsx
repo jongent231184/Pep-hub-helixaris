@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Blocklist } from '../../lib/api';
-import { Loader2, Trash2, ShieldBan, Plus } from 'lucide-react';
+import { Loader2, Trash2, ShieldBan, Plus, Ban } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
@@ -13,6 +13,8 @@ const CustomerBlocklist = ({ onChange }) => {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [form, setForm] = useState(EMPTY);
+  const [area, setArea] = useState({ country: '', postcode_prefix: '', reason: '' });
+  const [savingArea, setSavingArea] = useState(false);
   const { toast } = useToast();
 
   const load = () => Blocklist.list().then(setEntries).catch(() => setEntries([])).finally(() => setLoading(false));
@@ -32,6 +34,25 @@ const CustomerBlocklist = ({ onChange }) => {
     } catch (err) {
       toast({ title: 'Could not add', description: String(err.response?.data?.detail || err.message), variant: 'destructive' });
     } finally { setSaving(false); }
+  };
+
+  const submitArea = async (e) => {
+    e.preventDefault();
+    if (!area.country.trim() && !area.postcode_prefix.trim()) {
+      toast({ title: 'Enter a country and/or a postcode prefix', variant: 'destructive' });
+      return;
+    }
+    setSavingArea(true);
+    try {
+      const entry = await Blocklist.create({ kind: 'area', ...area });
+      setEntries(prev => [entry, ...prev]);
+      setArea({ country: '', postcode_prefix: '', reason: '' });
+      toast({ title: 'Area blocked', description: 'Checkout will refuse addresses in this area.' });
+    } catch (err) {
+      toast({ title: 'Could not add', description: String(err.response?.data?.detail || err.message), variant: 'destructive' });
+    } finally {
+      setSavingArea(false);
+    }
   };
 
   const remove = async (entry) => {
@@ -74,6 +95,19 @@ const CustomerBlocklist = ({ onChange }) => {
         </Button>
       </form>
 
+      <form onSubmit={submitArea} className="bg-white border border-amber-200 rounded-lg p-5 space-y-3" data-testid="area-block-form">
+        <h2 className="font-bold uppercase text-sm tracking-wide">Block an area</h2>
+        <p className="text-xs text-slate-500">Refuse checkout for a whole country or postcode area. Examples: country <span className="font-mono">Ireland</span>; prefix <span className="font-mono">BT</span> (Northern Ireland), <span className="font-mono">GY</span>/<span className="font-mono">JE</span> (Channel Islands), <span className="font-mono">IM</span> (Isle of Man).</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Input value={area.country} onChange={e => setArea(a => ({ ...a, country: e.target.value }))} placeholder="Country (e.g. Ireland)" data-testid="area-country" />
+          <Input value={area.postcode_prefix} onChange={e => setArea(a => ({ ...a, postcode_prefix: e.target.value.toUpperCase() }))} placeholder="Postcode prefix (e.g. BT)" className="font-mono uppercase" data-testid="area-prefix" />
+          <Input value={area.reason} onChange={e => setArea(a => ({ ...a, reason: e.target.value }))} placeholder="Reason (internal)" data-testid="area-reason" />
+        </div>
+        <Button type="submit" disabled={savingArea} className="bg-amber-600 hover:bg-amber-700 text-white gap-2" data-testid="area-submit-btn">
+          {savingArea ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />} Block area
+        </Button>
+      </form>
+
       {loading ? (
         <div className="grid place-items-center py-10"><Loader2 className="h-6 w-6 animate-spin text-sky-500" /></div>
       ) : (
@@ -93,6 +127,17 @@ const CustomerBlocklist = ({ onChange }) => {
             <tbody className="divide-y">
               {entries.map(e => (
                 <tr key={e.id} className="hover:bg-slate-50" data-testid={`blocklist-row-${e.id}`}>
+                  {e.kind === 'area' ? (
+                    <>
+                      <td className="p-3 font-semibold"><span className="inline-block bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded" data-testid={`area-badge-${e.id}`}>Area</span></td>
+                      <td className="p-3 text-xs text-slate-400">—</td>
+                      <td className="p-3 text-xs">
+                        {e.country && <p>{e.country}</p>}
+                        {e.postcode_prefix && <p className="font-mono">Postcodes starting {e.postcode_prefix}</p>}
+                      </td>
+                    </>
+                  ) : (
+                    <>
                   <td className="p-3 font-semibold">{`${e.first_name || ''} ${e.last_name || ''}`.trim() || <span className="text-slate-400">—</span>}</td>
                   <td className="p-3 text-xs">{e.email || <span className="text-slate-400">—</span>}</td>
                   <td className="p-3 text-xs">
@@ -100,6 +145,8 @@ const CustomerBlocklist = ({ onChange }) => {
                     {e.postcode && <p className="font-mono">{e.postcode}</p>}
                     {!e.address1 && !e.postcode && <span className="text-slate-400">—</span>}
                   </td>
+                    </>
+                  )}
                   <td className="p-3 text-xs text-slate-600">
                     {e.reason || <span className="text-slate-400">—</span>}
                     {e.source_order_number && <p className="font-mono text-[10px] text-slate-400 mt-1">from {e.source_order_number}</p>}

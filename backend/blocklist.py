@@ -10,6 +10,27 @@ BLOCKED_MESSAGE = (
     "We're unable to accept orders for these customer details. "
     "If you believe this is a mistake, please contact support."
 )
+AREA_BLOCKED_MESSAGE = (
+    "Sorry — we don't currently ship to this area, so we can't accept this order. "
+    "Please contact us if you have any questions."
+)
+
+
+def area_matches(entry: dict, addr: dict) -> bool:
+    """Area entry: blocks by country name and/or postcode prefix (outward code start, e.g. 'BT')."""
+    e_country = norm_text(entry.get('country'))
+    e_prefix = norm_text(entry.get('postcode_prefix'))
+    a_country = norm_text(addr.get('country'))
+    a_post = norm_text(addr.get('postcode'))
+    if e_country and a_country and (a_country == e_country or e_country in a_country):
+        return True
+    if e_prefix and a_post and a_post.startswith(e_prefix):
+        return True
+    return False
+
+
+def blocked_message(entry: dict) -> str:
+    return AREA_BLOCKED_MESSAGE if entry.get('kind') == 'area' else BLOCKED_MESSAGE
 
 
 def norm_text(v: Optional[str]) -> str:
@@ -57,7 +78,12 @@ async def find_block_match(addresses: list[dict]) -> Optional[dict]:
     entries = await db.blocklist.find().to_list(2000)
     for entry in entries:
         for addr in addresses:
-            if addr and entry_matches(entry, addr):
+            if not addr:
+                continue
+            if entry.get('kind') == 'area':
+                if area_matches(entry, addr):
+                    return entry
+            elif entry_matches(entry, addr):
                 return entry
     return None
 
@@ -71,9 +97,11 @@ async def record_hit(entry: dict, addr: dict, channel: str = 'checkout') -> None
                 'name': f"{addr.get('first_name', '')} {addr.get('last_name', '')}".strip(),
                 'email': addr.get('email', ''),
                 'postcode': addr.get('postcode', ''),
+                'country': addr.get('country', ''),
             },
         }},
         return_document=True,
     )
     hits = int((updated or entry).get('hits', 1))
-    asyncio.create_task(send_blocked_attempt_email(entry, addr, channel, hits))
+    if entry.get('kind') != 'area':
+        asyncio.create_task(send_blocked_attempt_email(entry, addr, channel, hits))

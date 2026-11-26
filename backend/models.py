@@ -286,6 +286,9 @@ class BlocklistEntryCreate(BaseModel):
     address1: Optional[str] = ''
     postcode: Optional[str] = ''
     reason: Optional[str] = ''
+    kind: Optional[str] = 'customer'  # 'customer' | 'area'
+    country: Optional[str] = ''
+    postcode_prefix: Optional[str] = ''
 
 
 class BlocklistEntryOut(BlocklistEntryCreate):

@@ -24,6 +24,14 @@ async def list_entries(_=Depends(require_admin)):
 @router.post('', response_model=BlocklistEntryOut)
 async def create_entry(payload: BlocklistEntryCreate, _=Depends(require_admin)):
     data = {k: (v or '').strip() for k, v in payload.model_dump().items()}
+    if data.get('kind') == 'area':
+        data['postcode_prefix'] = data['postcode_prefix'].upper().replace(' ', '')
+        if not data['country'] and not data['postcode_prefix']:
+            raise HTTPException(400, 'Provide a country and/or a postcode prefix (e.g. BT)')
+        doc = {'id': str(uuid.uuid4()), **data, 'hits': 0, 'created_at': datetime.utcnow()}
+        await db.blocklist.insert_one(doc)
+        return BlocklistEntryOut(**doc_to_dict(doc))
+    data['kind'] = 'customer'
     if not _has_criteria(data):
         raise HTTPException(400, 'Provide at least an email, a postcode or a name')
     if data['postcode'] and not data['address1'] and not (data['first_name'] or data['last_name']):
